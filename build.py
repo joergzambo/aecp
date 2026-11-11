@@ -59,7 +59,7 @@ def header(depth, active=''):
 def footer(depth):
     return f'''<footer class="aecp-footer">
  <p class="aecp-tagline">{esc(SITE["name"])} · {esc(SITE["claim"])}</p>
- <p>Netzwerktechnik lernen · ein Projekt von <a href="https://joergzambo.com/">Jörg Zambo</a></p>
+ <p>Netzwerktechnik lernen · ein Projekt von <a href="https://joergzambo.com/">Jörg Zambo</a> an der <a href="https://www.htlpinkafeld.at/">HTL Pinkafeld</a>, Abteilung Informatik und Informationstechnologie</p>
  <p><a href="https://joergzambo.com/impressum/">Impressum</a></p>
 </footer>
 '''
