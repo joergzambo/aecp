@@ -12,7 +12,8 @@ SITE = {
     'intro': '<strong>Analyze</strong> – Topologien durchschauen. <strong>Explain</strong> – verstehen, warum das Netz so entscheidet. '
              '<strong>Configure</strong> – selbst Hand anlegen. <strong>Practice</strong> – üben, bis es sitzt. '
              'Vom OSI-Modell bis zu Angriffen im LAN, mit Animationen, Lösungen zum Aufklappen und Zufallsgenerator.',
-    'news': ['<strong>Neu:</strong> <a href="grundlagen/subnetting/">Subnetting und VLSM</a> und <a href="grundlagen/supernetting/">Supernetting</a> – mit VLSM-Erklärung für eigene Beispiele. '
+    'news': ['<strong>Neu:</strong> <a href="grundlagen/ethernet-switching/">Ethernet und Switching</a> – MAC-Learning zum Ausprobieren, mit ARP und Windows-Eingabeaufforderung. '
+             'Außerdem <a href="grundlagen/subnetting/">Subnetting und VLSM</a> und <a href="grundlagen/supernetting/">Supernetting</a> – mit VLSM-Erklärung für eigene Beispiele. '
              'Außerdem <a href="routing/statisches-routing/">Statisches Routing</a> – ip route-Befehle zusammenstecken, eintippen und prüfen lassen. '
              'Außerdem <a href="routing/rip/">RIP</a> – welche Netze in die network-Befehle gehören, mit Übungen und Zufallsgenerator. '
              'Außerdem <a href="grundlagen/collision-broadcast-domains/">Collision und Broadcast Domains</a> – Domains im Netzplan einkreisen, mit Zufallsgenerator. '
@@ -33,7 +34,8 @@ AREAS = [
           'text': 'Netze zu einer Route zusammenfassen – binär erklärt, mit Übungen und Zufallsgenerator.'},
          {'slug': 'collision-broadcast-domains', 'title': 'Collision und Broadcast Domains', 'tool': 'collision-broadcast-domains',
           'text': 'Hub, Switch oder Router – wer trennt was? Domains im Netzplan einkreisen, mit 18 Übungen und Zufallsgenerator.'},
-         {'slug': 'ethernet-switching', 'title': 'Ethernet und Switching', 'text': 'MAC-Adressen, Frames und wie ein Switch lernt.'},
+         {'slug': 'ethernet-switching', 'title': 'Ethernet und Switching', 'tool': 'ethernet-switching',
+          'text': 'Ethernet-Frame, MAC-Adressen und MAC-Learning: Frames senden, ARP mitspielen, Switch-Tabellen beobachten – mit Übungen.'},
      ]},
     {'slug': 'switching', 'title': 'Switching', 'text': 'Redundanz ohne Schleifen und logische Trennung im LAN.',
      'topics': [

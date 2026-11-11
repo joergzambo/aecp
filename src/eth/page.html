@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ethernet und Switching</title>
+<style>
+/*BASECSS*/
+.frame2{display:flex;flex-wrap:wrap;margin:8px 0;font:600 13.5px var(--mono)}
+.frame2 button{border:1.5px solid var(--ink);margin-right:-1.5px;padding:10px 10px;background:#fff;cursor:pointer;text-align:center;line-height:1.25;font:600 13.5px var(--mono);color:var(--ink)}
+.frame2 button small{display:block;font:400 11.5px var(--body);color:var(--mute)}
+.frame2 button[aria-pressed="true"]{background:#fff8e1;box-shadow:inset 0 -4px 0 #ffa000}
+.frame2 .dm{background:#e3f2fd}.frame2 .sm{background:#e8f5e9}
+.fexp{background:var(--soft);border-radius:4px;padding:10px 14px;font-size:15.5px;min-height:3em}
+.macbox{font:700 22px var(--mono);margin:8px 0 2px;letter-spacing:1px}
+.macbox .o{color:#7b1fa2}.macbox .n{color:#1565c0}
+.ctrl{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin:10px 0}
+.ctrl select{padding:7px 8px;border:1.5px solid #90a4ae;border-radius:4px;font:500 15px var(--body)}
+.tabs2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px;margin-top:10px}
+pre.mt{background:#1c2b33;color:#e6edf2;border-radius:4px;padding:8px 10px;margin:0;font:12.5px/1.5 var(--mono);overflow-x:auto;min-height:7em}
+pre.mt .new{background:#61a229;color:#fff}
+pre.mt .em{color:#78909c}
+.log{list-style:none;padding:0;margin:10px 0 0;font-size:15px}
+.log li{margin:5px 0;padding:6px 10px;border-radius:4px;background:var(--soft)}
+.log b.f{color:#e65100}.log b.w{color:#2e7d32}.log b.x{color:#c62828}.log b.l{color:#1565c0}
+.ftab{border-collapse:collapse;width:100%;margin-top:10px;font-size:15px}
+.ftab th,.ftab td{border:1px solid #cfd8dc;padding:6px 8px;text-align:left;vertical-align:top}
+.ftab th{background:var(--soft);font:600 14px var(--ui)}
+.ftab td.fr{font-weight:600;white-space:nowrap}
+.ftab td.fr small{display:block;font:400 12px var(--mono);color:var(--mute)}
+.pcs{display:flex;flex-wrap:wrap;gap:5px}
+.pcs button{padding:5px 10px;border-radius:14px;border:1.5px solid #90a4ae;background:#fff;cursor:pointer;font:600 13.5px var(--ui)}
+.pcs button[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.pcs button.right{border-color:var(--ok);box-shadow:0 0 0 2px var(--ok)}
+.pcs button.wrong{border-color:var(--bad);box-shadow:0 0 0 2px var(--bad)}
+.pcs button.missed{border-style:dashed;border-color:var(--ok)}
+.pcs .none{font-size:13px;color:var(--mute);align-self:center}
+.qh{font:600 16px var(--ui);margin:16px 0 2px}
+.fnav{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0}
+.fnav button.fn{min-width:38px;padding:5px 0;border:1.5px solid #90a4ae;background:#fff;border-radius:4px;cursor:pointer;font:600 14px var(--ui);color:var(--ink)}
+.fnav button.fn[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.fnav button.fn.ok{border-color:var(--ok);background:#e3f4e6}.fnav button.fn.no{border-color:var(--bad);background:#fde3e3}
+.fnav button.fn[aria-pressed="true"].ok{background:var(--ok);color:#fff}.fnav button.fn[aria-pressed="true"].no{background:var(--bad);color:#fff}
+.fcur{background:#fff8e1;border-left:4px solid #ffa000;padding:8px 12px;font-size:16px;margin:6px 0}
+.fcur code{font-size:13px}
+svg.eth .ck{cursor:pointer}
+svg.eth .ck:focus{outline:none}svg.eth .ck:focus-visible rect.box{stroke:#61a229;stroke-width:3}
+.solf{margin:8px 0;padding:8px 12px;border-left:4px solid var(--accent);background:var(--soft);font-size:15px}
+.solf ul{margin:4px 0 0;padding-left:18px}
+.play{padding:3px 9px;font-size:13px}
+.seg{display:inline-flex;border:1.5px solid var(--ink);border-radius:4px;overflow:hidden}
+.seg button{border:0;padding:6px 12px;background:#fff;color:var(--ink);cursor:pointer;font:600 13.5px var(--mono)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:#fff}
+.cmdwin{border:1px solid #455a64;border-radius:6px;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,.15);max-width:760px}
+.cmdbar{background:#e8eaed;color:#202124;font:13px 'Segoe UI',Arial,sans-serif;padding:6px 10px;border-bottom:1px solid #cfd8dc}
+.cmdbar span{display:inline-block;background:#0c0c0c;color:#ccc;font:700 10px var(--mono);padding:1px 4px;margin-right:6px;border-radius:2px}
+.cmdwin pre{margin:0;background:#0c0c0c;color:#cccccc;font:13px/1.45 Consolas,'Cascadia Mono',ui-monospace,monospace;padding:10px 12px;overflow-x:auto}
+.cmdwin pre b{color:#fff;font-weight:400}.cmdwin pre .hl{background:#61a229;color:#fff}
+</style>
+</head>
+<body>
+<main class="vmain">
+<h1>Ethernet und Switching</h1>
+<p class="sub">Ein Switch schickt Frames nicht stur an alle Ports wie ein Hub, sondern merkt sich, hinter welchem Port welche MAC-Adresse steckt. Wie er das lernt und was er mit jedem Frame macht, kannst du hier ausprobieren.</p>
+<nav class="jumps" aria-label="Abschnitte"><a href="#frame">Der Ethernet-Frame</a><a href="#lernen">MAC-Learning ausprobieren</a><a href="#regeln">Regelwerk</a><a href="#uebungen">Übungen</a><a href="#generator">🎲 Zufallsgenerator</a></nav>
+
+<h2 class="part" id="frame">Der Ethernet-Frame</h2>
+<div class="card">
+ <p class="hint" style="margin-top:0">Tippe ein Feld an.</p>
+ <div class="frame2" id="fr" role="group" aria-label="Felder des Ethernet-Frames"></div>
+ <div class="fexp" id="frx" aria-live="polite"></div>
+ <h3 style="font:400 20px var(--head);margin:18px 0 4px">Die MAC-Adresse</h3>
+ <div class="macbox"><span class="o">00aa.aa</span><span class="n">aa.aaaa</span></div>
+ <p style="margin:0">48 Bit, geschrieben als 12 Hex-Ziffern. Die <b style="color:#7b1fa2">ersten 24 Bit (OUI)</b> stehen für den Hersteller, die <b style="color:#1565c0">letzten 24 Bit</b> vergibt der Hersteller für jede Netzwerkkarte einzeln.</p>
+ <ul><li>Schreibweisen: Cisco <code>00aa.aaaa.aaaa</code>, Windows <code>00-AA-AA-AA-AA-AA</code>, Linux <code>00:aa:aa:aa:aa:aa</code> – alles dieselbe Adresse.</li>
+ <li><b>Broadcast</b>: <code>ffff.ffff.ffff</code> – an alle im LAN, z. B. ARP-Anfragen.</li>
+ <li>In den Übungen haben die PCs leicht lesbare MACs: PC A = <code>00aa.aaaa.aaaa</code>, PC B = <code>00bb.bbbb.bbbb</code> …</li></ul>
+</div>
+
+<h2 class="part" id="lernen">MAC-Learning ausprobieren</h2>
+<div class="card">
+ <div class="ctrl"><label for="dS"><b>Sender</b></label><select id="dS"></select><label for="dD"><b>Ziel</b></label><select id="dD"></select>
+  <button class="btn" id="dGo" type="button">Frame senden</button><button class="btn ghost" id="dClr" type="button">Tabellen leeren</button>
+  <label style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" id="dArp" checked> ARP mitspielen</label>
+  <label style="display:inline-flex;gap:8px;align-items:center">🐢 <input type="range" id="dSpd" min="1" max="5" step="1" value="2" aria-label="Tempo"> 🐇 <span id="dSpdT" class="hint" style="margin:0"></span></label></div>
+ <div class="ctrl"><b>Schreibweise der MACs</b><span class="seg" role="group" aria-label="Schreibweise"><button type="button" data-nf="cisco" aria-pressed="true">Cisco 00aa.aaaa.aaaa</button><button type="button" data-nf="win" aria-pressed="false">Windows 00-AA-AA-AA-AA-AA</button></span></div>
+ <div id="dSvg"></div>
+ <ul class="log" id="dLog" aria-live="polite"><li>Die MAC-Tabellen sind leer. Schick einen Frame – der Switch lernt aus der <b>Quell</b>-MAC.</li></ul>
+ <div class="tabs2" id="dTabs"></div>
+ <p class="hint">Der Switch zeigt die MAC-Adressen immer in Cisco-Schreibweise – egal, welche Schreibweise oben gewählt ist.</p>
+ <h3 style="font:400 20px var(--head);margin:18px 0 4px">Am PC: die Windows-Eingabeaufforderung</h3>
+ <p class="hint" style="margin-top:0">So findest du die MAC-Adresse eines PCs unter Windows – und mit <code>arp -a</code>, welche MAC-Adressen der PC selbst schon kennt.</p>
+ <div class="ctrl"><label for="dP"><b>Ansicht von</b></label><select id="dP"></select></div>
+ <div class="cmdwin"><div class="cmdbar"><span>C:\</span> Eingabeaufforderung</div><pre id="dCmd"></pre></div>
+ <div class="rules" style="margin-top:12px"><div class="card"><h3>ARP-Tabelle am PC</h3><ul><li>ordnet <b>IP-Adressen → MAC-Adressen</b> zu</li><li>braucht der PC, um überhaupt einen Frame an eine IP adressieren zu können</li><li>gefüllt per ARP: Broadcast „Wer hat 192.168.1.14?“, Antwort per Unicast</li></ul></div>
+ <div class="card"><h3>MAC-Tabelle am Switch</h3><ul><li>ordnet <b>MAC-Adressen → Ports</b> zu</li><li>braucht der Switch, um zu wissen, wohin er einen Frame schickt</li><li>gefüllt durch Mitlesen der Quell-MAC jedes Frames</li></ul></div></div>
+ <p class="hint">Windows schreibt die MAC mit Bindestrichen und Großbuchstaben, Cisco mit Punkten in Vierergruppen – es ist dieselbe Adresse: <code id="dCmp"></code></p>
+</div>
+
+<h2 class="part" id="regeln">Regelwerk</h2>
+<div class="rules">
+ <div class="card"><h3>1. Lernen – aus der Quelle</h3><ul>
+  <li>Kommt ein Frame an Port X an, trägt der Switch die <b>Quell-MAC</b> mit Port X in die MAC-Tabelle ein.</li>
+  <li>Die Ziel-MAC lernt er dabei <b>nicht</b>.</li>
+  <li>Einträge verfallen nach 300 Sekunden ohne Verkehr (Aging).</li></ul></div>
+ <div class="card"><h3>2. Weiterleiten – nach dem Ziel</h3><ul>
+  <li><b style="color:#2e7d32">Ziel bekannt</b> → nur an diesen einen Port (Forwarding).</li>
+  <li><b style="color:#e65100">Ziel unbekannt</b> → an alle Ports außer dem Eingangsport (Flooding).</li>
+  <li><b style="color:#e65100">Broadcast</b> <code>ffff.ffff.ffff</code> → immer an alle außer dem Eingangsport.</li>
+  <li><b style="color:#c62828">Ziel liegt am Eingangsport</b> → verwerfen (Filtering).</li></ul></div>
+ <div class="card"><h3>Mehrere MACs an einem Port</h3><ul>
+  <li>Am Port zum nächsten Switch (Uplink) stehen <b>alle</b> MACs, die dahinter liegen.</li>
+  <li>An einem Port mit Hub ebenso alle PCs am Hub.</li>
+  <li>Ein PC-Port hat dagegen genau eine MAC.</li></ul></div>
+ <div class="card"><h3>Hub oder Switch?</h3><ul>
+  <li>Ein <b>Hub</b> lernt nichts und gibt jedes Signal an alle Ports weiter.</li>
+  <li>Hängen zwei PCs am selben Hub, sieht der eine jeden Frame des anderen.</li>
+  <li>Der Switch dahinter sieht den Frame zwar auch, schickt ihn aber nicht weiter, wenn das Ziel am selben Port hängt.</li></ul>
+  <pre class="cli">show mac address-table
+clear mac address-table dynamic</pre></div>
+</div>
+
+<h2 class="part" id="uebungen">Übungen</h2>
+<p class="sub">Alle MAC-Tabellen sind am Anfang leer. Spiel die Frames der Reihe nach durch: Wo kommt jeder Frame an?</p>
+<div class="pager"><button class="btn ghost" id="pprev" type="button">‹ Zurück</button><div class="pinfo"><b id="pnum"></b><span id="ppart"></span></div><button class="btn" id="pnext" type="button">Weiter ›</button><div class="toc" id="ptoc"></div></div>
+<div id="tasks"></div>
+
+<h2 class="part" id="generator">🎲 Zufallsgenerator</h2>
+<p class="sub">Jede Aufgabe hat eine Nummer. Mit der Nummer bekommt jede Schülerin und jeder Schüler genau dasselbe Netz.</p>
+<div class="genbar"><label for="glvl">Stufe</label><select id="glvl"><option value="L">Leicht (1 Switch)</option><option value="M" selected>Mittel (2 Switches, Broadcast)</option><option value="S">Schwer (3 Switches und ein Hub)</option></select>
+<button class="btn" id="gnew" type="button">Neue Aufgabe</button><label for="gcode">Nummer</label><input id="gcode" size="8" placeholder="M-123" autocomplete="off"><button class="btn ghost" id="gload" type="button">Laden</button><span id="gmsg" class="err"></span></div>
+<div id="gout"></div>
+</main>
+<script>
+/*ETHJS*/
+</script>
+<script>
+(function(){
+'use strict';
+var E=window.ETH,$=function(i){return document.getElementById(i);},reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+/* ---------- Frame-Aufbau ---------- */
+var FIELDS=[['Präambel','8 Byte','','Bitmuster 10101010…, damit sich der Empfänger auf den Takt einstellt. Wird beim Mitschneiden meist nicht angezeigt.'],
+ ['Ziel-MAC','6 Byte','dm','<b>An wen?</b> Nach dieser Adresse entscheidet der Switch, wohin der Frame geht. Sie steht als Erstes, damit der Switch sofort loslegen kann.'],
+ ['Quell-MAC','6 Byte','sm','<b>Von wem?</b> Aus dieser Adresse <b>lernt</b> der Switch: Er merkt sich, an welchem Port dieser Absender hängt.'],
+ ['802.1Q-Tag','4 Byte','','Nur auf Trunks: enthält die VLAN-Nummer. Auf Access-Ports fehlt er.'],
+ ['Typ','2 Byte','','Was steckt drin? 0x0800 = IPv4, 0x86DD = IPv6, 0x0806 = ARP.'],
+ ['Daten','46–1500 Byte','','Die Nutzlast, meist ein IP-Paket. Zu kurze Daten werden auf 46 Byte aufgefüllt.'],
+ ['FCS','4 Byte','','Frame Check Sequence: eine Prüfsumme (CRC). Stimmt sie nicht, wird der Frame verworfen.']],fsel=1;
+function fshow(){$('fr').innerHTML=FIELDS.map(function(f,i){return'<button type="button" class="'+f[2]+'" data-fi="'+i+'" aria-pressed="'+(i===fsel)+'">'+f[0]+'<small>'+f[1]+'</small></button>';}).join('');$('frx').innerHTML='<b>'+FIELDS[fsel][0]+'</b> ('+FIELDS[fsel][1]+'): '+FIELDS[fsel][3];}
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-fi]');if(b){fsel=+b.dataset.fi;fshow();}});fshow();
+
+/* ---------- Animation ---------- */
+var SPD={1:[2600,1800,'sehr langsam'],2:[1500,1100,'langsam'],3:[900,700,'mittel'],4:[550,450,'schnell'],5:[300,250,'sehr schnell']};
+function hopMs(){var e=document.getElementById('dSpd');return SPD[e?+e.value:2][0];}
+function gapMs(){var e=document.getElementById('dSpd');return SPD[e?+e.value:2][1];}
+function animate(svgHost,T,res,done){
+  var svg=svgHost.querySelector('svg'),g=svg.querySelector('.pk'),col=res.dstMac===E.BC?'#e65100':'#1565c0',levels={};
+  res.hops.forEach(function(h){(levels[h.depth]=levels[h.depth]||[]).push(h);});
+  var keys=Object.keys(levels).map(Number).sort(function(a,b){return a-b;}),i=0;
+  g.innerHTML='';
+  if(reduce){res.hops.forEach(function(h){var B=T.dev[h.to];g.insertAdjacentHTML('beforeend','<circle cx="'+B.x+'" cy="'+B.y+'" r="8" fill="'+col+'"/>');});if(done)done();return;}
+  (function step(){
+    if(i>=keys.length){setTimeout(function(){g.innerHTML='';if(done)done();},Math.min(350,gapMs()));return;}
+    var hs=levels[keys[i++]],t0=null,dots=hs.map(function(){var c=document.createElementNS('http://www.w3.org/2000/svg','g');c.innerHTML='<rect x="-11" y="-8" width="22" height="16" rx="2" fill="'+col+'"/><path d="M-11 -8l11 9 11 -9" fill="none" stroke="#fff" stroke-width="1.6"/>';g.appendChild(c);return c;});
+    function f(ts){if(t0===null)t0=ts;var k=Math.min(1,(ts-t0)/hopMs());hs.forEach(function(h,j){var A=T.dev[h.from],B=T.dev[h.to];dots[j].setAttribute('transform','translate('+(A.x+(B.x-A.x)*k)+' '+(A.y+(B.y-A.y)*k)+')');});
+      if(k<1)requestAnimationFrame(f);else{dots.forEach(function(d){d.remove();});step();}}
+    requestAnimationFrame(f);})();
+}
+function actTxt(T,a,dst){var sw=T.dev[a.sw].name,L=a.learn,nm=E.nameOfMac(T,L.mac);
+  var l='<b class="l">'+sw+' lernt</b> '+nm+' ('+L.mac+') an '+L.port+(L.isNew?'':' – stand schon drin');
+  var x=a.act==='bcast'?'<b class="f">Broadcast → flutet</b> an '+a.out.join(', '):a.act==='flood'?'<b class="f">Ziel '+E.nameOfMac(T,dst)+' unbekannt → flutet</b> an '+(a.out.join(', ')||'– (kein weiterer Port)'):a.act==='forward'?'<b class="w">Ziel bekannt → nur an</b> '+a.out[0]:'<b class="x">Ziel liegt am Eingangsport '+a.inPort+' → verwirft</b> (Filtering)';
+  return l+'. '+x+'.';}
+function tablesHTML(T,tables,hlMacs){return T.dev.filter(function(d){return d.t==='sw';}).map(function(sw){var t=E.tableTxt(T,sw.id,tables[sw.id],hlMacs&&hlMacs[sw.id]);
+  return'<pre class="mt">'+esc(t.head)+(t.empty?'<span class="em">   (leer)</span>':t.rows.map(function(r){return r.hl?'<span class="new">'+esc(r.txt)+'</span>':esc(r.txt);}).join('\n'))+'</pre>';}).join('');}
+
+/* ---------- Demo ---------- */
+var D=E.demo(),dTab={},busy=false,NF='cisco',ARP={},IPS={};
+E.pcs(D).forEach(function(p){IPS[p.id]='192.168.1.'+(10+'ABCDE'.indexOf(p.name.slice(-1))+1);});
+function fm(m){return NF==='win'&&m!==E.BC?E.winMac(m):NF==='win'?'FF-FF-FF-FF-FF-FF':m;}
+(function(){var P=E.pcs(D);$('dS').innerHTML=P.map(function(p){return'<option value="'+p.id+'">'+p.name+'</option>';}).join('');
+  $('dD').innerHTML=P.map(function(p){return'<option value="'+p.mac+'">'+p.name+' ('+p.mac+')</option>';}).join('')+'<option value="'+E.BC+'">Broadcast (ffff.ffff.ffff)</option>';$('dD').selectedIndex=3;})();
+function dRender(hl){$('dSvg').innerHTML=E.draw(D,{mark:hl,win:NF==='win',ips:IPS});$('dTabs').innerHTML=tablesHTML(D,dTab,dHl);cmd();}
+function cmd(){var pid=+$('dP').value,p=D.dev[pid],n=p.name.slice(-1),ip=IPS[pid],w=E.winMac(p.mac),u='C:\\Users\\PC-'+n+'>';
+  var ent=Object.keys(ARP[pid]||{}).map(Number).sort(function(a,b){return a-b;});
+  var arp=esc(u)+'<b>arp -a</b>\n\nSchnittstelle: '+ip+' --- 0x7\n  Internetadresse       Physische Adresse     Typ\n'+
+    ent.map(function(q){return'  <span class="hl">'+(IPS[q]+'                ').slice(0,22)+E.winMac(D.dev[q].mac).toLowerCase()+'     dynamisch</span>';}).join('\n')+(ent.length?'\n':'')+
+    '  192.168.1.255         ff-ff-ff-ff-ff-ff     statisch\n  224.0.0.22            01-00-5e-00-00-16     statisch\n  255.255.255.255       ff-ff-ff-ff-ff-ff     statisch\n';
+  $('dCmd').innerHTML=esc(u)+'<b>ipconfig /all</b>\n\nEthernet-Adapter Ethernet:\n\n   Beschreibung. . . . . . . . . . . : Intel(R) Ethernet Connection\n   Physische Adresse . . . . . . . . : <span class="hl">'+w+'</span>\n   DHCP aktiviert. . . . . . . . . . : Nein\n   IPv4-Adresse  . . . . . . . . . . : '+ip+'(Bevorzugt)\n   Subnetzmaske  . . . . . . . . . . : 255.255.255.0\n\n'+
+    esc(u)+'<b>getmac</b>\n\nPhysische Adresse    Transportname\n=================== ==========================================================\n'+w+'   \\Device\\Tcpip_{7A1E2C44-91B3-4F0D-A2C6-3D5B8E0F1A2B}\n\n'+arp+'\n'+esc(u)+
+    (ent.length?'':'\n\n<span style="color:#78909c">(Noch keine dynamischen Einträge – '+p.name+' hat noch mit niemandem gesprochen.)</span>');
+  $('dCmp').textContent=w+'  =  '+p.mac;}
+$('dP').innerHTML=E.pcs(D).map(function(p){return'<option value="'+p.id+'">'+p.name+' ('+IPS[p.id]+')</option>';}).join('');
+$('dP').addEventListener('change',cmd);
+$('dS').addEventListener('change',function(){$('dP').value=$('dS').value;cmd();});
+
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-nf]');if(!b)return;NF=b.dataset.nf;document.querySelectorAll('[data-nf]').forEach(function(x){x.setAttribute('aria-pressed',x===b);});
+  var P=E.pcs(D),sel=$('dD').selectedIndex;$('dD').innerHTML=P.map(function(p){return'<option value="'+p.mac+'">'+p.name+' ('+fm(p.mac)+')</option>';}).join('')+'<option value="'+E.BC+'">Broadcast ('+fm(E.BC)+')</option>';$('dD').selectedIndex=sel;dRender();});
+var dHl={};
+function frameLog(res,label){var s=res.src,d=res.dstMac;
+  return'<li><b>'+label+': '+D.dev[s].name+' → '+E.nameOfMac(D,d)+'</b> (Quelle '+fm(D.dev[s].mac)+', Ziel '+fm(d)+')<ul style="margin:4px 0 0;padding-left:18px">'+res.acts.map(function(a){return'<li>'+actTxt(D,a,d).replace(/[0-9a-f]{4}\.[0-9a-f]{4}\.[0-9a-f]{4}/g,fm)+'</li>';}).join('')+
+   '<li>Angekommen bei: <b>'+(res.reached.map(function(i){return D.dev[i].name;}).join(', ')||'niemandem')+'</b>'+(res.dst>=0&&res.reached.length>1?' – die anderen werfen ihn weg, er ist nicht an sie adressiert.':'')+'</li></ul></li>';}
+$('dGo').onclick=function(){if(busy)return;var s=+$('dS').value,d=$('dD').value,dst=E.pcs(D).filter(function(p){return p.mac===d;})[0];
+  if(D.dev[s].mac===d){$('dLog').innerHTML='<li>Ein PC schickt sich nicht selbst einen Frame – wähl ein anderes Ziel.</li>';return;}
+  var seq=[];
+  if(dst&&$('dArp').checked&&!(ARP[s]&&ARP[s][dst.id])){
+    seq.push({src:s,dst:E.BC,label:'ARP-Anfrage',pre:'<li>'+D.dev[s].name+' kennt die MAC von '+IPS[dst.id]+' noch nicht (nicht in <code>arp -a</code>) → fragt per <b>Broadcast</b>: „Wer hat '+IPS[dst.id]+'?“</li>',after:function(){(ARP[dst.id]=ARP[dst.id]||{})[s]=1;}});
+    seq.push({src:dst.id,dst:D.dev[s].mac,label:'ARP-Antwort',pre:'<li>'+dst.name+' antwortet per <b>Unicast</b>: „'+IPS[dst.id]+' ist '+fm(dst.mac)+'.“</li>',after:function(){(ARP[s]=ARP[s]||{})[dst.id]=1;}});
+  }
+  seq.push({src:s,dst:d,label:'Daten',pre:seq.length?'<li>Jetzt kennt '+D.dev[s].name+' die Ziel-MAC und schickt die eigentlichen Daten.</li>':''});
+  busy=true;$('dLog').innerHTML='';$('dP').value=s;var k=0;
+  (function next(){if(k>=seq.length){busy=false;return;}var q=seq[k++],res=E.send(D,dTab,q.src,q.dst);dHl={};res.acts.forEach(function(a){if(a.learn.isNew)dHl[a.sw]=a.learn.mac;});
+    var mk={};mk[q.src]='#1565c0';dRender(mk);$('dLog').insertAdjacentHTML('beforeend',q.pre+frameLog(res,q.label));
+    animate($('dSvg'),D,res,function(){if(q.after)q.after();var m={};m[q.src]='#1565c0';res.reached.forEach(function(i){m[i]=i===res.dst?'#2e7d32':'#ef6c00';});dRender(m);setTimeout(next,reduce?0:gapMs());});})();
+};
+$('dClr').onclick=function(){dTab={};dHl={};ARP={};dRender();$('dLog').innerHTML='<li>Tabellen geleert – am Switch <code>clear mac address-table dynamic</code>, an den PCs <code>arp -d *</code>.</li>';};
+dRender();
+function spdT(){$('dSpdT').textContent=SPD[+$('dSpd').value][2];}$('dSpd').addEventListener('input',spdT);spdT();
+
+/* ---------- Aufgaben ---------- */
+var cache={};
+function taskOf(card){var c=card.dataset.code;if(!cache[c]){var m=c.split('-');cache[c]=E.makeTask(+m[1],m[0]);}return cache[c];}
+function taskHTML(T,id,label){
+  var P=E.pcs(T),ask=T.dev[T.ask],ports=E.portsOf(T,T.ask);
+  return'<div class="card task" id="'+id+'" data-code="'+T.code+'"><h3>'+label+' <span class="tag">'+E.LVNAME[T.level]+'</span><span class="tag">Nr. '+T.code+'</span></h3>'+
+   '<p class="qh">Wo kommt jeder Frame an? Spiel die Frames der Reihe nach durch und hake im Plan alle PCs an, die ihn erhalten.</p>'+
+   '<div class="fnav"><b style="font:600 14px var(--ui)">Frame</b>'+T.frames.map(function(f,i){return'<button type="button" class="fn" data-fn="'+i+'" aria-pressed="'+(i===0)+'">'+(i+1)+'</button>';}).join('')+'</div>'+
+   '<div class="fcur" aria-live="polite"></div><div class="board">'+E.draw(T)+'</div>'+
+   '<div class="acts"><button class="btn" type="button" data-act="check">Prüfen</button><button class="btn ghost" type="button" data-act="sol">Lösung anzeigen</button><span class="fb" aria-live="polite"></span></div><div class="sol"></div></div>';
+}
+/* Frage 1: Frame für Frame, PCs direkt im Plan anhaken */
+var FST={};
+function fst(card){return FST[card.id]=FST[card.id]||{cur:0,ans:{},ok:{},checked:false};}
+function toggle(ck){var card=ck.closest('.task'),s=fst(card),id=+ck.dataset.pc,a=s.ans[s.cur]=s.ans[s.cur]||{};if(a[id])delete a[id];else a[id]=1;delete s.ok[s.cur];fdraw(card);}
+function fdraw(card){
+  var T=taskOf(card),s=fst(card),f=T.frames[s.cur],src=T.dev[f[0]],a=s.ans[s.cur]||{},want=T.sim.steps[s.cur].reached,show=s.checked&&s.ok[s.cur]!==undefined;
+  card.querySelector('.fcur').innerHTML='<b>Frame '+(s.cur+1)+' von '+T.frames.length+':</b> '+src.name+' → '+E.nameOfMac(T,f[1])+' &nbsp;<code>'+src.mac+' → '+f[1]+'</code>'+(s.cur>0?'<br><small class="hint" style="margin:0">Die Switches haben aus den Frames davor schon gelernt.</small>':'');
+  card.querySelectorAll('[data-fn]').forEach(function(b,i){b.setAttribute('aria-pressed',i===s.cur);b.classList.remove('ok','no');if(s.ok[i]!==undefined)b.classList.add(s.ok[i]?'ok':'no');});
+  var board=card.querySelector('.board'),mk={};mk[src.id]='#1565c0';board.innerHTML=E.draw(T,{mark:mk});
+  var svg=board.querySelector('svg'),h='';
+  E.pcs(T).forEach(function(p){
+    if(p.id===src.id){h+='<text x="'+(p.x+24)+'" y="'+(p.y-10)+'" font-size="12" font-weight="700" fill="#1565c0" font-family="Open Sans,Arial,sans-serif" stroke="#fff" stroke-width="3" paint-order="stroke">Sender</text>';return;}
+    var on=!!a[p.id],w=want.indexOf(p.id)>=0,col=show?(on&&w?'#2e7d32':on?'#c62828':w?'#2e7d32':'#90a4ae'):(on?'#1c2b33':'#90a4ae');
+    h+='<g class="ck" data-pc="'+p.id+'" tabindex="0" role="checkbox" aria-checked="'+on+'" aria-label="'+p.name+' erhält den Frame"><rect x="'+(p.x-30)+'" y="'+(p.y-26)+'" width="60" height="48" fill="transparent"/>'+
+      '<rect class="box" x="'+(p.x+20)+'" y="'+(p.y-24)+'" width="20" height="20" rx="3" fill="'+(on?col:'#fff')+'" stroke="'+col+'" stroke-width="2"'+(show&&!on&&w?' stroke-dasharray="4 3"':'')+'/>'+
+      (on?'<path d="M'+(p.x+24)+' '+(p.y-14)+'l4 4 8-9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>':'')+
+      (show&&on&&!w?'<text x="'+(p.x+46)+'" y="'+(p.y-9)+'" font-size="15" font-weight="700" fill="#c62828">✕</text>':'')+'</g>';
+  });
+  svg.insertAdjacentHTML('beforeend',h);
+}
+document.addEventListener('keydown',function(e){var ck=e.target.closest&&e.target.closest('svg.eth .ck');if(ck&&(e.key===' '||e.key==='Enter')){e.preventDefault();var id=ck.dataset.pc,card=ck.closest('.task');toggle(ck);var n=card.querySelector('.ck[data-pc="'+id+'"]');if(n)n.focus();}});
+function check(card){
+  var T=taskOf(card),S=T.sim,ok=0,tot=0;
+  var st=fst(card);st.checked=true;
+  T.frames.forEach(function(f,i){var want=S.steps[i].reached,got=st.ans[i]||{},rowOk=E.pcs(T).every(function(p){return p.id===f[0]||(!!got[p.id])===(want.indexOf(p.id)>=0);});st.ok[i]=rowOk;tot++;if(rowOk)ok++;});
+  fdraw(card);
+  var fb=card.querySelector('.fb'),all=ok===tot;fb.className='fb '+(all?'good':'bad');
+  fb.textContent=all?'Alles richtig! ✓':ok+' von '+tot+' Frames richtig. Im Plan: grün = richtig angehakt, rot = kommt dort nicht an, gestrichelt = kommt dort auch noch an.';
+  if(all)card.dataset.solved='1';markToc();
+}
+function solHTML(T){
+  var S=T.sim;
+  return'<h3 style="font:400 20px var(--head);margin:0">Lösung</h3><p class="hint" style="margin-top:0">Mit ▶ wird der Frame im Plan abgespielt.</p><div class="solsvg">'+E.draw(T)+'</div>'+
+   S.steps.map(function(s,i){var src=T.dev[s.src];return'<div class="solf"><b>'+(i+1)+'. '+src.name+' → '+E.nameOfMac(T,s.dstMac)+'</b> <button class="btn ghost play" type="button" data-play="'+i+'">▶</button><ul>'+s.acts.map(function(a){return'<li>'+actTxt(T,a,s.dstMac)+'</li>';}).join('')+'<li>Kommt an bei: <b>'+(s.reached.map(function(x){return T.dev[x].name;}).join(', ')||'niemandem')+'</b></li></ul></div>';}).join('')+
+   '<p class="qh">MAC-Tabellen am Ende</p><div class="tabs2">'+tablesHTML(T,S.tables)+'</div>';
+}
+document.addEventListener('click',function(e){
+  var fnb=e.target.closest&&e.target.closest('[data-fn]');if(fnb){var c0=fnb.closest('.task');fst(c0).cur=+fnb.dataset.fn;fdraw(c0);return;}
+  var ck=e.target.closest&&e.target.closest('svg.eth .ck');if(ck){toggle(ck);return;}
+  var pl=e.target.closest&&e.target.closest('[data-play]');if(pl){var c=pl.closest('.task'),T=taskOf(c),i=+pl.dataset.play,s=T.sim.steps[i],host=c.querySelector('.solsvg');var m={};m[s.src]='#1565c0';host.innerHTML=E.draw(T,{mark:m});
+    animate(host,T,s,function(){var mm={};mm[s.src]='#1565c0';s.reached.forEach(function(x){mm[x]=x===s.dst?'#2e7d32':'#ef6c00';});host.innerHTML=E.draw(T,{mark:mm});});return;}
+  var t=e.target.closest&&e.target.closest('[data-act]');if(!t)return;var card=t.closest('.task');if(!card)return;
+  if(t.dataset.act==='check')check(card);
+  if(t.dataset.act==='sol'){var so=card.querySelector('.sol');if(!so.innerHTML)so.innerHTML=solHTML(taskOf(card));var o=so.classList.toggle('open');t.textContent=o?'Lösung ausblenden':'Lösung anzeigen';}
+});
+
+/* ---------- Blättern ---------- */
+var list=['L-1','L-2','L-3','L-4','M-1','M-2','M-3','M-4','S-1','S-2','S-3','S-4'];
+var host=$('tasks'),cur=0;
+list.forEach(function(code,i){var m=code.split('-'),T=E.makeTask(+m[1],m[0]);cache[code]=T;var d=document.createElement('div');d.className='page';d.hidden=i!==0;
+  d.innerHTML=taskHTML(T,'t'+(i+1),'Aufgabe '+(i+1))+'<div class="navrow">'+(i>0?'<button class="btn ghost" type="button" data-go="'+(i-1)+'">‹ Aufgabe '+i+'</button>':'<span></span>')+(i<list.length-1?'<button class="btn" type="button" data-go="'+(i+1)+'">Aufgabe '+(i+2)+' ›</button>':'<a class="btn" href="#generator" style="text-decoration:none">🎲 Weiter mit dem Zufallsgenerator</a>')+'</div>';host.appendChild(d);});
+var pages=[].slice.call(host.children);
+pages.forEach(function(p){fdraw(p.querySelector('.task'));});
+list.forEach(function(c,i){var b=document.createElement('button');b.type='button';b.textContent=i+1;b.dataset.go=i;$('ptoc').appendChild(b);});
+function markToc(){[].forEach.call($('ptoc').children,function(b,i){b.classList.toggle('on',i===cur);b.classList.toggle('ok',pages[i].querySelector('.task').dataset.solved==='1');});}
+function show(i,scroll){i=Math.max(0,Math.min(pages.length-1,i));cur=i;pages.forEach(function(p,j){p.hidden=j!==i;});$('pnum').textContent='Aufgabe '+(i+1)+' von '+pages.length;$('ppart').textContent=E.LVNAME[list[i][0]];$('pprev').disabled=i===0;$('pnext').disabled=i===pages.length-1;markToc();if(scroll){var top=$('uebungen').getBoundingClientRect().top+window.pageYOffset;if(window.pageYOffset>top)window.scrollTo({top:top,behavior:reduce?'auto':'smooth'});}}
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-go]');if(b)show(+b.dataset.go,true);});
+$('pprev').onclick=function(){show(cur-1,true);};$('pnext').onclick=function(){show(cur+1,true);};show(0,false);
+
+/* ---------- Generator ---------- */
+function gen(lvl,seed){var T=E.makeTask(seed,lvl);if(!T){$('gmsg').textContent='Zu dieser Nummer gibt es keine Aufgabe.';return;}$('gmsg').textContent='';cache[T.code]=T;delete FST['g'+T.code];$('gout').innerHTML=taskHTML(T,'g'+T.code,'Aufgabe '+T.code);fdraw($('g'+T.code));$('gcode').value=T.code;$('glvl').value=lvl;}
+$('gnew').onclick=function(){gen($('glvl').value,1+Math.floor(Math.random()*99999));};
+function load(){var m=/^\s*([LMS])\s*-?\s*(\d{1,6})\s*$/i.exec($('gcode').value);if(!m){$('gmsg').textContent='Bitte eine Nummer wie L-12, M-305 oder S-4711 eingeben.';return;}gen(m[1].toUpperCase(),+m[2]);}
+$('gload').onclick=load;$('gcode').addEventListener('keydown',function(e){if(e.key==='Enter')load();});
+gen('M',1+Math.floor(Math.random()*99999));
+})();
+</script>
+</body>
+</html>
