@@ -1,4 +1,4 @@
-"""Baut die statische AECP-Seite (nwt.joergzambo.com) nach ./site.
+"""Baut die statische NWT-Seite (nwt.joergzambo.com) nach ./site.
 
 Aufbau:
   content.py   – Themenbereiche und Themen (hier neue Themen eintragen)
@@ -34,8 +34,8 @@ def head(title, depth, desc):
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{full}</title>
 <meta name="description" content="{esc(desc)}">
-<link rel="icon" type="image/png" sizes="512x512" href="{r}assets/img/aecp-emblem-512.png">
-<link rel="apple-touch-icon" href="{r}assets/img/aecp-emblem-180.png">
+<link rel="icon" type="image/png" sizes="512x512" href="{r}assets/img/nwt-512.png">
+<link rel="apple-touch-icon" href="{r}assets/img/nwt-180.png">
 <link rel="stylesheet" href="{r}assets/aecp.css">
 </head>
 '''
@@ -48,7 +48,7 @@ def header(depth, active=''):
         for a in AREAS)
     return f'''<header class="aecp-header">
  <div class="aecp-wrap aecp-header-in">
-  <a class="aecp-brand" href="{r}"><img src="{r}assets/img/aecp-emblem.png" alt="" width="68" height="48"><span>{esc(SITE["name"])}</span></a>
+  <a class="aecp-brand" href="{r}"><img src="{r}assets/img/nwt-mark.png" alt="" width="48" height="48"><span>{esc(SITE["name"])}</span></a>
   <input type="checkbox" id="aecp-menu" class="aecp-menu-toggle"><label for="aecp-menu" class="aecp-menu-btn" aria-label="Menü öffnen">Menü</label>
   <nav class="aecp-nav" aria-label="Hauptmenü">{links}</nav>
  </div>
@@ -104,7 +104,7 @@ def build_tool(area, topic, depth):
     r = rel(depth)
     src = re.sub(r'<title>.*?</title>', f'<title>{esc(topic["title"])} – {esc(SITE["name"])}</title>', src, count=1, flags=re.S)
     src = src.replace('</head>', f'''<meta name="description" content="{esc(topic["text"])}">
-<link rel="icon" type="image/png" sizes="512x512" href="{r}assets/img/aecp-emblem-512.png">
+<link rel="icon" type="image/png" sizes="512x512" href="{r}assets/img/nwt-512.png">
 <link rel="stylesheet" href="{r}assets/aecp.css">
 <style>
 /* Schriften der Plattform auch im Tool */
@@ -132,7 +132,7 @@ def build():
     areas = ''.join(area_card(a, 0) for a in AREAS)
     news = ''.join(f'<p class="aecp-center">{n}</p>' for n in SITE['news'])
     write('index.html', page(SITE['name'], 0, SITE['description'], f'''<section class="aecp-hero aecp-wrap">
- <img class="aecp-logo" src="assets/img/aecp-logo.png" width="710" height="762" alt="AECP – Analyze, Explain, Configure, Practice">
+ <h1 class="nwt-title">NWT</h1>
  <p class="aecp-tagline">Netzwerktechnik lernen</p>
  <hr class="aecp-divider">
  <p class="aecp-center aecp-lead">{SITE["intro"]}</p>

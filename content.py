@@ -1,16 +1,15 @@
-"""Inhalte der AECP-Plattform.
+"""Inhalte der NWT-Plattform (nwt.joergzambo.com).
 
 Neues Thema online stellen: fertige Seite als tools/<name>.html ablegen
 und beim Thema "tool": "<name>" eintragen. Themen ohne "tool" erscheinen als „in Vorbereitung“.
 """
 
 SITE = {
-    'name': 'AECP',
+    'name': 'NWT',
     'domain': 'nwt.joergzambo.com',
-    'claim': 'Analyze · Explain · Configure · Practice',
-    'description': 'AECP – Netzwerktechnik lernen mit Animationen, Erklärungen und Übungen: Switching, Routing, IP-Services und Netzwerksicherheit.',
-    'intro': '<strong>Analyze</strong> – Topologien durchschauen. <strong>Explain</strong> – verstehen, warum das Netz so entscheidet. '
-             '<strong>Configure</strong> – selbst Hand anlegen. <strong>Practice</strong> – üben, bis es sitzt. '
+    'claim': 'Netzwerktechnik lernen',
+    'description': 'NWT – Netzwerktechnik lernen mit Animationen, Erklärungen und Übungen: Switching, Routing, IP-Services und Netzwerksicherheit.',
+    'intro': 'Topologien durchschauen, verstehen, warum das Netz so entscheidet, selbst konfigurieren – und üben, bis es sitzt. '
              'Vom OSI-Modell bis zu Angriffen im LAN, mit Animationen, Lösungen zum Aufklappen und Zufallsgenerator.',
     'news': ['<strong>Neu:</strong> <a href="ip-services/dhcp/">DHCP und ip helper-address</a> – DORA-Ablauf als Animation und Übungen zum DHCP-Relay. '
              'Außerdem <a href="grundlagen/ethernet-switching/">Ethernet und Switching</a> – MAC-Learning zum Ausprobieren, mit ARP und Windows-Eingabeaufforderung. '

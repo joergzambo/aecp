@@ -1,4 +1,4 @@
-# AECP – Analyze · Explain · Configure · Practice
+# NWT – Analyze · Explain · Configure · Practice
 
 Lernplattform Netzwerktechnik für **nwt.joergzambo.com** – eine ganz normale statische Website
 (nur HTML, CSS und JavaScript; kein WordPress, kein PHP, keine Datenbank).
@@ -28,7 +28,7 @@ Jeder Push auf `main` baut die Seite (`build.py`) und veröffentlicht sie auf **
 
 Einmalig einrichten:
 
-1. Repo öffentlich auf GitHub anlegen (z. B. `joergzambo/aecp`) und diesen Inhalt pushen.
+1. Repo öffentlich auf GitHub anlegen (z. B. `joergzambo/nwt`) und diesen Inhalt pushen.
 2. *Settings → Pages → Build and deployment → Source:* **GitHub Actions**.
 3. *Settings → Pages → Custom domain:* `nwt.joergzambo.com` eintragen und speichern.
 4. DNS bei hosting.de (Zone joergzambo.com): **CNAME** `nwt` → `joergzambo.github.io`
