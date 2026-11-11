@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title><!--ST-->Statisches Routing<!--/ST--><!--RIP-->RIP<!--/RIP--></title>
+<style>
+/*BASECSS*/
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 10px}
+.tabs button{padding:8px 14px;border-radius:4px;border:1.5px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer}
+.tabs button[aria-pressed="true"]{background:var(--ink);color:#fff}
+.tabs button.done::after{content:" ✓";color:#7cb342}
+.sub2{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px;align-items:center}
+.sub2 button{padding:5px 11px;border-radius:4px;border:1.5px solid #90a4ae;background:#fff;color:var(--ink);cursor:pointer;font-size:14px}
+.sub2 button[aria-pressed="true"]{border-color:var(--ink);background:var(--soft);box-shadow:inset 0 0 0 1px var(--ink)}
+.qtext{font-size:15.5px;margin:4px 0 8px}
+textarea.cli{width:100%;min-height:170px;background:#1c2b33;color:#e6edf2;border:0;border-radius:4px;padding:10px 12px;font:14px/1.55 var(--mono);resize:vertical}
+textarea.cli::placeholder{color:#78909c}
+.lines{list-style:none;padding:0;margin:10px 0 0;font-size:14.5px}
+.lines li{margin:5px 0;padding:6px 10px;border-radius:4px;background:var(--soft)}
+.lines li.ok{background:#e3f4e6}.lines li.no{background:#fde3e3}
+.lines code{font-weight:700}
+.lines small{display:block;color:#37474f;margin-top:2px}
+.todo{margin:8px 0 0;font-weight:600;color:var(--bad)}
+.kit{border-collapse:collapse;font-size:14.5px;width:100%}
+.kit th,.kit td{border:1px solid #cfd8dc;padding:5px 8px;text-align:left}
+.kit th{background:var(--soft)}
+.kit td.n{font-family:var(--mono);white-space:nowrap}
+.kit select{font:500 14px var(--body);padding:3px 4px;max-width:100%}
+.kit tr.ok td{background:#e3f4e6}.kit tr.no td{background:#fde3e3}
+.kit td.m{font-size:13px;color:#37474f}
+.preview{margin-top:8px}
+.tip{background:#fff8e1;border-left:4px solid #ffa000;padding:8px 12px;margin:10px 0;font-size:15px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13.5px;color:var(--mute);margin:6px 0 0}
+.legend i{display:inline-block;width:26px;height:3px;vertical-align:middle;margin-right:6px}
+.cmd{font:600 18px/1.6 var(--mono);background:#1c2b33;color:#fff;border-radius:4px;padding:10px 14px;margin:10px 0;overflow-x:auto;white-space:nowrap}
+.cmd .c1{color:#90caf9}.cmd .c2{color:#ce93d8}.cmd .c3{color:#ffb74d}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.chips button{padding:5px 10px;border-radius:14px;border:1.5px solid #90a4ae;background:#fff;cursor:pointer;font:600 13.5px var(--mono)}
+.chips button[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.chips .dir{border-style:dashed;color:var(--mute);cursor:default}
+.demoex{font-size:15.5px}
+.demoex b.c1{color:#1565c0}.demoex b.c2{color:#7b1fa2}.demoex b.c3{color:#e65100}
+.rtab{border-collapse:collapse;font-size:14px;margin:8px 0;width:100%}
+.rtab th,.rtab td{border:1px solid #cfd8dc;padding:5px 8px;text-align:left}
+.rtab th{background:var(--soft)}
+.rtab td{font-family:var(--mono);font-size:13.5px}
+.rtab tr[data-r]{cursor:pointer}.rtab tr[data-r]:hover td{background:#f1f8e9}.rtab tr.sel td{background:#e3f4e6}
+.rtab td.w{font-family:var(--body)}
+.cls{border-collapse:collapse;font-size:14.5px;margin:6px 0}
+.cls th,.cls td{border:1px solid #cfd8dc;padding:4px 10px;text-align:left}
+.cls th{background:var(--soft)}
+</style>
+</head>
+<body>
+<main class="vmain">
+<!--ST--><h1>Statisches Routing</h1>
+<p class="sub">Ein Router kennt von Haus aus nur die Netze, an denen er selbst hängt. Für alle anderen braucht er eine Route – beim statischen Routing trägst du sie von Hand mit <code>ip route</code> ein. Die zwei Fragen, um die sich alles dreht: <b>Welche Netze?</b> und <b>Welcher Next Hop?</b></p><!--/ST-->
+<!--RIP--><h1>RIP</h1>
+<p class="sub">Mit RIP (Routing Information Protocol) lernen Router die fremden Netze automatisch von ihren Nachbarn. Du musst nur sagen, welche <b>eigenen</b> Netze ein Router bekannt geben soll – und genau da liegt der Knackpunkt: <b>Welche Netze kommen in die network-Befehle?</b></p><!--/RIP-->
+<nav class="jumps" aria-label="Abschnitte"><a href="#erklaert"><!--ST-->So findest du Netz und Next Hop<!--/ST--><!--RIP-->So findest du die network-Befehle<!--/RIP--></a><a href="#regeln">Regelwerk</a><a href="#uebungen">Übungen</a><a href="#generator">🎲 Zufallsgenerator</a></nav>
+
+<h2 class="part" id="erklaert"><!--ST-->So findest du Netz und Next Hop<!--/ST--><!--RIP-->So findest du die network-Befehle<!--/RIP--></h2>
+<div class="card">
+ <div class="sub2" id="dR" role="group" aria-label="Router wählen"></div>
+ <div id="dSvg"></div>
+ <div class="legend"><span><i style="background:#1c2b33"></i>GigabitEthernet (schnell)</span><span><i style="background:#d32f2f"></i>Serial ⚡ (langsam)</span><span><b style="color:#1565c0">.1</b> = Hostteil der IP – zusammen mit dem Netz darüber ergibt sich die volle IP</span></div>
+ <div class="demoex" id="dTxt" aria-live="polite"></div>
+</div>
+
+<h2 class="part" id="regeln">Regelwerk</h2>
+<div class="rules">
+<!--ST--> <div class="card"><h3>Der Befehl</h3>
+  <div class="cmd" style="font-size:15px">ip route <span class="c1">192.168.3.0</span> <span class="c2">255.255.255.0</span> <span class="c3">10.0.0.2</span></div>
+  <ul><li><b style="color:#1565c0">Zielnetz</b> – die <b>Netzadresse</b> eines Netzes, das der Router <b>nicht</b> direkt kennt</li>
+  <li><b style="color:#7b1fa2">Maske</b> – ausgeschrieben, passend zum Zielnetz (/24 = 255.255.255.0, /30 = 255.255.255.252)</li>
+  <li><b style="color:#e65100">Next Hop</b> – die IP des <b>Nachbarrouters</b> auf dem gemeinsamen Kabel. Nie die eigene IP, nie ein Router weiter hinten.</li></ul></div>
+ <div class="card"><h3>Das Rezept in 4 Schritten</h3><ol style="margin:0;padding-left:20px">
+  <li><b>Alle Netze</b> im Plan auflisten – Kabel zwischen Routern (/30) und LANs.</li>
+  <li><b>Direkt verbundene streichen</b> – an jedem Kabel des Routers hängt eines. Dafür keine Route!</li>
+  <li>Für jedes übrige Netz den <b>schnellsten Weg</b> suchen.</li>
+  <li>Der <b>erste Router</b> auf diesem Weg ist der Nachbar – seine IP am gemeinsamen Kabel ist der Next Hop.</li></ol>
+  <p class="hint">Zur Kontrolle: Es gibt genau so viele Routen, wie es Netze gibt, minus die direkt verbundenen.</p></div>
+ <div class="card"><h3>Schnellster Weg</h3><ul>
+  <li><b>Serial ist langsam</b> (1,5 Mbit/s), Gigabit schnell (1000 Mbit/s).</li>
+  <li>Meide also Serial-Leitungen – lieber ein Hop mehr über Gigabit.</li>
+  <li>Bei gleich vielen Serial-Leitungen gewinnt der Weg mit <b>weniger Hops</b>.</li>
+  <li>Sind zwei Wege genau gleich gut, sind beide richtig.</li></ul></div>
+<!--/ST--><!--RIP--> <div class="card"><h3>RIPv2</h3>
+  <pre class="cli">router rip
+ version 2
+ no auto-summary
+ network 10.0.0.0
+ network 192.168.1.0</pre>
+  <ul><li><code>network</code>: <b>jedes direkt verbundene</b> Netz – die anderen lernt der Router von den Nachbarn.</li>
+  <li>die <b>Netzadresse ohne Maske</b>.</li>
+  <li>IOS speichert jedes network als <b>Klassennetz</b>:</li></ul>
+  <table class="cls"><tr><th>Erste Zahl</th><th>Klasse</th><th>Klassennetz von …</th></tr>
+  <tr><td>1–126</td><td>A</td><td>10.0.0.4 → <b>10.0.0.0</b></td></tr>
+  <tr><td>128–191</td><td>B</td><td>172.16.5.0 → <b>172.16.0.0</b></td></tr>
+  <tr><td>192–223</td><td>C</td><td>192.168.3.0 → <b>192.168.3.0</b></td></tr></table>
+  <p class="hint">Liegen zwei Netze im selben Klassennetz (z. B. 10.0.0.0/30 und 10.0.0.4/30), tippst du trotzdem beide ein. In der Running-Config steht danach nur noch <b>eine</b> Zeile <code>network 10.0.0.0</code> – das ist kein Fehler. Nur das Klassennetz einzutippen ist auch richtig.</p></div>
+ <div class="card"><h3>So arbeitet RIP</h3><ul>
+  <li>Jeder Router schickt alle <b>30 Sekunden</b> seine Routing-Tabelle an die Nachbarn.</li>
+  <li>Metrik ist der <b>Hop Count</b> – die Anzahl der Router bis zum Ziel. Bandbreite ist RIP egal: ein Hop über Serial zählt gleich viel wie über Gigabit.</li>
+  <li>Maximal <b>15 Hops</b>, 16 heißt „unerreichbar“.</li>
+  <li>Administrative Distanz <b>120</b> – eine statische Route (1) gewinnt also immer.</li></ul></div>
+ <div class="card"><h3>Typische Fehler</h3><ul>
+  <li><code>network 192.168.5.0 255.255.255.0</code> – <b>keine Maske</b> bei RIP.</li>
+  <li>Netze anderer Router eintragen – die lernt RIP doch von selbst.</li>
+  <li>Ein direkt verbundenes Netz vergessen – zähl die Kabel am Router, jedes hat ein Netz.</li>
+  <li>Sich wundern, dass in der Running-Config weniger network-Zeilen stehen – IOS fasst Netze im selben <b>Klassennetz</b> zusammen.</li>
+  <li><code>version 2</code> und <code>no auto-summary</code> vergessen.</li></ul></div>
+<!--/RIP--></div>
+
+<h2 class="part" id="uebungen">Übungen</h2>
+<p class="sub">Tippe die Befehle so ein, wie du sie am Router eingeben würdest – jede Zeile wird einzeln geprüft und erklärt.<!--ST--> Wer Hilfe braucht, nimmt den <b>Baukasten</b>.<!--/ST--></p>
+<div class="pager"><button class="btn ghost" id="pprev" type="button">‹ Zurück</button><div class="pinfo"><b id="pnum"></b><span id="ppart"></span></div><button class="btn" id="pnext" type="button">Weiter ›</button><div class="toc" id="ptoc"></div></div>
+<div id="tasks"></div>
+
+<h2 class="part" id="generator">🎲 Zufallsgenerator</h2>
+<p class="sub">Jede Aufgabe hat eine Nummer. Mit der Nummer bekommt jede Schülerin und jeder Schüler genau dasselbe Netz.</p>
+<div class="genbar"><label for="glvl">Stufe</label><select id="glvl"><!--ST--><option value="L">Leicht (3–4 Router, nur Gigabit)</option><option value="M" selected>Mittel (4 Router, Ring, Serial-Leitungen)</option><option value="S">Schwer (5–6 Router, mehrere Ringe)</option><!--/ST--><!--RIP--><option value="L">Leicht (wenige Netze)</option><option value="M" selected>Mittel (mehr Netze, zwei LANs)</option><option value="S">Schwer (mehrere Netze pro Klassennetz)</option><!--/RIP--></select>
+<button class="btn" id="gnew" type="button">Neue Aufgabe</button><label for="gcode">Nummer</label><input id="gcode" size="8" placeholder="M-123" autocomplete="off"><button class="btn ghost" id="gload" type="button">Laden</button><span id="gmsg" class="err"></span></div>
+<div id="gout"></div>
+</main>
+<script>
+/*RTJS*/
+</script>
+<script>
+(function(){
+'use strict';
+var MODE='/*MODE*/',R=window.RT,$=function(i){return document.getElementById(i);},reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function linksOfPath(T,p){var o={};for(var i=0;i+1<p.length;i++)T.links.forEach(function(l,k){if((l.a===p[i]&&l.b===p[i+1])||(l.b===p[i]&&l.a===p[i+1]))o[k]=1;});return o;}
+function ripTab(dir){return'<table class="rtab"><thead><tr><th>Direkt verbundenes Netz</th><th>Du tippst</th><th class="w">Klasse</th><th>In der Running-Config</th></tr></thead><tbody>'+dir.slice().sort(function(a,b){return R.ip2n(a.net)-R.ip2n(b.net);}).map(function(d){var c=R.classful(d.net);return'<tr><td>'+d.net+'/'+d.p+'</td><td>network '+d.net+'</td><td class="w">'+c.cls+'</td><td>network '+c.net+'</td></tr>';}).join('')+'</tbody></table>';}
+function hasSer(T){return T.links.some(function(l){return l.type==='ser';});}
+
+/* ---------- Erklär-Demo ---------- */
+var D=R.makeTask(1,'B'),dSrc=MODE==='rip'?1:0,dNet=null;
+function demo(){
+  $('dR').innerHTML='<b style="font:600 14px var(--ui);margin-right:4px">'+(MODE==='rip'?'RIP auf':'Routen für')+'</b>'+D.routers.map(function(r,i){return'<button type="button" data-dr="'+i+'" aria-pressed="'+(i===dSrc)+'">'+r.name+'</button>';}).join('');
+  var rs=R.routes(D,dSrc),dir=R.direct(D,dSrc),sel=rs.filter(function(x){return x.net===dNet;})[0],rt=D.routers[dSrc];
+  var hl={routers:{}};hl.routers[dSrc]=1;
+  if(sel){hl.links=linksOfPath(D,sel.path);hl.ip=sel.hops[0].ip;hl.net=sel.net;}
+  $('dSvg').innerHTML=R.draw(D,{hl:hl});
+  var h='<p><b>1. Direkt verbunden</b> – kennt '+rt.name+' schon, keine Route nötig:</p><div class="chips">'+dir.map(function(n){return'<button type="button" class="dir" disabled>'+n.net+'/'+n.p+'</button>';}).join('')+'</div>'+
+   '<p><b>2. Fehlt noch</b> – tippe ein Netz an:</p><div class="chips">'+rs.map(function(x){return'<button type="button" data-dn="'+x.net+'" aria-pressed="'+(x.net===dNet)+'">'+x.net+'/'+x.p+'</button>';}).join('')+'</div>';
+  if(sel){
+    var hop=sel.hops[0],nb=D.routers[hop.r];
+    h+='<div class="cmd">ip route <span class="c1">'+sel.net+'</span> <span class="c2">'+R.maskTxt(sel.p)+'</span> <span class="c3">'+hop.ip+'</span></div>'+
+     '<p>Der Weg geht '+sel.path.map(function(i){return D.routers[i].name;}).join(' → ')+'. Der <b>erste Router</b> danach ist <b>'+nb.name+'</b>. Seine IP auf dem Kabel zu '+rt.name+' ist '+
+     '<b class="c3">'+hop.ip+'</b> (Netz '+D.links[hop.link].net+' + Hostteil .'+hop.ip.split('.')[3]+') – das ist der Next Hop, auch wenn das Ziel noch weiter hinten liegt.</p>';
+  } else h+='<p class="hint">Es braucht '+rs.length+' Routen: '+(dir.length+rs.length)+' Netze im Plan, davon '+dir.length+' direkt verbunden.</p>';
+  if(MODE==='rip'){var rip0=R.ripNets(D,dSrc);
+    h='<p><b>1. Direkt verbunden</b> – nur diese Netze gibt '+rt.name+' per RIP bekannt:</p><div class="chips">'+dir.map(function(n){return'<button type="button" class="dir" disabled>'+n.net+'/'+n.p+'</button>';}).join('')+'</div>'+
+     '<p><b>2. Fremde Netze</b> – die lernt '+rt.name+' von den Nachbarn, die kommen <b>nicht</b> rein: '+rs.map(function(x){return x.net+'/'+x.p;}).join(', ')+'</p>'+
+     '<p><b>3. Jedes direkt verbundene Netz</b> bekommt einen network-Befehl (Netzadresse, ohne Maske):</p>'+ripTab(dir)+
+     '<pre class="cli">'+esc(['router rip',' version 2',' no auto-summary'].concat(dir.map(function(x){return' network '+x.net;})).join('\n'))+'</pre>'+
+     (rip0.some(function(x){return x.from.length>1;})?'<p class="hint">Mehrere Netze im selben Klassennetz? Trotzdem alle eintippen – IOS speichert sie als eine Zeile. Wer nur das Klassennetz schreibt, liegt auch richtig.</p>':'');
+    $('dTxt').innerHTML=h;$('dSvg').innerHTML=R.draw(D,{hl:{routers:hl.routers}});return;}
+  var rip=R.ripNets(D,dSrc);
+  if(false)h+='<p><b>Und mit RIP?</b> Da gibt '+rt.name+' nur seine direkt verbundenen Netze an – als Klassennetz: '+rip.map(function(x){return'<code>network '+x.net+'</code>';}).join(', ')+(rip.some(function(x){return x.from.length>1;})?' (zwei 10.0.0.x-Netze → ein Klassennetz 10.0.0.0)':'')+'.</p>';
+  $('dTxt').innerHTML=h;
+}
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-dr],[data-dn]');if(b&&b.disabled)return;if(!b)return;if(b.dataset.dr){dSrc=+b.dataset.dr;dNet=null;}else dNet=dNet===b.dataset.dn?null:b.dataset.dn;demo();});
+demo();
+
+/* ---------- Aufgaben ---------- */
+var cache={},state={};
+function taskOf(card){var c=card.getAttribute('data-code');if(!cache[c]){var m=c.split('-');cache[c]=R.makeTask(+m[1],m[0]);}return cache[c];}
+function st(card){if(!state[card.id])state[card.id]={tab:MODE,mode:'cli',tip:{st:0,rip:0}};return state[card.id];}
+function allNets(T){return R.nets(T).slice().sort(function(a,b){return R.ip2n(a.net)-R.ip2n(b.net);});}
+function allIps(T){var o=[];T.links.forEach(function(l){o.push(l.ipA,l.ipB);});return o.sort(function(a,b){return R.ip2n(a)-R.ip2n(b);});}
+function taskHTML(T,id,label){
+  var S=T.routers[T.ask.st].name,P=T.routers[T.ask.rip].name,ips=allIps(T);
+  var kit='<table class="kit"><thead><tr><th>Netz im Plan</th><th>Was braucht '+S+'?</th><th></th></tr></thead><tbody>'+allNets(T).map(function(n,i){
+    return'<tr data-net="'+n.net+'" data-p="'+n.p+'"><td class="n">'+n.net+'/'+n.p+'</td><td><select aria-label="'+n.net+'/'+n.p+'"><option value="">– wählen –</option><option value="d">direkt verbunden – keine Route</option>'+ips.map(function(ip){return'<option value="'+ip+'">Route über Next Hop '+ip+'</option>';}).join('')+'</select></td><td class="m"></td></tr>';}).join('')+'</tbody></table>'+
+    '<div class="preview"><b>Daraus entstehen diese Befehle:</b><pre class="cli kitout">–</pre></div>';
+  return '<div class="card task" id="'+id+'" data-code="'+T.code+'"><h3>'+label+' <span class="tag">'+R.LVNAME[T.level]+'</span><span class="tag">Nr. '+T.code+'</span></h3>'+
+   '<div class="board">'+R.draw(T)+'</div>'+
+   '<div class="legend"><span><i style="background:#1c2b33"></i>GigabitEthernet (schnell)</span><span><i style="background:#d32f2f"></i>Serial ⚡ (langsam)</span></div>'+
+   '<div class="pane" data-pane="st"'+(MODE==='st'?'':' hidden')+'><p class="qtext">Schreibe alle <code>ip route</code>-Befehle für <b>'+S+'</b>, damit er jedes Netz im Plan erreicht.'+(hasSer(T)?' Wähle jeweils den <b>schnellsten</b> Weg.':'')+'</p>'+
+    '<div class="sub2"><button type="button" data-mode="cli" aria-pressed="true">⌨️ Eintippen</button><button type="button" data-mode="kit" aria-pressed="false">🧩 Baukasten</button></div>'+
+    '<div data-m="cli"><textarea class="cli" data-in="st" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="'+S+'(config)# ip route …"></textarea></div><div data-m="kit" hidden>'+kit+'</div></div>'+
+   '<div class="pane" data-pane="rip"'+(MODE==='rip'?'':' hidden')+'><p class="qtext">Schreibe alle Befehle, um auf <b>'+P+'</b> RIPv2 zu konfigurieren. Du startest im Global Config Mode.</p>'+
+    '<textarea class="cli" data-in="rip" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="'+P+'(config)# router rip"></textarea></div>'+
+   '<div class="acts"><button class="btn" type="button" data-act="check">Prüfen</button><button class="btn ghost" type="button" data-act="tip">💡 Tipp</button><button class="btn ghost" type="button" data-act="sol">Lösung anzeigen</button><span class="fb" aria-live="polite"></span></div>'+
+   '<div class="tipbox"></div><div class="res"></div><div class="sol"></div></div>';
+}
+function kitText(card){var o=[];card.querySelectorAll('.kit tbody tr').forEach(function(tr){var v=tr.querySelector('select').value;if(v&&v!=='d')o.push('ip route '+tr.dataset.net+' '+R.maskTxt(+tr.dataset.p)+' '+v);});return o.join('\n');}
+function updKit(card){var t=kitText(card);card.querySelector('.kitout').textContent=t||'–';card.querySelectorAll('.kit tr').forEach(function(tr){tr.classList.remove('ok','no');var m=tr.querySelector('.m');if(m)m.textContent='';});}
+function view(card){var s=st(card);
+  card.querySelectorAll('[data-tab]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.tab===s.tab);});
+  card.querySelectorAll('[data-pane]').forEach(function(p){p.hidden=p.dataset.pane!==s.tab;});
+  card.querySelectorAll('[data-mode]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.mode===s.mode);});
+  card.querySelectorAll('[data-m]').forEach(function(p){p.hidden=p.dataset.m!==s.mode;});
+  card.querySelector('.res').innerHTML='';card.querySelector('.tipbox').innerHTML='';var fb=card.querySelector('.fb');fb.textContent='';fb.className='fb';}
+
+function linesHTML(lines){return'<ul class="lines">'+lines.map(function(l){return'<li class="'+(l.ok?'ok':'no')+'">'+(l.ok?'✓ ':'✕ ')+'<code>'+esc(l.line)+'</code>'+(l.msg?'<small>'+esc(l.msg)+'</small>':'')+'</li>';}).join('')+'</ul>';}
+function check(card){
+  var T=taskOf(card),s=st(card),fb=card.querySelector('.fb'),out=card.querySelector('.res'),solved;
+  if(s.tab==='st'&&s.mode==='kit'){
+    var g=R.gradeStatic(T,kitText(card)),rs=R.routes(T,T.ask.st),dir=R.direct(T,T.ask.st),S=T.routers[T.ask.st].name,okAll=true;
+    card.querySelectorAll('.kit tbody tr').forEach(function(tr){var v=tr.querySelector('select').value,n=tr.dataset.net,isDir=dir.some(function(d){return d.net===n;}),m=tr.querySelector('.m'),ok=false,msg='';
+      if(!v)msg='noch offen';
+      else if(v==='d'){ok=isDir;msg=ok?'':S+' hängt nicht direkt an diesem Netz – es braucht eine Route.';}
+      else{var line=g.lines.filter(function(l){return l.line.split(' ')[2]===n;})[0];ok=line&&line.ok;msg=line&&line.msg||'';}
+      tr.classList.remove('ok','no');tr.classList.add(ok?'ok':'no');m.textContent=ok?(msg||'✓'):msg;if(!ok)okAll=false;});
+    solved=okAll;out.innerHTML='';
+    fb.className='fb '+(solved?'good':'bad');fb.textContent=solved?'Alles richtig! ✓ Probier es jetzt auch ohne Baukasten.':'Noch nicht ganz – siehe rote Zeilen.';
+  } else {
+    var txt=card.querySelector('[data-in="'+s.tab+'"]').value;
+    if(!txt.trim()){fb.className='fb bad';fb.textContent='Noch nichts eingetippt.';return;}
+    if(s.tab==='st'){var g2=R.gradeStatic(T,txt);solved=g2.solved;
+      out.innerHTML=linesHTML(g2.lines)+(g2.missing.length?'<p class="todo">Es fehl'+(g2.missing.length>1?'en noch Routen zu '+g2.missing.length+' Netzen':'t noch eine Route zu 1 Netz')+'.</p>':'');
+      fb.className='fb '+(solved?'good':'bad');fb.textContent=solved?'Alles richtig! ✓ '+g2.need+' Routen':g2.ok+' von '+g2.need+' Routen richtig.';
+    } else {var g3=R.gradeRip(T,txt);solved=g3.solved;
+      out.innerHTML=linesHTML(g3.lines)+(g3.note?'<p class="hint">'+esc(g3.note)+'</p>':'')+(g3.todo.length?'<p class="todo">'+esc(g3.todo.join(' · '))+'</p>':'');
+      fb.className='fb '+(solved?'good':'bad');fb.textContent=solved?'Alles richtig! ✓':'Noch nicht ganz.';}
+  }
+  if(solved)card.dataset.solved='1';markToc();
+}
+function tip(card){
+  var T=taskOf(card),s=st(card),box=card.querySelector('.tipbox'),k=s.tab;s.tip[k]=Math.min(s.tip[k]+1,3);var n=s.tip[k],h='';
+  if(k==='st'){var S=T.routers[T.ask.st].name,dir=R.direct(T,T.ask.st),rs=R.routes(T,T.ask.st),ips=R.ipsOf(T,T.ask.st);
+    h+='<div class="tip"><b>Schritt 1:</b> '+S+' ist direkt verbunden mit '+dir.map(function(d){return d.net+'/'+d.p;}).join(', ')+' – dafür <b>keine</b> Route.</div>';
+    if(n>=2)h+='<div class="tip"><b>Schritt 2:</b> Im Plan gibt es '+(dir.length+rs.length)+' Netze, also braucht '+S+' genau <b>'+rs.length+' Routen</b>.</div>';
+    if(n>=3)h+='<div class="tip"><b>Schritt 3:</b> Als Next Hop kommen nur die direkten Nachbarn in Frage: '+ips.map(function(x){var o=T.links[x.link],nbIp=o.ipA===x.ip?o.ipB:o.ipA,nb=R.ipOwner(T,nbIp);return T.routers[nb.r].name+' mit <b>'+nbIp+'</b> (über '+x.ifn+(o.type==='ser'?', Serial – langsam':'')+')';}).join(', ')+'.</div>';
+  } else {var P=T.routers[T.ask.rip].name,dr=R.direct(T,T.ask.rip),rp=R.ripNets(T,T.ask.rip);
+    h+='<div class="tip"><b>Schritt 1:</b> Der Rahmen ist immer gleich: <code>router rip</code>, <code>version 2</code>, <code>no auto-summary</code>.</div>';
+    if(n>=2)h+='<div class="tip"><b>Schritt 2:</b> '+P+' ist direkt verbunden mit '+dr.map(function(d){return d.net+'/'+d.p;}).join(', ')+'.</div>';
+    if(n>=3)h+='<div class="tip"><b>Schritt 3:</b> Für jedes dieser Netze ein <code>network</code> mit der Netzadresse, ohne Maske – das sind <b>'+dr.length+' network-Befehle</b>.</div>';}
+  if(n<3)h+='<p class="hint">Noch ein Klick auf 💡 Tipp verrät den nächsten Schritt.</p>';
+  box.innerHTML=h;
+}
+function solHTML(T,id){
+  var S=T.routers[T.ask.st].name,P=T.routers[T.ask.rip].name,rs=R.routes(T,T.ask.st),rp=R.ripNets(T,T.ask.rip);
+  var head='<h3 style="font:400 20px var(--head);margin:0">Lösung</h3>';
+  if(MODE==='rip')return head+'<p>'+P+' ist direkt verbunden mit '+R.direct(T,T.ask.rip).map(function(d){return d.net+'/'+d.p;}).join(', ')+'. Alle anderen Netze lernt '+P+' von seinen Nachbarn.</p>'+
+   ripTab(R.direct(T,T.ask.rip))+
+   '<pre class="cli">'+esc(R.solRip(T).join('\n'))+'</pre>'+
+   (rp.some(function(x){return x.from.length>1;})?'<p class="hint">Mehrere Netze liegen im selben Klassennetz – in der Running-Config steht dafür nur <b>eine</b> Zeile. Auch richtig wäre, nur das Klassennetz einzutippen.</p>':'')+
+   '<p class="hint">Optional: <code>passive-interface '+T.routers[T.ask.rip].lanIf+'</code> – dann schickt '+P+' keine RIP-Updates ins LAN.</p>';
+  return head+'<p class="hint" style="margin-top:0">Tippe eine Zeile an – der Weg wird im Plan gezeigt.</p>'+
+   '<div class="solsvg" data-for="'+id+'">'+R.draw(T,{hl:{routers:(function(){var o={};o[T.ask.st]=1;return o;})()}})+'</div>'+
+   '<table class="rtab"><thead><tr><th>Zielnetz</th><th>Maske</th><th class="w">Schnellster Weg</th><th>Next Hop</th></tr></thead><tbody>'+rs.map(function(x,i){
+     return'<tr data-r="'+i+'"><td>'+x.net+'</td><td>'+R.maskTxt(x.p)+'</td><td class="w">'+x.path.map(function(k){return T.routers[k].name;}).join(' → ')+'</td><td>'+x.hops.map(function(h){return h.ip;}).join('<br><small>oder </small>')+'</td></tr>';}).join('')+'</tbody></table>'+
+   '<pre class="cli">'+esc(R.solStatic(T).join('\n'))+'</pre>';
+}
+document.addEventListener('click',function(e){
+  var row=e.target.closest&&e.target.closest('.rtab tr[data-r]');
+  if(row){var card=row.closest('.task'),T=taskOf(card),x=R.routes(T,T.ask.st)[+row.dataset.r],ro={};ro[T.ask.st]=1;
+    row.parentNode.querySelectorAll('tr').forEach(function(r){r.classList.toggle('sel',r===row);});
+    card.querySelector('.solsvg').innerHTML=R.draw(T,{hl:{routers:ro,links:linksOfPath(T,x.path),ip:x.hops[0].ip,net:x.net}});return;}
+  var t=e.target.closest&&e.target.closest('[data-tab],[data-mode],[data-act]');if(!t)return;var card2=t.closest('.task');if(!card2)return;var s=st(card2);
+  if(t.dataset.tab){s.tab=t.dataset.tab;view(card2);return;}
+  if(t.dataset.mode){s.mode=t.dataset.mode;view(card2);return;}
+  if(t.dataset.act==='check')check(card2);
+  if(t.dataset.act==='tip')tip(card2);
+  if(t.dataset.act==='sol'){var so=card2.querySelector('.sol');if(!so.innerHTML)so.innerHTML=solHTML(taskOf(card2),card2.id);var o=so.classList.toggle('open');t.textContent=o?'Lösung ausblenden':'Lösung anzeigen';}
+});
+document.addEventListener('change',function(e){var c=e.target.closest&&e.target.closest('.kit');if(c)updKit(c.closest('.task'));});
+
+/* ---------- Blättern ---------- */
+var list=['L-1','L-2','L-3','L-4','M-1','M-2','M-3','M-4','S-1','S-2','S-3','S-4'];
+var host=$('tasks'),cur=0;
+list.forEach(function(code,i){var m=code.split('-'),T=R.makeTask(+m[1],m[0]);cache[code]=T;var d=document.createElement('div');d.className='page';d.hidden=i!==0;
+  d.innerHTML=taskHTML(T,'t'+(i+1),'Aufgabe '+(i+1))+'<div class="navrow">'+(i>0?'<button class="btn ghost" type="button" data-go="'+(i-1)+'">‹ Aufgabe '+i+'</button>':'<span></span>')+(i<list.length-1?'<button class="btn" type="button" data-go="'+(i+1)+'">Aufgabe '+(i+2)+' ›</button>':'<a class="btn" href="#generator" style="text-decoration:none">🎲 Weiter mit dem Zufallsgenerator</a>')+'</div>';host.appendChild(d);});
+var pages=[].slice.call(host.children);
+list.forEach(function(c,i){var b=document.createElement('button');b.type='button';b.textContent=i+1;b.dataset.go=i;$('ptoc').appendChild(b);});
+function markToc(){[].forEach.call($('ptoc').children,function(b,i){b.classList.toggle('on',i===cur);b.classList.toggle('ok',pages[i].querySelector('.task').dataset.solved==='1');});}
+function show(i,scroll){i=Math.max(0,Math.min(pages.length-1,i));cur=i;pages.forEach(function(p,j){p.hidden=j!==i;});$('pnum').textContent='Aufgabe '+(i+1)+' von '+pages.length;$('ppart').textContent=R.LVNAME[list[i][0]];$('pprev').disabled=i===0;$('pnext').disabled=i===pages.length-1;markToc();if(scroll){var top=$('uebungen').getBoundingClientRect().top+window.pageYOffset;if(window.pageYOffset>top)window.scrollTo({top:top,behavior:reduce?'auto':'smooth'});}}
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-go]');if(b)show(+b.dataset.go,true);});
+$('pprev').onclick=function(){show(cur-1,true);};$('pnext').onclick=function(){show(cur+1,true);};show(0,false);
+
+/* ---------- Generator ---------- */
+function gen(lvl,seed){var T=R.makeTask(seed,lvl);if(!T){$('gmsg').textContent='Zu dieser Nummer gibt es keine Aufgabe.';return;}$('gmsg').textContent='';cache[T.code]=T;delete state['g'+T.code];$('gout').innerHTML=taskHTML(T,'g'+T.code,'Aufgabe '+T.code);$('gcode').value=T.code;$('glvl').value=lvl;}
+$('gnew').onclick=function(){gen($('glvl').value,1+Math.floor(Math.random()*99999));};
+function load(){var m=/^\s*([LMS])\s*-?\s*(\d{1,6})\s*$/i.exec($('gcode').value);if(!m){$('gmsg').textContent='Bitte eine Nummer wie L-12, M-305 oder S-4711 eingeben.';return;}gen(m[1].toUpperCase(),+m[2]);}
+$('gload').onclick=load;$('gcode').addEventListener('keydown',function(e){if(e.key==='Enter')load();});
+gen('M',1+Math.floor(Math.random()*99999));
+})();
+</script>
+</body>
+</html>
