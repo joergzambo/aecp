@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Collision &amp; Broadcast Domains</title>
+<style>
+/*BASECSS*/
+.devtab{border-collapse:collapse;font-size:15px;margin:6px 0 4px;width:100%;max-width:640px}
+.devtab th,.devtab td{border:1px solid #cfd8dc;padding:6px 10px;text-align:left}
+.devtab th{background:var(--soft);font-weight:600}
+.devtab td.y{color:var(--ok);font-weight:700}.devtab td.n{color:var(--bad);font-weight:700}
+.merk{background:#eef6e6;border-left:4px solid var(--accent);padding:10px 14px;margin:12px 0;font-size:15.5px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:760px){.two{grid-template-columns:1fr}}
+.two h4{font:600 15px var(--ui);margin:0 0 6px}
+.modes{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 8px}
+.modes button{padding:8px 14px;border-radius:4px;border:1.5px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer}
+.modes button[aria-pressed="true"]{background:var(--ink);color:#fff}
+.modes button .n{display:inline-block;min-width:1.4em;margin-left:6px;font-weight:400;opacity:.8}
+.tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 10px}
+.tools button{padding:6px 12px;border-radius:4px;border:1.5px solid #90a4ae;background:#fff;color:var(--ink);cursor:pointer;font-size:14px}
+.tools button[aria-pressed="true"]{border-color:var(--ink);background:var(--soft);box-shadow:inset 0 0 0 1px var(--ink)}
+.tools .info{font-size:13.5px;color:var(--mute);margin-left:auto}
+svg.net.draw{touch-action:none;cursor:crosshair}
+svg.net.draw.erase{cursor:pointer}
+.counts{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:12px;align-items:center}
+.counts label{display:inline-flex;gap:8px;align-items:center;font-weight:600}
+.counts input{width:4.2em;padding:6px 8px;border:1.5px solid #90a4ae;border-radius:4px;font:600 16px var(--body);text-align:center}
+.counts input.right{border-color:var(--ok);background:#e3f4e6}.counts input.wrong{border-color:var(--bad);background:#fde3e3}
+.fbl{margin:4px 0 0;padding-left:20px}
+.fbl li.good{color:var(--ok)}.fbl li.bad{color:var(--bad)}
+.dlist{list-style:none;padding:0;margin:8px 0 0;font-size:14.5px}
+.dlist li{margin:6px 0;display:flex;gap:8px;align-items:flex-start}
+.dlist .dot{flex:none;margin-top:5px;width:14px;height:14px;opacity:.75}
+.dlist small{color:var(--mute)}
+.howto{font-size:14.5px;color:var(--mute);margin:0 0 6px}
+</style>
+</head>
+<body>
+<main class="vmain">
+<h1>Collision &amp; Broadcast Domains</h1>
+<p class="sub">Eine <b>Collision Domain</b> ist der Bereich, in dem sich zwei gleichzeitig gesendete Signale stören können. Eine <b>Broadcast Domain</b> ist der Bereich, den ein Broadcast (z.&nbsp;B. ARP-Anfrage) erreicht. Welches Gerät welche Grenze zieht, entscheidet alles.</p>
+<nav class="jumps" aria-label="Abschnitte"><a href="#regeln">Regelwerk</a><a href="#uebungen">Einzeichnen üben</a><a href="#generator">🎲 Zufallsgenerator</a></nav>
+
+<h2 class="part" id="regeln">Regelwerk</h2>
+<div class="card">
+<table class="devtab"><thead><tr><th>Gerät</th><th>trennt Collision Domains?</th><th>trennt Broadcast Domains?</th></tr></thead><tbody>
+<tr><td><b>Hub</b> / Repeater (Layer 1)</td><td class="n">nein</td><td class="n">nein</td></tr>
+<tr><td><b>Switch</b> / Bridge (Layer 2)</td><td class="y">ja – jeder Port</td><td class="n">nein</td></tr>
+<tr><td><b>Router</b> (Layer 3)</td><td class="y">ja – jedes Interface</td><td class="y">ja – jedes Interface</td></tr>
+</tbody></table>
+<div class="merk"><b>So zeichnest du ein:</b><br>
+<b>Collision Domains:</b> Jedes Kabel ist zunächst eine eigene Collision Domain. Nur ein <b>Hub</b> fasst alle seine Kabel zu <i>einer</i> Collision Domain zusammen (auch über mehrere Hubs hinweg).<br>
+<b>Broadcast Domains:</b> Schneide das Netz nur an den <b>Routern</b> auf. Alles, was ohne Router zusammenhängt, ist eine Broadcast Domain. Jedes benutzte Router-Interface gehört zu einer eigenen Broadcast Domain.</div>
+<p class="hint">Hinweis: Mit VLANs teilt auch ein Switch Broadcast Domains – jedes VLAN ist eine eigene. In diesen Übungen gibt es keine VLANs.</p>
+</div>
+<div class="card"><h3 style="font:400 20px var(--head);margin:0 0 8px">Beispiel</h3>
+<div class="two"><div><h4>4 Collision Domains</h4><div id="exCd"></div></div><div><h4>2 Broadcast Domains</h4><div id="exBd"></div></div></div>
+<p class="hint">PC0, PC1 und das Kabel zum Switch hängen am Hub → <b>ein</b> Kreis, also eine Collision Domain (gelb). Switch0 trennt: das Kabel zu PC2 und das Kabel zum Router sind je eigene. Router0–PC3 ist die vierte. Der Router teilt das Netz in zwei Broadcast Domains.</p>
+</div>
+
+<h2 class="part" id="uebungen">Einzeichnen üben</h2>
+<p class="howto">Zieh mit dem Finger oder der Maus einen <b>Kreis um alle Kabel einer Domain</b> – jeder Kreis bekommt automatisch eine neue Farbe. Ein Kabel zählt, wenn sein <b>Mittelpunkt</b> (○) im Kreis liegt. Zeichne zuerst die Collision Domains, dann die Broadcast Domains ein, und trage die Anzahl ein.</p>
+<div class="pager"><button class="btn ghost" id="pprev" type="button">‹ Zurück</button><div class="pinfo"><b id="pnum"></b><span id="ppart"></span></div><button class="btn" id="pnext" type="button">Weiter ›</button><div class="toc" id="ptoc"></div></div>
+<div id="tasks"></div>
+
+<h2 class="part" id="generator">🎲 Zufallsgenerator</h2>
+<p class="sub">Jede Aufgabe hat eine Nummer. Mit der Nummer bekommt jede Schülerin und jeder Schüler genau dasselbe Netz.</p>
+<div class="genbar"><label for="glvl">Stufe</label><select id="glvl"><option value="L">Leicht (bis 1 Router, wenige Geräte)</option><option value="M" selected>Mittel (1 Router, mehrere Hubs)</option><option value="S">Schwer (2 Router, Hub-Ketten, Ringe)</option></select>
+<button class="btn" id="gnew" type="button">Neue Aufgabe</button><label for="gcode">Nummer</label><input id="gcode" size="8" placeholder="M-123" autocomplete="off"><button class="btn ghost" id="gload" type="button">Laden</button><span id="gmsg" class="err"></span></div>
+<div id="gout"></div>
+</main>
+<script>
+/*DOMJS*/
+</script>
+<script>
+(function(){
+'use strict';
+var D=window.DOM,$=function(i){return document.getElementById(i);},reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+var MN={cd:'Collision Domains',bd:'Broadcast Domains'};
+
+var ex=D.makeTask(1,'B');$('exCd').innerHTML=D.draw(ex,{solution:'cd'});$('exBd').innerHTML=D.draw(ex,{solution:'bd'});
+
+/* ---------- Aufgaben-Karten ---------- */
+var cache={},state={};
+function taskOf(card){var c=card.getAttribute('data-code');if(!cache[c]){var m=c.split('-');cache[c]=D.makeTask(+m[1],m[0]);}return cache[c];}
+function taskHTML(T,id,label){
+  return '<div class="card task" id="'+id+'" data-code="'+T.code+'"><h3>'+label+' <span class="tag">'+D.LVNAME[T.level]+'</span><span class="tag">Nr. '+T.code+'</span></h3>'+
+   '<div class="modes"><button type="button" data-mode="cd" aria-pressed="true">① Collision Domains<span class="n"></span></button><button type="button" data-mode="bd" aria-pressed="false">② Broadcast Domains<span class="n"></span></button></div>'+
+   '<div class="tools"><button type="button" data-tool="draw" aria-pressed="true">✏️ Kreis ziehen</button><button type="button" data-tool="erase" aria-pressed="false">⌫ Kreis entfernen</button><button type="button" data-act="undo">↶ Rückgängig</button><button type="button" data-act="clear">Alle Kreise löschen</button></div>'+
+   '<div class="board">'+D.draw(T,{interactive:true})+'</div>'+
+   '<div class="counts"><label>Anzahl Collision Domains <input inputmode="numeric" data-cnt="cd" maxlength="2" autocomplete="off"></label><label>Anzahl Broadcast Domains <input inputmode="numeric" data-cnt="bd" maxlength="2" autocomplete="off"></label></div>'+
+   '<div class="acts"><button class="btn" type="button" data-act="check">Prüfen</button><button class="btn ghost" type="button" data-act="sol">Lösung anzeigen</button><span class="fb" aria-live="polite"></span></div><ul class="fbl"></ul><div class="sol"></div></div>';
+}
+function st(card){var id=card.id;if(!state[id])state[id]={mode:'cd',tool:'draw',loops:{cd:[],bd:[]},res:{cd:null,bd:null}};return state[id];}
+function smooth(pts){if(pts.length<3)return'';var d='M'+((pts[0][0]+pts[1][0])/2).toFixed(1)+' '+((pts[0][1]+pts[1][1])/2).toFixed(1);for(var i=1;i<=pts.length;i++){var p=pts[i%pts.length],q=pts[(i+1)%pts.length];d+='Q'+p[0].toFixed(1)+' '+p[1].toFixed(1)+' '+((p[0]+q[0])/2).toFixed(1)+' '+((p[1]+q[1])/2).toFixed(1);}return d+'Z';}
+function centroid(pts){var x=0,y=0;pts.forEach(function(p){x+=p[0];y+=p[1];});return[x/pts.length,y/pts.length];}
+function paintView(card){
+  var s=st(card),L=s.loops[s.mode],r=s.res[s.mode];
+  card.querySelector('.loops').innerHTML=L.map(function(lp,k){var c=D.PAL[lp.col%D.PAL.length],bad=r&&!r.loopOk[k],good=r&&r.loopOk[k],ce=centroid(lp.pts);
+    return'<path d="'+smooth(lp.pts)+'" fill="'+c+'" fill-opacity=".16" stroke="'+c+'" stroke-width="3.5" stroke-linejoin="round"'+(bad?' stroke-dasharray="9 6"':'')+'/>'+(r?'<text x="'+ce[0]+'" y="'+ce[1]+'" font-size="22" font-weight="700" text-anchor="middle" fill="'+(good?'#2e7d32':'#c62828')+'" stroke="#fff" stroke-width="4" paint-order="stroke">'+(good?'✓':'✕')+'</text>':'');}).join('');
+  card.querySelectorAll('.cab path').forEach(function(e){var i=+e.dataset.l,x=r&&r.wrong[i];e.setAttribute('stroke',x?'#c62828':'#1c2b33');e.setAttribute('stroke-width',x?3.5:2.5);if(x)e.setAttribute('stroke-dasharray','7 5');else e.removeAttribute('stroke-dasharray');});
+  card.querySelectorAll('[data-mode]').forEach(function(b){var k=s.loops[b.dataset.mode].length;b.setAttribute('aria-pressed',b.dataset.mode===s.mode);b.querySelector('.n').textContent=k?'· '+k+' Kreis'+(k>1?'e':''):'';});
+  card.querySelectorAll('[data-tool]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.tool===s.tool);});
+  card.querySelector('svg.net').classList.toggle('erase',s.tool==='erase');
+}
+function nextCol(L){var used={};L.forEach(function(l){used[l.col]=1;});for(var c=0;c<D.PAL.length;c++)if(!used[c])return c;return L.length%D.PAL.length;}
+function svgPt(svg,e){var p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;var q=p.matrixTransform(svg.getScreenCTM().inverse());return[q.x,q.y];}
+function area(pts){var a=0;for(var i=0,j=pts.length-1;i<pts.length;j=i++)a+=(pts[j][0]+pts[i][0])*(pts[j][1]-pts[i][1]);return Math.abs(a/2);}
+
+/* Kreis ziehen: Finger/Maus gedrückt halten und um die Kabel herumfahren */
+var pen=null;
+document.addEventListener('pointerdown',function(e){var svg=e.target.closest&&e.target.closest('svg.net.draw');if(!svg)return;var card=svg.closest('.task'),s=st(card),p=svgPt(svg,e);e.preventDefault();
+  if(s.tool==='erase'){var L=s.loops[s.mode],best=-1,ba=1e18;L.forEach(function(lp,k){if(D.inPoly(p,lp.pts)){var a=area(lp.pts);if(a<ba){ba=a;best=k;}}});if(best>=0){L.splice(best,1);s.res[s.mode]=null;paintView(card);}return;}
+  try{svg.setPointerCapture(e.pointerId);}catch(x){}
+  var col=nextCol(s.loops[s.mode]),c=D.PAL[col];
+  var path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('fill','none');path.setAttribute('stroke',c);path.setAttribute('stroke-width','3.5');path.setAttribute('stroke-linecap','round');path.setAttribute('stroke-linejoin','round');
+  svg.querySelector('.ink').appendChild(path);pen={svg:svg,card:card,pts:[p],path:path,col:col};});
+document.addEventListener('pointermove',function(e){if(!pen)return;var p=svgPt(pen.svg,e),l=pen.pts[pen.pts.length-1];if(Math.hypot(p[0]-l[0],p[1]-l[1])<4)return;pen.pts.push(p);pen.path.setAttribute('d','M'+pen.pts.map(function(q){return q[0].toFixed(1)+' '+q[1].toFixed(1);}).join('L'));});
+function penUp(){if(!pen)return;var P=pen;pen=null;P.path.remove();var s=st(P.card);
+  if(P.pts.length>=6&&area(P.pts)>300){s.loops[s.mode].push({pts:P.pts,col:P.col});s.res[s.mode]=null;}
+  paintView(P.card);}
+document.addEventListener('pointerup',penUp);document.addEventListener('pointercancel',penUp);
+
+function evalMode(T,s,m){var L=s.loops[m],paint=D.loopsToPaint(T,L),g=D.grade(T,m,paint);
+  g.loopOk=L.map(function(lp,k){var mem=[];paint.forEach(function(p,i){if(p===k)mem.push(i);});return mem.length>0&&mem.every(function(i){return!g.wrong[i];});});return g;}
+function solHTML(T){
+  var ex=D.explain(T);
+  function list(a,m){return'<ul class="dlist">'+a.map(function(d){return'<li><i class="dot" style="background:'+D.PAL[d.c]+'"></i><span><b>'+(m==='cd'?'CD ':'BD ')+(d.c+1)+':</b> '+esc(d.links.join(', '))+'<br><small>'+esc(d.why)+'</small></span></li>';}).join('')+'</ul>';}
+  return '<h3 style="font:400 20px var(--head);margin:0">Lösung</h3><div class="ans"><b>'+T.sol.ncd+' Collision Domains</b> und <b>'+T.sol.nbd+' Broadcast Domain'+(T.sol.nbd>1?'s':'')+'</b>.</div>'+
+   '<div class="two"><div><h4>Collision Domains</h4>'+D.draw(T,{solution:'cd'})+list(ex.cd,'cd')+'</div><div><h4>Broadcast Domains</h4>'+D.draw(T,{solution:'bd'})+list(ex.bd,'bd')+'</div></div>';
+}
+function check(card){
+  var T=taskOf(card),s=st(card),items=[],all=true;
+  ['cd','bd'].forEach(function(m){
+    var inp=card.querySelector('[data-cnt="'+m+'"]'),v=inp.value.trim(),want=m==='cd'?T.sol.ncd:T.sol.nbd,drawn=s.loops[m].length>0;
+    var g=evalMode(T,s,m);s.res[m]=drawn?g:null;
+    var okD=drawn&&g.good===g.total&&g.loopOk.every(Boolean),okC=v!==''&&+v===want;
+    inp.classList.remove('right','wrong');if(v!=='')inp.classList.add(okC?'right':'wrong');
+    var extra=[];if(g.unpainted)extra.push(g.unpainted+' Kabel in keinem Kreis');if(g.multi)extra.push(g.multi+' Kabel in mehreren Kreisen');var empty=g.loopOk.filter(function(x){return!x;}).length;if(empty&&!okD)extra.push(empty+' Kreis'+(empty>1?'e':'')+' falsch (✕)');
+    items.push('<li class="'+(okD?'good':'bad')+'">'+MN[m]+' eingekreist: '+(drawn?(okD?'alle '+g.total+' richtig ✓':g.good+' von '+g.total+' richtig'+(extra.length?' – '+extra.join(', '):'')+'. Rot gestrichelte Kabel sind noch falsch eingekreist.'):'noch kein Kreis gezogen')+'</li>');
+    items.push('<li class="'+(okC?'good':'bad')+'">Anzahl '+MN[m]+': '+(v===''?'noch leer':okC?v+' ✓':v+' stimmt nicht')+'</li>');
+    if(!okD||!okC)all=false;
+  });
+  paintView(card);
+  card.querySelector('.fbl').innerHTML=items.join('');
+  var fb=card.querySelector('.fb');fb.className='fb '+(all?'good':'bad');fb.textContent=all?'Alles richtig! ✓':'Noch nicht ganz.';
+  if(all)card.dataset.solved='1';markToc();
+}
+document.addEventListener('click',function(e){
+  var t=e.target.closest&&e.target.closest('[data-mode],[data-tool],[data-act]');if(!t)return;var card=t.closest('.task');if(!card)return;var s=st(card);
+  if(t.dataset.mode){s.mode=t.dataset.mode;paintView(card);return;}
+  if(t.dataset.tool){s.tool=t.dataset.tool;paintView(card);return;}
+  if(t.dataset.act==='undo'){s.loops[s.mode].pop();s.res[s.mode]=null;paintView(card);}
+  if(t.dataset.act==='clear'){s.loops[s.mode]=[];s.res[s.mode]=null;paintView(card);}
+  if(t.dataset.act==='check')check(card);
+  if(t.dataset.act==='sol'){var so=card.querySelector('.sol');if(!so.innerHTML)so.innerHTML=solHTML(taskOf(card));var o=so.classList.toggle('open');t.textContent=o?'Lösung ausblenden':'Lösung anzeigen';}
+});
+
+/* ---------- Blättern ---------- */
+/* handverlesene Aufgaben, je Stufe vom Einfachen zum Schwierigeren */
+var list=['L-4','L-2','L-14','L-5','L-1','L-6','M-5','M-10','M-3','M-2','M-19','M-1','S-2','S-3','S-10','S-6','S-13','S-18'];
+var host=$('tasks'),cur=0;
+list.forEach(function(code,i){var m=code.split('-'),T=D.makeTask(+m[1],m[0]);cache[code]=T;var d=document.createElement('div');d.className='page';d.hidden=i!==0;
+  d.innerHTML=taskHTML(T,'t'+(i+1),'Aufgabe '+(i+1))+'<div class="navrow">'+(i>0?'<button class="btn ghost" type="button" data-go="'+(i-1)+'">‹ Aufgabe '+i+'</button>':'<span></span>')+(i<list.length-1?'<button class="btn" type="button" data-go="'+(i+1)+'">Aufgabe '+(i+2)+' ›</button>':'<a class="btn" href="#generator" style="text-decoration:none">🎲 Weiter mit dem Zufallsgenerator</a>')+'</div>';host.appendChild(d);});
+var pages=[].slice.call(host.children);
+list.forEach(function(c,i){var b=document.createElement('button');b.type='button';b.textContent=i+1;b.dataset.go=i;$('ptoc').appendChild(b);});
+function markToc(){[].forEach.call($('ptoc').children,function(b,i){b.classList.toggle('on',i===cur);b.classList.toggle('ok',pages[i].querySelector('.task').dataset.solved==='1');});}
+function show(i,scroll){i=Math.max(0,Math.min(pages.length-1,i));cur=i;pages.forEach(function(p,j){p.hidden=j!==i;});$('pnum').textContent='Aufgabe '+(i+1)+' von '+pages.length;$('ppart').textContent=D.LVNAME[list[i][0]];$('pprev').disabled=i===0;$('pnext').disabled=i===pages.length-1;markToc();if(scroll){var top=$('uebungen').getBoundingClientRect().top+window.pageYOffset;if(window.pageYOffset>top)window.scrollTo({top:top,behavior:reduce?'auto':'smooth'});}}
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-go]');if(b)show(+b.dataset.go,true);});
+$('pprev').onclick=function(){show(cur-1,true);};$('pnext').onclick=function(){show(cur+1,true);};show(0,false);
+
+/* ---------- Generator ---------- */
+function gen(lvl,seed){var T=D.makeTask(seed,lvl);if(!T){$('gmsg').textContent='Zu dieser Nummer gibt es keine Aufgabe.';return;}$('gmsg').textContent='';cache[T.code]=T;delete state['g'+T.code];$('gout').innerHTML=taskHTML(T,'g'+T.code,'Aufgabe '+T.code);$('gcode').value=T.code;if('LMS'.indexOf(lvl)>=0)$('glvl').value=lvl;}
+$('gnew').onclick=function(){gen($('glvl').value,1+Math.floor(Math.random()*99999));};
+function load(){var m=/^\s*([LMS])\s*-?\s*(\d{1,6})\s*$/i.exec($('gcode').value);if(!m){$('gmsg').textContent='Bitte eine Nummer wie L-12, M-305 oder S-4711 eingeben.';return;}gen(m[1].toUpperCase(),+m[2]);}
+$('gload').onclick=load;$('gcode').addEventListener('keydown',function(e){if(e.key==='Enter')load();});
+gen('M',1+Math.floor(Math.random()*99999));
+})();
+</script>
+</body>
+</html>
