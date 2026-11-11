@@ -6,7 +6,7 @@
 <title>OSI-Modell zum Ziehen</title>
 <style>
 :root{
-  /* AECP-Stil; die Schichtfarben gruppieren: Anwendung (5–7), Transport, Vermittlung, Sicherung, Bitübertragung */
+  /* AECP-Stil; die Schichtfarben gruppieren: Application (5–7), Transport, Network, Data Link, Physical */
   --ink:#1c2b33; --mute:#546e7a; --line:#e3e1e8; --soft:#f3f5f7; --ok:#2e7d32; --bad:#c62828; --accent:#61a229;
   --l7:#e3effc; --l4:#e6f4e7; --l3:#fdf0e0; --l2:#f1e8f8; --l1:#eceff1;
   --head:"Belgrano",Georgia,serif; --ui:"Bitter",Georgia,serif; --body:"Open Sans","Helvetica Neue",Arial,sans-serif;
@@ -124,18 +124,16 @@ button{font:600 15px var(--ui);letter-spacing:.3px}
 <h2 class="part">Zum Merken</h2>
 <div class="mnemo">
  <div class="card"><h3>Eselsbrücken</h3>
-  <p><b>Von oben (7 → 1):</b> <b>A</b>lle <b>D</b>eutschen <b>S</b>tudenten <b>T</b>rinken <b>V</b>erschiedene <b>S</b>orten <b>B</b>ier<br>
-  <small>Anwendung · Darstellung · Sitzung · Transport · Vermittlung · Sicherung · Bitübertragung</small></p>
-  <p><b>Englisch von oben (7 → 1):</b> <b>A</b>lle <b>P</b>riester <b>S</b>aufen <b>T</b>equila <b>N</b>ach <b>D</b>er <b>P</b>redigt<br>
+  <p><b>Von oben (7 → 1):</b> <b>A</b>lle <b>P</b>riester <b>S</b>aufen <b>T</b>equila <b>N</b>ach <b>D</b>er <b>P</b>redigt<br>
   <small>Application · Presentation · Session · Transport · Network · Data Link · Physical</small></p>
   <p><b>Von unten (1 → 7):</b> <b>P</b>lease <b>D</b>o <b>N</b>ot <b>T</b>hrow <b>S</b>alami <b>P</b>izza <b>A</b>way<br>
   <small>Physical · Data Link · Network · Transport · Session · Presentation · Application</small></p></div>
  <div class="card"><h3>OSI und TCP/IP</h3>
   <table class="cmp"><tr><th>OSI</th><th>TCP/IP</th><th>PDU</th></tr>
-  <tr><td>7 Anwendung · 6 Darstellung · 5 Sitzung</td><td>Anwendung</td><td>Daten</td></tr>
+  <tr><td>7 Application · 6 Presentation · 5 Session</td><td>Application</td><td>Daten</td></tr>
   <tr><td>4 Transport</td><td>Transport</td><td>Segment (UDP: Datagramm)</td></tr>
-  <tr><td>3 Vermittlung</td><td>Internet</td><td>Paket</td></tr>
-  <tr><td>2 Sicherung · 1 Bitübertragung</td><td>Netzzugang</td><td>Frame · Bits</td></tr></table></div>
+  <tr><td>3 Network</td><td>Internet</td><td>Paket</td></tr>
+  <tr><td>2 Data Link · 1 Physical</td><td>Network Access</td><td>Frame · Bits</td></tr></table></div>
 </div>
 <div class="card" style="margin-top:12px"><h3>Kapselung: jede Schicht packt ihren Header davor</h3>
  <div class="enc">
@@ -152,10 +150,10 @@ button{font:600 15px var(--ui);letter-spacing:.3px}
 (function(){
 'use strict';
 var $=function(id){return document.getElementById(id);};
-var LAYERS=[[7,'Anwendung','Application'],[6,'Darstellung','Presentation'],[5,'Sitzung','Session'],[4,'Transport','Transport'],[3,'Vermittlung','Network'],[2,'Sicherung','Data Link'],[1,'Bitübertragung','Physical']];
+var LAYERS=[[7,'Application'],[6,'Presentation'],[5,'Session'],[4,'Transport'],[3,'Network'],[2,'Data Link'],[1,'Physical']];
 var ROUNDS=[
  {key:'layer',title:'Schichten',task:'Runde 1: Bring die sieben Schichten in die richtige Reihenfolge. Schicht 7 steht oben, Schicht 1 unten.',hint:'Schicht hierher',single:true,
-  items:LAYERS.map(function(l){return{id:'L'+l[0],label:l[1],small:l[2],ok:[l[0]]};})},
+  items:LAYERS.map(function(l){return{id:'L'+l[0],label:l[1],ok:[l[0]]};})},
  {key:'pdu',title:'PDUs',task:'Runde 2: Wie heißt die Dateneinheit (PDU) auf jeder Schicht? Für die oberen drei Schichten gibt es drei gleiche Kärtchen.',hint:'PDU',single:true,
   items:[{id:'p1',label:'Daten',ok:[5,6,7]},{id:'p2',label:'Daten',ok:[5,6,7]},{id:'p3',label:'Daten',ok:[5,6,7]},{id:'p4',label:'Segment',ok:[4],note:'Segment: bei TCP. Bei UDP sagt man auch Datagramm.'},{id:'p5',label:'Paket',ok:[3]},{id:'p6',label:'Frame (Rahmen)',ok:[2]},{id:'p7',label:'Bits',ok:[1]}]},
  {key:'dev',title:'Geräte & Medien',task:'Runde 3: Auf welcher Schicht arbeitet welches Gerät oder Medium? Pro Schicht passen mehrere Kärtchen.',hint:'Geräte hierher',
@@ -196,7 +194,7 @@ function render(){
     ROUNDS.slice(0,cols).forEach(function(X,ri){
       var zid=X.key+'-'+n;
       if(ri<round){ // frühere Runden: richtige Lösung fest anzeigen
-        var fixed=ri===0?l[1]+'<small>'+l[2]+'</small>':ri===1?(n>=5?'Daten':n===4?'Segment':n===3?'Paket':n===2?'Frame':'Bits'):X.items.filter(function(it){return it.ok[0]===n;}).map(function(it){return it.label;}).join(' · ');
+        var fixed=ri===0?l[1]:ri===1?(n>=5?'Daten':n===4?'Segment':n===3?'Paket':n===2?'Frame':'Bits'):X.items.filter(function(it){return it.ok[0]===n;}).map(function(it){return it.label;}).join(' · ');
         h+='<div class="zone fixed">'+fixed+'</div>';
       } else {
         var inZ=order[X.key].filter(function(id){return place[id]===zid;});
@@ -291,13 +289,13 @@ render();
 'use strict';
 var $=function(id){return document.getElementById(id);};
 var L={
- 7:{n:'Anwendung',en:'Application',pdu:'Daten',dev:['Proxy','Web-Application-Firewall'],fun:['HTTP','DNS','SMTP','FTP','Schnittstelle zur Anwendung']},
- 6:{n:'Darstellung',en:'Presentation',pdu:'Daten',dev:[],fun:['Verschlüsselung','Zeichensatz umwandeln','Komprimierung','Datenformate (JPEG, MP3)']},
- 5:{n:'Sitzung',en:'Session',pdu:'Daten',dev:[],fun:['Sitzungen auf- und abbauen','Dialogsteuerung','Wiederaufnahme nach Abbruch']},
- 4:{n:'Transport',en:'Transport',pdu:'Segment',dev:[],fun:['TCP','UDP','Portnummern','Flusskontrolle','Segmentierung']},
- 3:{n:'Vermittlung',en:'Network',pdu:'Paket',dev:['Router'],fun:['IP-Adressen','Routing','ICMP (ping)']},
- 2:{n:'Sicherung',en:'Data Link',pdu:'Frame',dev:['Switch','Bridge'],fun:['MAC-Adressen','Fehlererkennung (FCS)','VLAN-Tag 802.1Q']},
- 1:{n:'Bitübertragung',en:'Physical',pdu:'Bits',dev:['Hub','Repeater','Kupferkabel','Glasfaser','RJ45-Stecker'],fun:['Elektrische/optische Signale','Leitungscodierung']}
+ 7:{n:'Application',pdu:'Daten',dev:['Proxy','Web-Application-Firewall'],fun:['HTTP','DNS','SMTP','FTP','Schnittstelle zur Anwendung']},
+ 6:{n:'Presentation',pdu:'Daten',dev:[],fun:['Verschlüsselung','Zeichensatz umwandeln','Komprimierung','Datenformate (JPEG, MP3)']},
+ 5:{n:'Session',pdu:'Daten',dev:[],fun:['Sitzungen auf- und abbauen','Dialogsteuerung','Wiederaufnahme nach Abbruch']},
+ 4:{n:'Transport',pdu:'Segment',dev:[],fun:['TCP','UDP','Portnummern','Flusskontrolle','Segmentierung']},
+ 3:{n:'Network',pdu:'Paket',dev:['Router'],fun:['IP-Adressen','Routing','ICMP (ping)']},
+ 2:{n:'Data Link',pdu:'Frame',dev:['Switch','Bridge'],fun:['MAC-Adressen','Fehlererkennung (FCS)','VLAN-Tag 802.1Q']},
+ 1:{n:'Physical',pdu:'Bits',dev:['Hub','Repeater','Kupferkabel','Glasfaser','RJ45-Stecker'],fun:['Elektrische/optische Signale','Leitungscodierung']}
 };
 var COLS=['name','pdu','dev','fun'], CN={name:'Schicht',pdu:'PDU',dev:'Gerät / Medium',fun:'Funktion / Protokoll'};
 var GAPS={L:5,M:9,S:14}, DIST={L:0,M:0,S:3}, LCODE={L:1,M:2,S:3};
@@ -336,7 +334,7 @@ function render(){
       var key=n+'-'+c, v=T.rows[n][c];
       if(T.gaps.indexOf(key)>=0){var id=inGap[key];h+='<div class="zone gap" data-gap="'+key+'" role="button" tabindex="0" aria-label="Lücke: Schicht '+n+', '+CN[c]+'">'+(id?chip(T.chips.filter(function(x){return x.id===id;})[0]):'')+'</div>';}
       else if(v===null)h+='<div class="zone cell empty">—</div>';
-      else h+='<div class="zone cell'+(c==='name'?' name':'')+'">'+v+(c==='name'?'<small>'+L[n].en+'</small>':'')+'</div>';
+      else h+='<div class="zone cell'+(c==='name'?' name':'')+'">'+v+''+'</div>';
     });
     h+='</div>';
   });
