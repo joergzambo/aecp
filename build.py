@@ -14,6 +14,7 @@ import re
 import shutil
 
 from content import AREAS, SITE
+from legal import IMPRESSUM, DATENSCHUTZ
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(ROOT, 'site')
@@ -60,7 +61,7 @@ def footer(depth):
     return f'''<footer class="aecp-footer">
  <p class="aecp-tagline">{esc(SITE["name"])} · {esc(SITE["claim"])}</p>
  <p>Netzwerktechnik lernen · ein Projekt von Jörg Zambo an der <a href="https://www.htlpinkafeld.at/">HTL Pinkafeld</a>, Abteilung Informatik und Informationstechnologie</p>
- <p><a href="https://joergzambo.com/impressum/">Impressum</a></p>
+ <p><a href="{rel(depth)}impressum/">Impressum</a> · <a href="{rel(depth)}datenschutz/">Datenschutz</a></p>
 </footer>
 '''
 
@@ -153,6 +154,10 @@ def build():
             if live(t):
                 write(f'{a["slug"]}/{t["slug"]}/index.html', build_tool(a, t, 2))
 
+
+    # Impressum und Datenschutz
+    write('impressum/index.html', page('Impressum', 1, 'Impressum und Offenlegung von NWT', IMPRESSUM))
+    write('datenschutz/index.html', page('Datenschutzerklärung', 1, 'Datenschutzerklärung von NWT', DATENSCHUTZ))
     write('404.html', page('Seite nicht gefunden', 0, 'Seite nicht gefunden', '''<section class="aecp-wrap aecp-narrow aecp-center">
  <h1>Seite nicht gefunden</h1><p>Diese Seite gibt es (noch) nicht. <a href="/">Zur Startseite</a></p></section>'''))
     # Eigene Domain für GitHub Pages
