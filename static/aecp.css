@@ -17,7 +17,7 @@ body.aecp{margin:0;background:#fff;color:#000;font:16px/1.75 "Open Sans","Helvet
 .aecp-header{background:#fff;border-bottom:1px solid #f1f1f1;font-family:"Open Sans",Arial,sans-serif;position:relative;z-index:20}
 .aecp-header-in{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:76px;flex-wrap:wrap}
 .aecp-brand{display:flex;align-items:center;gap:12px;color:#000;text-decoration:none}
-.aecp-brand img{height:48px;width:auto;display:block}
+.aecp-brand img{height:52px;width:auto;display:block}
 .aecp-brand span{font:400 30px/1 "Belgrano",Georgia,serif;letter-spacing:2px}
 .aecp-nav{display:flex;gap:6px 26px;flex-wrap:wrap}
 .aecp-nav a{font:600 17px/1.4 "Bitter",Georgia,serif;letter-spacing:.6px;color:#000;text-decoration:none;padding:6px 0;border-bottom:2px solid transparent}
@@ -40,7 +40,6 @@ body.aecp{margin:0;background:#fff;color:#000;font:16px/1.75 "Open Sans","Helvet
 .aecp-center{text-align:center;max-width:680px;margin-left:auto;margin-right:auto}
 .aecp-lead{font-size:1.15rem}
 .aecp-hero{text-align:center}
-.aecp-logo{display:block;width:min(420px,80vw);height:auto;margin:0 auto 18px}
 .aecp-tagline{font:400 17px/1.4 "Belgrano",Georgia,serif;text-transform:uppercase;letter-spacing:2.5px;text-align:center;margin:.5rem 0}
 .aecp-divider{width:60px;border:0;border-top:1px solid #c9c9c9;margin:1.25rem auto 2rem}
 .aecp-crumbs{font-size:14px;color:#777;margin-bottom:.5rem}
@@ -76,5 +75,6 @@ a.aecp-area:hover,a.aecp-card:hover{border-color:#000;box-shadow:0 6px 18px rgba
 :focus-visible{outline:2px solid #61a229;outline-offset:2px}
 @media print{.aecp-header,.aecp-footer,.aecp-crumbs{display:none}}
 
-/* NWT-Schriftzug auf der Startseite (ersetzt das frühere AECP-Logo) */
-.nwt-title{font:400 clamp(72px,14vw,132px)/1 "Belgrano",Georgia,serif;letter-spacing:12px;text-align:center;margin:.3em 0 .1em;padding-left:12px}
+/* NWT-Logo auf der Startseite */
+.nwt-title{margin:.6em 0 .2em;text-align:center;line-height:0}
+.nwt-title img{width:min(560px,86vw);height:auto}

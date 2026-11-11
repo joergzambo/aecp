@@ -48,7 +48,7 @@ def header(depth, active=''):
         for a in AREAS)
     return f'''<header class="aecp-header">
  <div class="aecp-wrap aecp-header-in">
-  <a class="aecp-brand" href="{r}"><img src="{r}assets/img/nwt-mark.png" alt="" width="48" height="48"><span>{esc(SITE["name"])}</span></a>
+  <a class="aecp-brand" href="{r}"><img src="{r}assets/img/nwt-logo-120.png" alt="{esc(SITE["name"])}" width="160" height="42"></a>
   <input type="checkbox" id="aecp-menu" class="aecp-menu-toggle"><label for="aecp-menu" class="aecp-menu-btn" aria-label="Menü öffnen">Menü</label>
   <nav class="aecp-nav" aria-label="Hauptmenü">{links}</nav>
  </div>
@@ -132,7 +132,7 @@ def build():
     areas = ''.join(area_card(a, 0) for a in AREAS)
     news = ''.join(f'<p class="aecp-center">{n}</p>' for n in SITE['news'])
     write('index.html', page(SITE['name'], 0, SITE['description'], f'''<section class="aecp-hero aecp-wrap">
- <h1 class="nwt-title">NWT</h1>
+ <h1 class="nwt-title"><img src="assets/img/nwt-logo.png" alt="NWT" width="1983" height="521"></h1>
  <p class="aecp-tagline">Netzwerktechnik lernen</p>
  <hr class="aecp-divider">
  <p class="aecp-center aecp-lead">{SITE["intro"]}</p>
