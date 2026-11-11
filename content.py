@@ -12,7 +12,8 @@ SITE = {
     'intro': '<strong>Analyze</strong> – Topologien durchschauen. <strong>Explain</strong> – verstehen, warum das Netz so entscheidet. '
              '<strong>Configure</strong> – selbst Hand anlegen. <strong>Practice</strong> – üben, bis es sitzt. '
              'Vom OSI-Modell bis zu Angriffen im LAN, mit Animationen, Lösungen zum Aufklappen und Zufallsgenerator.',
-    'news': ['<strong>Neu:</strong> <a href="routing/rip/">RIP</a> – welche Netze in die network-Befehle gehören, mit Übungen und Zufallsgenerator. '
+    'news': ['<strong>Neu:</strong> <a href="routing/statisches-routing/">Statisches Routing</a> – ip route-Befehle zusammenstecken, eintippen und prüfen lassen. '
+             'Außerdem <a href="routing/rip/">RIP</a> – welche Netze in die network-Befehle gehören, mit Übungen und Zufallsgenerator. '
              'Außerdem <a href="grundlagen/collision-broadcast-domains/">Collision und Broadcast Domains</a> – Domains im Netzplan einkreisen, mit Zufallsgenerator. '
              'Außerdem <a href="grundlagen/osi-modell/">Das OSI-Modell zum Ziehen</a> – Schichten, PDUs, Geräte und Protokolle zuordnen, mit Lückentext-Generator. '
              'Außerdem <a href="routing/inter-vlan-routing/">Inter-VLAN-Routing</a> – Paketweg Schritt für Schritt und Fehlersuche in echten Configs. '
@@ -41,6 +42,8 @@ AREAS = [
      'topics': [
          {'slug': 'inter-vlan-routing', 'title': 'Inter-VLAN-Routing', 'tool': 'inter-vlan-routing',
           'text': 'Router-on-a-Stick und Layer-3-Switch – Schritt für Schritt, mit Fehlersuche-Übungen und Zufallsgenerator.'},
+         {'slug': 'statisches-routing', 'title': 'Statisches Routing', 'tool': 'statisches-routing',
+          'text': 'ip route: Welches Zielnetz, welche Maske, welcher Next Hop? Mit Erklärung am Plan, Zusammenstecken, Baukasten und Zufallsgenerator.'},
          {'slug': 'rip', 'title': 'RIP', 'tool': 'rip',
           'text': 'Welche Netze kommen in die network-Befehle? Schritt für Schritt erklärt, mit Übungen, Tipps und Zufallsgenerator.'},
      ]},

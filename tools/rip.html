@@ -119,6 +119,24 @@ textarea.cli::placeholder{color:#78909c}
 .kit tr.ok td{background:#e3f4e6}.kit tr.no td{background:#fde3e3}
 .kit td.m{font-size:13px;color:#37474f}
 .preview{margin-top:8px}
+.dnd .pool{background:#fff;border:1px solid var(--line);border-radius:4px;padding:8px 10px;margin-bottom:10px}
+@media(min-width:760px) and (min-height:700px){.dnd .pool{position:sticky;top:0;z-index:5}}
+.dnd .pool h5{font:600 13px var(--ui);margin:2px 0 4px;color:var(--mute)}
+.dnd .chips2{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}
+.chip2{font:600 13.5px var(--mono);padding:5px 9px;border-radius:4px;border:1.5px solid #90a4ae;background:#fff;color:var(--ink);cursor:grab;touch-action:none;user-select:none}
+.chip2.m{border-color:#ab47bc;background:#f8eefa}
+.chip2.sel{box-shadow:0 0 0 3px var(--accent)}
+.chip2.used{opacity:.4}
+.dragghost{position:fixed;z-index:1000;pointer-events:none;transform:translate(-50%,-50%) rotate(-2deg);box-shadow:0 10px 24px rgba(0,0,0,.2);opacity:.95}
+.drow{display:flex;flex-wrap:wrap;align-items:center;gap:6px;background:#1c2b33;color:#fff;border-radius:4px;padding:8px 10px;margin:6px 0;font:600 14.5px var(--mono)}
+.drow.ok{outline:3px solid var(--ok)}.drow.no{outline:3px solid var(--bad)}
+.slot{min-width:128px;min-height:30px;padding:4px 8px;border-radius:4px;border:2px dashed #78909c;background:#263845;color:#fff;font:600 14px var(--mono);cursor:pointer;text-align:center}
+.slot.f{border-style:solid;border-color:#90caf9}
+.slot[data-k="m"].f{border-color:#ce93d8}
+.slot.hot{background:#3d5566;border-color:var(--accent)}
+.slot .ph{color:#90a4ae;font:500 12.5px var(--body)}
+.dmsg{font:14px var(--body);color:#37474f;margin:-2px 0 8px 4px}
+.dmsg.ok{color:var(--ok)}.dmsg.no{color:var(--bad)}
 .tip{background:#fff8e1;border-left:4px solid #ffa000;padding:8px 12px;margin:10px 0;font-size:15px}
 .legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13.5px;color:var(--mute);margin:6px 0 0}
 .legend i{display:inline-block;width:26px;height:3px;vertical-align:middle;margin-right:6px}
@@ -714,13 +732,47 @@ function taskHTML(T,id,label){
    '<div class="board">'+R.draw(T)+'</div>'+
    '<div class="legend"><span><i style="background:#1c2b33"></i>GigabitEthernet (schnell)</span><span><i style="background:#d32f2f"></i>Serial ⚡ (langsam)</span></div>'+
    '<div class="pane" data-pane="st"'+(MODE==='st'?'':' hidden')+'><p class="qtext">Schreibe alle <code>ip route</code>-Befehle für <b>'+S+'</b>, damit er jedes Netz im Plan erreicht.'+(hasSer(T)?' Wähle jeweils den <b>schnellsten</b> Weg.':'')+'</p>'+
-    '<div class="sub2"><button type="button" data-mode="cli" aria-pressed="true">⌨️ Eintippen</button><button type="button" data-mode="kit" aria-pressed="false">🧩 Baukasten</button></div>'+
-    '<div data-m="cli"><textarea class="cli" data-in="st" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="'+S+'(config)# ip route …"></textarea></div><div data-m="kit" hidden>'+kit+'</div></div>'+
+    '<div class="sub2"><button type="button" data-mode="cli" aria-pressed="true">⌨️ Eintippen</button><button type="button" data-mode="dnd" aria-pressed="false">🧲 Zusammenstecken</button><button type="button" data-mode="kit" aria-pressed="false">🧩 Baukasten</button></div>'+
+    '<div data-m="cli"><textarea class="cli" data-in="st" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="'+S+'(config)# ip route …"></textarea></div><div data-m="kit" hidden>'+kit+'</div><div data-m="dnd" class="dnd" hidden>'+dndHTML(T)+'</div></div>'+
    '<div class="pane" data-pane="rip"'+(MODE==='rip'?'':' hidden')+'><p class="qtext">Schreibe alle Befehle, um auf <b>'+P+'</b> RIPv2 zu konfigurieren. Du startest im Global Config Mode.</p>'+
     '<textarea class="cli" data-in="rip" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="'+P+'(config)# router rip"></textarea></div>'+
    '<div class="acts"><button class="btn" type="button" data-act="check">Prüfen</button><button class="btn ghost" type="button" data-act="tip">💡 Tipp</button><button class="btn ghost" type="button" data-act="sol">Lösung anzeigen</button><span class="fb" aria-live="polite"></span></div>'+
    '<div class="tipbox"></div><div class="res"></div><div class="sol"></div></div>';
 }
+/* ---------- Zusammenstecken (Drag & Drop) ---------- */
+function dndHTML(T){
+  var n=R.routes(T,T.ask.st).length,S=T.routers[T.ask.st].name,adr={};
+  R.nets(T).forEach(function(x){adr[x.net]=1;});T.links.forEach(function(l){adr[l.ipA]=1;adr[l.ipB]=1;});
+  var A=Object.keys(adr).sort(function(a,b){return R.ip2n(a)-R.ip2n(b);}),M={};
+  R.nets(T).forEach(function(x){M[x.p]=1;});M[32]=1;
+  var Ms=Object.keys(M).map(Number).sort(function(a,b){return a-b;});
+  var rows='';for(var i=0;i<n;i++)rows+='<div class="drow" data-row="'+i+'">ip route <button type="button" class="slot" data-k="a"><span class="ph">Zielnetz</span></button><button type="button" class="slot" data-k="m"><span class="ph">Maske</span></button><button type="button" class="slot" data-k="h"><span class="ph">Next Hop</span></button></div><div class="dmsg"></div>';
+  return '<p class="hint" style="margin-top:0">'+S+' braucht <b>'+n+' Routen</b>. Zieh die Bausteine in die Lücken – oder tippe erst einen Baustein, dann eine Lücke an. Antippen einer vollen Lücke leert sie.</p>'+
+   '<div class="pool"><h5>Adressen – Netzadressen und IPs von Routern gemischt</h5><div class="chips2">'+A.map(function(a){return'<span class="chip2" tabindex="0" role="button" data-v="'+a+'" data-k="a">'+a+'</span>';}).join('')+'</div>'+
+   '<h5>Masken</h5><div class="chips2">'+Ms.map(function(p){return'<span class="chip2 m" tabindex="0" role="button" data-v="'+R.maskTxt(p)+'" data-k="m">'+R.maskTxt(p)+'</span>';}).join('')+'</div></div>'+rows;
+}
+function dndText(card){return[].map.call(card.querySelectorAll('.drow'),function(r){var v=[].map.call(r.querySelectorAll('.slot'),function(x){return x.dataset.v||'';});return v.every(Boolean)?'ip route '+v.join(' '):'';});}
+function fillSlot(slot,v){var card=slot.closest('.task');if(v){slot.dataset.v=v;slot.textContent=v;slot.classList.add('f');}else{delete slot.dataset.v;slot.innerHTML='<span class="ph">'+{a:'Zielnetz',m:'Maske',h:'Next Hop'}[slot.dataset.k]+'</span>';slot.classList.remove('f');}
+  var row=slot.closest('.drow');row.classList.remove('ok','no');row.nextElementSibling.textContent='';row.nextElementSibling.className='dmsg';markUsed(card);}
+function markUsed(card){var used={};card.querySelectorAll('.slot[data-k="a"]').forEach(function(x){if(x.dataset.v)used[x.dataset.v]=1;});card.querySelectorAll('.chip2[data-k="a"]').forEach(function(c){c.classList.toggle('used',!!used[c.dataset.v]);});}
+function fits(chip,slot){return chip.dataset.k==='m'?slot.dataset.k==='m':slot.dataset.k!=='m';}
+var dsel=null,dd=null;
+document.addEventListener('pointerdown',function(e){var c=e.target.closest&&e.target.closest('.chip2');if(!c)return;e.preventDefault();dd={el:c,x:e.clientX,y:e.clientY,moved:false};});
+document.addEventListener('pointermove',function(e){if(!dd)return;if(!dd.moved&&Math.hypot(e.clientX-dd.x,e.clientY-dd.y)<6)return;
+  if(!dd.moved){dd.moved=true;dd.g=dd.el.cloneNode(true);dd.g.classList.add('dragghost');dd.g.classList.remove('sel','used');document.body.appendChild(dd.g);}
+  dd.g.style.left=e.clientX+'px';dd.g.style.top=e.clientY+'px';
+  document.querySelectorAll('.slot.hot').forEach(function(x){x.classList.remove('hot');});
+  var el=document.elementFromPoint(e.clientX,e.clientY),sl=el&&el.closest&&el.closest('.slot');if(sl&&sl.closest('.task')===dd.el.closest('.task')&&fits(dd.el,sl))sl.classList.add('hot');
+  var m=60,h=window.innerHeight;if(e.clientY<m)window.scrollBy(0,-14);else if(e.clientY>h-m)window.scrollBy(0,14);});
+document.addEventListener('pointerup',function(e){if(!dd)return;var D2=dd;dd=null;document.querySelectorAll('.slot.hot').forEach(function(x){x.classList.remove('hot');});
+  if(!D2.moved){if(dsel)dsel.classList.remove('sel');dsel=dsel===D2.el?null:D2.el;if(dsel)dsel.classList.add('sel');return;}
+  D2.g.remove();var el=document.elementFromPoint(e.clientX,e.clientY),sl=el&&el.closest&&el.closest('.slot');
+  if(sl&&sl.closest('.task')===D2.el.closest('.task')&&fits(D2.el,sl))fillSlot(sl,D2.el.dataset.v);});
+document.addEventListener('pointercancel',function(){if(dd&&dd.g)dd.g.remove();dd=null;});
+document.addEventListener('click',function(e){var sl=e.target.closest&&e.target.closest('.slot');if(!sl)return;
+  if(dsel&&dsel.closest('.task')===sl.closest('.task')&&fits(dsel,sl)){fillSlot(sl,dsel.dataset.v);dsel.classList.remove('sel');dsel=null;}else if(sl.dataset.v)fillSlot(sl,null);});
+document.addEventListener('keydown',function(e){var c=e.target.closest&&e.target.closest('.chip2');if(c&&(e.key==='Enter'||e.key===' ')){e.preventDefault();if(dsel)dsel.classList.remove('sel');dsel=c;c.classList.add('sel');}});
+
 function kitText(card){var o=[];card.querySelectorAll('.kit tbody tr').forEach(function(tr){var v=tr.querySelector('select').value;if(v&&v!=='d')o.push('ip route '+tr.dataset.net+' '+R.maskTxt(+tr.dataset.p)+' '+v);});return o.join('\n');}
 function updKit(card){var t=kitText(card);card.querySelector('.kitout').textContent=t||'–';card.querySelectorAll('.kit tr').forEach(function(tr){tr.classList.remove('ok','no');var m=tr.querySelector('.m');if(m)m.textContent='';});}
 function view(card){var s=st(card);
@@ -733,7 +785,14 @@ function view(card){var s=st(card);
 function linesHTML(lines){return'<ul class="lines">'+lines.map(function(l){return'<li class="'+(l.ok?'ok':'no')+'">'+(l.ok?'✓ ':'✕ ')+'<code>'+esc(l.line)+'</code>'+(l.msg?'<small>'+esc(l.msg)+'</small>':'')+'</li>';}).join('')+'</ul>';}
 function check(card){
   var T=taskOf(card),s=st(card),fb=card.querySelector('.fb'),out=card.querySelector('.res'),solved;
-  if(s.tab==='st'&&s.mode==='kit'){
+  if(s.tab==='st'&&s.mode==='dnd'){
+    var rows=dndText(card),filled=rows.filter(Boolean),gd=R.gradeStatic(T,filled.join('\n')),k=0,allOk=true;
+    card.querySelectorAll('.drow').forEach(function(r,i){var m=r.nextElementSibling;r.classList.remove('ok','no');
+      if(!rows[i]){m.className='dmsg no';m.textContent=r.querySelector('.slot.f')?'Zeile noch nicht vollständig.':'Zeile noch leer.';allOk=false;return;}
+      var L=gd.lines[k++];r.classList.add(L.ok?'ok':'no');m.className='dmsg '+(L.ok?'ok':'no');m.textContent=L.ok?'✓ '+(L.msg||''):'✕ '+L.msg;if(!L.ok)allOk=false;});
+    solved=allOk&&gd.solved;out.innerHTML='';
+    fb.className='fb '+(solved?'good':'bad');fb.textContent=solved?'Alles richtig! ✓ Probier es jetzt auch mit Eintippen.':gd.ok+' von '+gd.need+' Routen richtig.';
+  } else if(s.tab==='st'&&s.mode==='kit'){
     var g=R.gradeStatic(T,kitText(card)),rs=R.routes(T,T.ask.st),dir=R.direct(T,T.ask.st),S=T.routers[T.ask.st].name,okAll=true;
     card.querySelectorAll('.kit tbody tr').forEach(function(tr){var v=tr.querySelector('select').value,n=tr.dataset.net,isDir=dir.some(function(d){return d.net===n;}),m=tr.querySelector('.m'),ok=false,msg='';
       if(!v)msg='noch offen';
