@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VLANs und Trunking</title>
+<style>
+:root{
+  /* AECP-Stil: weiß, schwarz, Belgrano/Bitter/Open Sans; VLAN-Farben tragen Bedeutung */
+  --ink:#1c2b33; --mute:#546e7a; --line:#e3e1e8; --soft:#f3f5f7; --ok:#2e7d32; --bad:#c62828; --warn:#e65100; --accent:#61a229;
+  --head:"Belgrano",Georgia,serif; --ui:"Bitter",Georgia,serif; --body:"Open Sans","Helvetica Neue",Arial,sans-serif; --mono:ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#fff;color:var(--ink);font:16px/1.65 var(--body)}
+.vmain{max-width:980px;margin:0 auto;padding:24px 20px 60px}
+.vmain h1{font:400 clamp(30px,4.5vw,42px)/1.15 var(--head);letter-spacing:.5px;margin:.3em 0 .2em;text-wrap:balance}
+.vmain h2{font:400 26px/1.2 var(--head);letter-spacing:.5px;margin:0 0 .4em;text-wrap:balance}
+.sub{color:var(--mute);max-width:72ch;margin:0 0 14px}
+.jumps{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 6px}
+.jumps a{font:600 15px var(--ui);letter-spacing:.4px;color:#fff;background:var(--ink);padding:8px 14px;border-radius:4px;text-decoration:none}
+.jumps a:hover{background:#000}
+.part{border-top:3px solid var(--ink);margin-top:40px;padding-top:12px}
+.card{border:1px solid var(--line);border-radius:4px;background:#fff;padding:18px 20px;margin:14px 0}
+svg{width:100%;height:auto;display:block;background:#fbfcfd;border:1px solid var(--line);border-radius:4px}
+button,select,input{font:600 15px var(--ui);letter-spacing:.3px}
+.btn{padding:9px 16px;border-radius:4px;border:1.5px solid var(--ink);background:var(--ink);color:#fff;cursor:pointer}
+.btn:hover{background:#000}
+.btn.ghost{background:#fff;color:var(--ink)}
+.btn.ghost:hover{background:var(--soft)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Sandbox */
+.sbgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+@media(max-width:760px){.sbgrid{grid-template-columns:1fr}}
+.cfg{background:var(--soft);border-radius:4px;padding:10px 14px;font-size:14px}
+.cfg h3{font:600 15px var(--ui);margin:0 0 6px}
+.cfg label{margin-right:12px;white-space:nowrap}
+.cfg select{font:500 14px var(--body);padding:2px 4px}
+.hint{font-size:14px;color:var(--mute);margin:8px 0 0}
+.result{margin-top:10px;font-size:15px;min-height:1.6em}
+.frames{margin-top:12px;font:13px var(--mono)}
+.frame{display:flex;flex-wrap:wrap;margin:6px 0;align-items:stretch}
+.frame span{border:1.5px solid var(--ink);border-right:0;padding:5px 8px;background:#fff;white-space:nowrap}
+.frame span:last-child{border-right:1.5px solid var(--ink)}
+.frame .ftag{background:#fff8e1;font-weight:700}
+.frame .ftag.none{background:var(--soft);color:var(--mute);border-style:dashed;font-weight:400}
+.frame b{font-family:var(--body)}
+.flab{font:600 14px var(--ui);margin-top:8px}
+
+/* Regelwerk */
+.rules{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:760px){.rules{grid-template-columns:1fr}}
+.rules .card{margin:0}
+.rules h3{font:400 19px var(--head);margin:0 0 6px}
+.rules ul{margin:0;padding-left:20px}
+.rules li{margin:3px 0}
+code,pre{font-family:var(--mono);font-size:13.5px}
+pre.cli{background:#1c2b33;color:#e6edf2;border-radius:4px;padding:10px 12px;margin:8px 0 0;overflow-x:auto;line-height:1.5}
+.check{background:#fff8e1;border:1px solid #ffe082}
+
+/* Übungen */
+.pager{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:4px;padding:12px 14px;margin:14px 0}
+.pinfo{text-align:center;line-height:1.3}
+.pinfo span{display:block;font-size:13px;color:var(--mute)}
+.toc{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:5px}
+.toc button{min-width:36px;padding:4px 0;border:1px solid #cfd8dc;background:#fff;color:var(--ink);border-radius:4px;cursor:pointer;font-size:13px}
+.toc button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.toc button.ok{background:#e3f4e6;border-color:#a5d6a7}
+.toc button.on.ok{background:var(--ok);border-color:var(--ok)}
+.task h3{font:400 22px var(--head);margin:0 0 4px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.tag{font:400 12px var(--head);text-transform:uppercase;letter-spacing:1.5px;color:#3d6e14;background:#eef6e6;padding:2px 8px;border-radius:2px}
+.trunks{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px;margin-top:10px}
+.trunks pre{margin:0}
+.q{margin-top:16px;padding-top:12px;border-top:1px dashed #cfd8dc}
+.q p{margin:0 0 6px;font-weight:600}
+.opts{display:flex;flex-wrap:wrap;gap:6px 10px}
+.opts label{display:inline-flex;align-items:center;gap:6px;border:1.5px solid #cfd8dc;border-radius:4px;padding:5px 10px;cursor:pointer;font-size:15px;background:#fff}
+.opts label.right{border-color:var(--ok);background:#e3f4e6}
+.opts label.wrong{border-color:var(--bad);background:#fde3e3}
+.opts label.missed{border-color:var(--ok);border-style:dashed}
+.dot{width:11px;height:11px;border-radius:50%;display:inline-block}
+.acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;align-items:center}
+.fb{font-weight:600}
+.fb.good{color:var(--ok)} .fb.bad{color:var(--bad)}
+.sol{display:none;margin-top:14px;border-top:2px solid var(--ink);padding-top:12px}
+.sol.open{display:block}
+.sol ul{list-style:none;padding:0;margin:10px 0}
+.sol li{margin:4px 0;padding-left:4px}
+.ans{background:var(--soft);border-left:4px solid var(--accent);padding:8px 12px;margin:8px 0}
+.navrow{display:flex;justify-content:space-between;margin-top:14px;gap:8px}
+.genbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
+.genbar select,.genbar input{padding:8px;border:1.5px solid #90a4ae;border-radius:4px;font-family:var(--body);font-weight:500}
+.err{color:var(--bad)}
+@media print{.jumps,.pager,.acts,.navrow,.genbar,#sandbox,#generator{display:none!important}.task{display:block!important;break-inside:avoid}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<main class="vmain">
+<h1>VLANs und Trunking</h1>
+<p class="sub">Ein VLAN teilt einen Switch in mehrere getrennte Netze. Ein Broadcast bleibt in seinem VLAN. Über einen Trunk laufen mehrere VLANs gleichzeitig, jeder Frame bekommt dafür einen 802.1Q-Tag mit seiner VLAN-Nummer.</p>
+<nav class="jumps" aria-label="Abschnitte"><a href="#sandbox">▶ Ausprobieren</a><a href="#regeln">Regelwerk</a><a href="#uebungen">Übungen</a><a href="#generator">🎲 Zufallsgenerator</a></nav>
+
+<h2 class="part" id="sandbox">Ausprobieren: Wohin geht ein Broadcast?</h2>
+<p class="sub">Klicke auf einen PC. Er schickt einen Broadcast (z. B. eine ARP-Anfrage). Ändere die Trunk-Einstellungen und beobachte, was passiert.</p>
+<div class="card">
+ <div id="sbsvg"></div>
+ <div class="result" id="sbres" aria-live="polite">Klicke auf einen PC.</div>
+ <div class="sbgrid">
+  <div class="cfg"><h3>SW1 Gi0/1 (Trunk)</h3>
+   <div>Erlaubt: <label><input type="checkbox" data-side="A" data-v="10" checked> 10</label><label><input type="checkbox" data-side="A" data-v="20" checked> 20</label><label><input type="checkbox" data-side="A" data-v="30" checked> 30</label></div>
+   <div>Native VLAN: <select data-native="A"><option>1</option><option>10</option><option>20</option><option>30</option><option>99</option></select></div>
+  </div>
+  <div class="cfg"><h3>SW2 Gi0/1 (Trunk)</h3>
+   <div>Erlaubt: <label><input type="checkbox" data-side="B" data-v="10" checked> 10</label><label><input type="checkbox" data-side="B" data-v="20" checked> 20</label><label><input type="checkbox" data-side="B" data-v="30" checked> 30</label></div>
+   <div>Native VLAN: <select data-native="B"><option>1</option><option>10</option><option>20</option><option>30</option><option>99</option></select></div>
+  </div>
+ </div>
+ <p class="hint">Probiere z. B.: VLAN 20 auf SW2 nicht erlauben, oder native VLAN 10 auf SW1 und 20 auf SW2 (Native-VLAN-Mismatch).</p>
+ <div class="frames">
+  <div class="flab">So sieht der Frame aus</div>
+  <div>Am Access-Port (zum PC):</div>
+  <div class="frame"><span>Ziel-MAC</span><span>Quell-MAC</span><span class="ftag none">kein Tag</span><span>Typ</span><span>Daten</span><span>FCS</span></div>
+  <div>Auf dem Trunk:</div>
+  <div class="frame"><span>Ziel-MAC</span><span>Quell-MAC</span><span class="ftag" id="sbtag">802.1Q-Tag · TPID 0x8100 · PRI · DEI · <b>VID 10</b></span><span>Typ</span><span>Daten</span><span>FCS</span></div>
+ </div>
+</div>
+
+<h2 class="part" id="regeln">Regelwerk</h2>
+<div class="rules">
+ <div class="card"><h3>Access-Port</h3><ul>
+  <li>gehört zu <b>genau einem VLAN</b></li><li>Frames gehen <b>ohne Tag</b> zum PC – der PC weiß nichts vom VLAN</li></ul>
+  <pre class="cli">interface Fa0/1
+ switchport mode access
+ switchport access vlan 10</pre></div>
+ <div class="card"><h3>Trunk-Port</h3><ul>
+  <li>transportiert <b>mehrere VLANs</b> zwischen Switches</li><li>jeder Frame bekommt einen <b>802.1Q-Tag</b> (4 Byte) mit der VLAN-ID (12 Bit → VLAN 1–4094)</li>
+  <li>ein VLAN muss auf <b>beiden Seiten erlaubt</b> sein</li></ul>
+  <pre class="cli">interface Gi0/1
+ switchport mode trunk
+ switchport trunk allowed vlan 10,20
+ switchport trunk native vlan 99</pre></div>
+ <div class="card"><h3>Native VLAN</h3><ul>
+  <li>Frames im native VLAN laufen <b>ohne Tag</b> über den Trunk (Standard: VLAN 1)</li>
+  <li>ein ungetaggter Frame landet auf der anderen Seite in deren native VLAN</li>
+  <li>sind die native VLANs verschieden (<b>Mismatch</b>), springen Frames in ein fremdes VLAN – Cisco meldet dann „Native VLAN mismatch“</li>
+  <li>Empfehlung: ungenutztes VLAN wie 99 als native VLAN</li></ul></div>
+ <div class="card"><h3>Zwischen VLANs</h3><ul>
+  <li>jedes VLAN ist ein eigenes IP-Netz und eine eigene Broadcast-Domäne</li>
+  <li>PCs in verschiedenen VLANs erreichen sich nur über einen <b>Router</b> oder Layer-3-Switch (Inter-VLAN-Routing)</li>
+  <li>prüfen mit <code>show vlan brief</code> und <code>show interfaces trunk</code></li></ul></div>
+</div>
+<div class="card check"><b>So löst du die Aufgaben:</b> Starte beim Sender in seinem VLAN. Der Broadcast erreicht alle PCs im selben VLAN am selben Switch. Über einen Trunk geht er nur, wenn das VLAN auf der sendenden Seite erlaubt ist; dort bekommt er einen Tag (außer im native VLAN). Auf der Empfängerseite muss das VLAN ebenfalls erlaubt sein. Ein Frame ohne Tag landet im native VLAN der Empfängerseite.</div>
+
+<h2 class="part" id="uebungen">Übungen</h2>
+<p class="sub">Kreuze an und klicke auf „Prüfen“. Die Lösung zeigt den Weg des Broadcasts mit allen Tags.</p>
+<div class="pager" id="pager"><button class="btn ghost" id="pprev" type="button">‹ Zurück</button><div class="pinfo"><b id="pnum"></b><span id="ppart"></span></div><button class="btn" id="pnext" type="button">Weiter ›</button><div class="toc" id="ptoc"></div></div>
+<div id="tasks"></div>
+
+<h2 class="part" id="generator">🎲 Zufallsgenerator</h2>
+<p class="sub">Neue Aufgaben auf Knopfdruck. Jede Aufgabe hat eine Nummer (z. B. <b>S-4711</b>) – dieselbe Nummer ergibt dieselbe Aufgabe für die ganze Klasse.</p>
+<div class="genbar"><label for="glvl">Stufe</label><select id="glvl"><option value="L">Leicht (2 Switches, alle VLANs erlaubt)</option><option value="M" selected>Mittel (2–3 Switches, eingeschränkte Trunks)</option><option value="S">Schwer (3–4 Switches, einseitige Fehler, Native-Mismatch)</option></select>
+<button class="btn" id="gnew" type="button">Neue Aufgabe</button><label for="gcode">Nummer</label><input id="gcode" size="8" placeholder="M-123" autocomplete="off"><button class="btn ghost" id="gload" type="button">Laden</button><span id="gmsg" class="err"></span></div>
+<div id="gout"></div>
+</main>
+
+<script>/*VLANJS*/</script>
+<script>
+(function(){
+'use strict';
+var V=window.VLAN, $=function(id){return document.getElementById(id);};
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+/* ---------- Sandbox mit Animation ---------- */
+var SB={sw:['SW1','SW2'],pcs:[{name:'PC1',sw:'SW1',port:'Fa0/1',vlan:10},{name:'PC2',sw:'SW1',port:'Fa0/2',vlan:20},{name:'PC3',sw:'SW1',port:'Fa0/3',vlan:30},{name:'PC4',sw:'SW2',port:'Fa0/1',vlan:10},{name:'PC5',sw:'SW2',port:'Fa0/2',vlan:20},{name:'PC6',sw:'SW2',port:'Fa0/3',vlan:30}],
+  links:[{a:'SW1',b:'SW2',pa:'Gi0/1',pb:'Gi0/1',A:{allowed:[10,20,30],native:1},B:{allowed:[10,20,30],native:1}}]};
+var anim=null, raf=0, reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+function readCfg(){
+  ['A','B'].forEach(function(s){
+    var al=[];[].forEach.call(document.querySelectorAll('input[data-side="'+s+'"]'),function(c){if(c.checked)al.push(+c.dataset.v);});
+    var nat=+document.querySelector('select[data-native="'+s+'"]').value;
+    if(al.indexOf(nat)<0)al.push(nat); /* native VLAN gilt immer als erlaubt, sonst würde es verworfen */
+    SB.links[0][s]={allowed:al,native:nat};
+  });
+}
+function sbDraw(){
+  var t=anim?anim.t:0;
+  var sol=anim&&anim.done?anim.tr:null;
+  $('sbsvg').innerHTML=V.draw(SB,{click:true,sender:anim?anim.sender:null,sol:sol,anim:anim&&!anim.done?function(pos){return frameLayer(pos,anim.tr,t);}:null});
+}
+function pt(pos,name,side){var p=pos[name];if(/^SW/.test(name))return side==='down'?[p[0],p[1]+26]:side==='left'?[p[0]-60,p[1]]:side==='right'?[p[0]+60,p[1]]:p;return[p[0],p[1]-20];}
+function frameLayer(pos,tr,t){
+  var o=[];
+  tr.hops.forEach(function(h){
+    var dt=t-h.t0; if(dt<0||dt>1.6)return;
+    var a,b;
+    if(h.kind==='access'){ if(/^SW/.test(h.from)){a=pt(pos,h.from,'down');b=pt(pos,h.to);}else{a=pt(pos,h.from);b=pt(pos,h.to,'down');} }
+    else{ var right=pos[h.to][0]>pos[h.from][0]; a=pt(pos,h.from,right?'right':'left'); b=pt(pos,h.to,right?'left':'right'); }
+    var f=Math.min(1,dt), e=f<.5?2*f*f:1-Math.pow(-2*f+2,2)/2;
+    if(h.kind==='blocked'||h.status==='egress'){ if(dt<=1.4)o.push(cross(a[0]+(b[0]-a[0])*.15,a[1],'VLAN '+h.vlan+' nicht erlaubt'));return; }
+    var x=a[0]+(b[0]-a[0])*e, y=a[1]+(b[1]-a[1])*e;
+    if(dt>1){ if(h.status==='ingress')o.push(cross(b[0]-(b[0]-a[0])*.12,b[1],'VLAN '+(h.tagged?h.vlan:h.arrive)+' nicht erlaubt'));
+      else if(h.status==='leak')o.push(chip(b[0],b[1]-30,'landet in VLAN '+h.arrive+' ⚠','#e65100'));
+      return; }
+    var col=V.vcol(h.status==='leak'&&e>.5?h.arrive:h.vlan);
+    o.push('<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="9" fill="'+col+'" stroke="#fff" stroke-width="2"/>');
+    if(h.kind==='trunk')o.push(chip(x,y-22,h.tagged?'802.1Q · VLAN '+h.vlan:'ohne Tag (native)',h.tagged?col:'#546e7a'));
+  });
+  return o.join('');
+}
+function chip(x,y,s,c){var w=s.length*6.3+16;return'<rect x="'+(x-w/2).toFixed(1)+'" y="'+(y-10).toFixed(1)+'" width="'+w+'" height="20" rx="10" fill="#fff" stroke="'+c+'" stroke-width="1.5"/><text x="'+x.toFixed(1)+'" y="'+(y+4).toFixed(1)+'" text-anchor="middle" font-size="11" font-weight="700" fill="'+c+'">'+s+'</text>';}
+function cross(x,y,s){return'<path d="M'+(x-8)+' '+(y-8)+'L'+(x+8)+' '+(y+8)+'M'+(x+8)+' '+(y-8)+'L'+(x-8)+' '+(y+8)+'" stroke="#c62828" stroke-width="3.5" stroke-linecap="round"/>'+chip(x,y+24,s,'#c62828');}
+function send(name){
+  readCfg();
+  var tr=V.trace(SB,name), end=0; tr.hops.forEach(function(h){end=Math.max(end,h.t0+1.6);});
+  cancelAnimationFrame(raf);
+  anim={sender:name,tr:tr,t:reduce?end:0,end:end,done:reduce};
+  var p=SB.pcs.filter(function(x){return x.name===name;})[0];
+  var tw=tr.wire.filter(function(w){return w.status!=='egress';})[0];
+  $('sbtag').className='ftag'+(tw&&!tw.tagged?' none':'');
+  $('sbtag').innerHTML=tw?(tw.tagged?'802.1Q-Tag · TPID 0x8100 · PRI · DEI · <b>VID '+tw.vlan+'</b>':'kein Tag (VLAN '+tw.vlan+' ist native)'):'– dieser Broadcast geht nicht über den Trunk –';
+  var r=tr.recv.map(function(n){var q=SB.pcs.filter(function(x){return x.name===n;})[0];return n+' (VLAN '+q.vlan+')';});
+  var res=name+' (VLAN '+p.vlan+') sendet einen Broadcast. '+(r.length?'Empfänger: '+r.join(', ')+'.':'Niemand empfängt ihn.');
+  var leak=tr.wire.filter(function(w){return w.status==='leak';})[0]; if(leak)res+=' ⚠ Native-VLAN-Mismatch: der Frame ist von VLAN '+leak.vlan+' nach VLAN '+leak.arrive+' gesprungen!';
+  var bl=tr.wire.filter(function(w){return w.status==='egress'||w.status==='ingress';})[0]; if(bl)res+=' Auf dem Trunk wurde VLAN '+(bl.tagged===false?bl.arrive:bl.vlan)+' verworfen, weil es nicht erlaubt ist.';
+  $('sbres').textContent=res;
+  var prev=null;
+  function step(ts){ if(!anim||anim.done)return; if(prev!==null)anim.t+=Math.min(.05,(ts-prev)/1000)*1.1; prev=ts; if(anim.t>=anim.end){anim.done=true;} sbDraw(); if(!anim.done)raf=requestAnimationFrame(step); }
+  sbDraw(); if(!reduce)raf=requestAnimationFrame(step);
+}
+$('sbsvg').addEventListener('click',function(e){var g=e.target.closest&&e.target.closest('[data-pc]');if(g)send(g.getAttribute('data-pc'));});
+document.querySelectorAll('.cfg input,.cfg select').forEach(function(el){el.addEventListener('change',function(){readCfg();if(anim)send(anim.sender);else sbDraw();});});
+readCfg();sbDraw();
+
+/* ---------- Aufgaben ---------- */
+function taskHTML(T,id,label){
+  var others=T.pcs.filter(function(p){return p.name!==T.sender;});
+  var pre=T.sw.map(function(s){var t=V.showTrunk(T,s);return t?'<pre class="cli">'+esc(t)+'</pre>':'';}).join('');
+  var s=T.pcs.filter(function(p){return p.name===T.sender;})[0];
+  return '<div class="card task" id="'+id+'" data-code="'+T.code+'">'+
+   '<h3>'+label+' <span class="tag">'+V.LVNAME[T.level]+'</span><span class="tag">Nr. '+T.code+'</span></h3>'+
+   V.draw(T,{})+
+   '<div class="trunks">'+pre+'</div>'+
+   '<div class="q" data-q="1"><p>1. '+T.sender+' (VLAN '+s.vlan+') sendet einen Broadcast. Welche PCs empfangen ihn?</p><div class="opts">'+
+    others.map(function(p){return'<label><input type="checkbox" value="'+p.name+'"> <i class="dot" style="background:'+V.vcol(p.vlan)+'"></i>'+p.name+' (VLAN '+p.vlan+')</label>';}).join('')+
+    '<label><input type="checkbox" value="-"> keiner</label></div></div>'+
+   '<div class="q" data-q="2"><p>2. Kann '+T.pair[0]+' den '+T.pair[1]+' anpingen?</p><div class="opts">'+
+    '<label><input type="radio" name="'+id+'-p" value="ja"> Ja</label><label><input type="radio" name="'+id+'-p" value="nein"> Nein</label></div></div>'+
+   '<div class="acts"><button class="btn" type="button" data-act="check">Prüfen</button><button class="btn ghost" type="button" data-act="sol">Lösung anzeigen</button><span class="fb" aria-live="polite"></span></div>'+
+   '<div class="sol"></div></div>';
+}
+var cache={};
+function taskOf(el){var c=el.getAttribute('data-code');if(!cache[c]){var m=c.split('-');cache[c]=V.makeTask(+m[1],m[0]);}return cache[c];}
+function solHTML(T){
+  var tr=V.trace(T,T.sender), pg=V.ping(T,T.pair[0],T.pair[1]);
+  return '<h3 style="font:400 20px var(--head);margin:0">Lösung</h3>'+V.draw(T,{sol:tr,sender:T.sender})+
+   '<div class="ans"><b>1.</b> '+(tr.recv.length?'Empfänger: '+tr.recv.join(', '):'Niemand empfängt den Broadcast.')+'</div>'+
+   '<ul>'+V.explain(T,tr).map(function(l){return'<li>'+esc(l)+'</li>';}).join('')+'</ul>'+
+   '<div class="ans"><b>2. '+(pg.ok?'Ja':'Nein')+'.</b> '+esc(pg.why)+'</div>';
+}
+function check(card){
+  var T=taskOf(card), tr=V.trace(T,T.sender), pg=V.ping(T,T.pair[0],T.pair[1]), good=0, tot=0;
+  card.querySelectorAll('[data-q="1"] label').forEach(function(l){
+    var c=l.querySelector('input'), should=c.value==='-'?tr.recv.length===0:tr.recv.indexOf(c.value)>=0;
+    l.classList.remove('right','wrong','missed'); tot++;
+    if(c.checked&&should){l.classList.add('right');good++;} else if(c.checked&&!should){l.classList.add('wrong');} else if(!c.checked&&should){l.classList.add('missed');} else good++;
+  });
+  var rad=card.querySelector('[data-q="2"] input:checked'); tot++;
+  card.querySelectorAll('[data-q="2"] label').forEach(function(l){l.classList.remove('right','wrong','missed');var c=l.querySelector('input'),should=(c.value==='ja')===pg.ok;if(c.checked)l.classList.add(should?'right':'wrong');else if(should&&rad)l.classList.add('missed');});
+  if(rad&&(rad.value==='ja')===pg.ok)good++;
+  var fb=card.querySelector('.fb'), all=good===tot;
+  fb.className='fb '+(all?'good':'bad');
+  fb.textContent=all?'Alles richtig! ✓':(good+' von '+tot+' Punkten richtig – grün gestrichelt = hättest du ankreuzen müssen.');
+  if(all)card.dataset.solved='1';
+  markToc();
+}
+document.addEventListener('click',function(e){
+  var b=e.target.closest&&e.target.closest('[data-act]'); if(!b)return;
+  var card=b.closest('.task');
+  if(b.dataset.act==='check')check(card);
+  if(b.dataset.act==='sol'){var s=card.querySelector('.sol');if(!s.innerHTML)s.innerHTML=solHTML(taskOf(card));var o=s.classList.toggle('open');b.textContent=o?'Lösung ausblenden':'Lösung anzeigen';}
+});
+/* "keiner" schließt andere Kreuze aus */
+document.addEventListener('change',function(e){var c=e.target;if(!c.closest||!c.closest('[data-q="1"]'))return;var box=c.closest('.opts');if(c.value==='-'&&c.checked)box.querySelectorAll('input').forEach(function(x){if(x!==c)x.checked=false;});else if(c.checked){var n=box.querySelector('input[value="-"]');if(n)n.checked=false;}});
+
+var PLAN=[['L',[1,2,3,4,5,6,7,8,9,10]],['M',[1,2,3,4,5,6,7,8,9,10]],['S',[1,2,3,4,5,6,7,8,9,10]]], list=[];
+PLAN.forEach(function(p){p[1].forEach(function(s){list.push(p[0]+'-'+s);});});
+var host=$('tasks'), cur=0;
+list.forEach(function(code,i){var m=code.split('-'),T=V.makeTask(+m[1],m[0]);cache[code]=T;var d=document.createElement('div');d.className='page';d.hidden=i!==0;d.innerHTML=taskHTML(T,'t'+(i+1),'Aufgabe '+(i+1))+'<div class="navrow">'+(i>0?'<button class="btn ghost" type="button" data-go="'+(i-1)+'">‹ Aufgabe '+i+'</button>':'<span></span>')+(i<list.length-1?'<button class="btn" type="button" data-go="'+(i+1)+'">Aufgabe '+(i+2)+' ›</button>':'<a class="btn" href="#generator" style="text-decoration:none">🎲 Weiter mit dem Zufallsgenerator</a>')+'</div>';host.appendChild(d);});
+var pages=[].slice.call(host.children);
+list.forEach(function(c,i){var b=document.createElement('button');b.type='button';b.textContent=i+1;b.dataset.go=i;$('ptoc').appendChild(b);});
+function markToc(){[].forEach.call($('ptoc').children,function(b,i){b.classList.toggle('on',i===cur);b.classList.toggle('ok',pages[i].querySelector('.task').dataset.solved==='1');});}
+function show(i,scroll){i=Math.max(0,Math.min(pages.length-1,i));cur=i;pages.forEach(function(p,j){p.hidden=j!==i;});$('pnum').textContent='Aufgabe '+(i+1)+' von '+pages.length;var lv=list[i][0];$('ppart').textContent=V.LVNAME[lv];$('pprev').disabled=i===0;$('pnext').disabled=i===pages.length-1;markToc();if(scroll){var top=$('uebungen').getBoundingClientRect().top+window.pageYOffset;if(window.pageYOffset>top)window.scrollTo({top:top,behavior:reduce?'auto':'smooth'});}}
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-go]');if(b)show(+b.dataset.go,true);});
+$('pprev').onclick=function(){show(cur-1,true);};$('pnext').onclick=function(){show(cur+1,true);};
+show(0,false);
+
+/* ---------- Generator ---------- */
+function gen(lvl,seed){var T=V.makeTask(seed,lvl);if(!T){$('gmsg').textContent='Zu dieser Nummer gibt es keine Aufgabe.';return;}$('gmsg').textContent='';cache[T.code]=T;$('gout').innerHTML=taskHTML(T,'g'+T.code,'Aufgabe '+T.code);$('gcode').value=T.code;$('glvl').value=lvl;}
+$('gnew').onclick=function(){gen($('glvl').value,1+Math.floor(Math.random()*99999));};
+function load(){var m=/^\s*([LMS])\s*-?\s*(\d{1,6})\s*$/i.exec($('gcode').value);if(!m){$('gmsg').textContent='Bitte eine Nummer wie L-12, M-305 oder S-4711 eingeben.';return;}gen(m[1].toUpperCase(),+m[2]);}
+$('gload').onclick=load;$('gcode').addEventListener('keydown',function(e){if(e.key==='Enter')load();});
+gen('M',1+Math.floor(Math.random()*99999));
+})();
+</script>
+</body>
+</html>

@@ -12,8 +12,8 @@ SITE = {
     'intro': '<strong>Analyze</strong> – Topologien durchschauen. <strong>Explain</strong> – verstehen, warum das Netz so entscheidet. '
              '<strong>Configure</strong> – selbst Hand anlegen. <strong>Practice</strong> – üben, bis es sitzt. '
              'Vom OSI-Modell bis zu Angriffen im LAN, mit Animationen, Lösungen zum Aufklappen und Zufallsgenerator.',
-    'news': ['<strong>Neu:</strong> <a href="switching/spanning-tree/">Spanning Tree und RSTP</a> mit Animation der Portzustände, '
-             '50 durchgerechneten Übungen und Zufallsgenerator.'],
+    'news': ['<strong>Neu:</strong> <a href="switching/vlan/">VLANs und Trunking</a> – Broadcasts verfolgen, 802.1Q-Tags verstehen, '
+             'Native-VLAN-Mismatch entdecken. Dazu <a href="switching/spanning-tree/">Spanning Tree und RSTP</a> mit 50 Übungen.'],
 }
 
 AREAS = [
@@ -27,7 +27,8 @@ AREAS = [
      'topics': [
          {'slug': 'spanning-tree', 'title': 'Spanning Tree und RSTP', 'tool': 'spanning-tree',
           'text': 'Root Bridge, Root Port, Designated Port – mit Animation, 50 Übungen und Zufallsgenerator.'},
-         {'slug': 'vlan', 'title': 'VLANs und Trunking', 'text': 'Access- und Trunk-Ports, 802.1Q-Tags und natives VLAN.'},
+         {'slug': 'vlan', 'title': 'VLANs und Trunking', 'tool': 'vlan',
+          'text': 'Access- und Trunk-Ports, 802.1Q-Tags und native VLAN – zum Ausprobieren, mit 30 Übungen und Zufallsgenerator.'},
      ]},
     {'slug': 'routing', 'title': 'Routing', 'text': 'Wie Pakete zwischen Netzen ihren Weg finden.',
      'topics': [
