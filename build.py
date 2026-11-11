@@ -95,7 +95,7 @@ def page(title, depth, desc, body, active=''):
 
 
 # Seiten mit Netzplänen bekommen die Zoom-Leiste (static/zoom.js)
-ZOOM_TOOLS = {'spanning-tree', 'vlan', 'inter-vlan-routing', 'collision-broadcast-domains', 'statisches-routing', 'rip', 'ethernet-switching'}
+ZOOM_TOOLS = {'spanning-tree', 'vlan', 'inter-vlan-routing', 'collision-broadcast-domains', 'statisches-routing', 'rip', 'ethernet-switching', 'dhcp'}
 
 
 def build_tool(area, topic, depth):

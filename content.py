@@ -12,7 +12,8 @@ SITE = {
     'intro': '<strong>Analyze</strong> – Topologien durchschauen. <strong>Explain</strong> – verstehen, warum das Netz so entscheidet. '
              '<strong>Configure</strong> – selbst Hand anlegen. <strong>Practice</strong> – üben, bis es sitzt. '
              'Vom OSI-Modell bis zu Angriffen im LAN, mit Animationen, Lösungen zum Aufklappen und Zufallsgenerator.',
-    'news': ['<strong>Neu:</strong> <a href="grundlagen/ethernet-switching/">Ethernet und Switching</a> – MAC-Learning zum Ausprobieren, mit ARP und Windows-Eingabeaufforderung. '
+    'news': ['<strong>Neu:</strong> <a href="ip-services/dhcp/">DHCP und ip helper-address</a> – DORA-Ablauf als Animation und Übungen zum DHCP-Relay. '
+             'Außerdem <a href="grundlagen/ethernet-switching/">Ethernet und Switching</a> – MAC-Learning zum Ausprobieren, mit ARP und Windows-Eingabeaufforderung. '
              'Außerdem <a href="grundlagen/subnetting/">Subnetting und VLSM</a> und <a href="grundlagen/supernetting/">Supernetting</a> – mit VLSM-Erklärung für eigene Beispiele. '
              'Außerdem <a href="routing/statisches-routing/">Statisches Routing</a> – ip route-Befehle zusammenstecken, eintippen und prüfen lassen. '
              'Außerdem <a href="routing/rip/">RIP</a> – welche Netze in die network-Befehle gehören, mit Übungen und Zufallsgenerator. '
@@ -56,7 +57,8 @@ AREAS = [
     {'slug': 'ip-services', 'title': 'IP-Services', 'text': 'Dienste, die ein Netz erst benutzbar machen.',
      'topics': [
          {'slug': 'nat', 'title': 'NAT und PAT', 'text': 'Private Adressen ins Internet übersetzen.'},
-         {'slug': 'dhcp', 'title': 'DHCP', 'text': 'Adressen automatisch vergeben: DORA, Pools und Relay.'},
+         {'slug': 'dhcp', 'title': 'DHCP und ip helper-address', 'tool': 'dhcp',
+          'text': 'DORA als Animation, DHCP-Relay mit giaddr – und wo der Helper hin muss. Mit Übungen und Zufallsgenerator.'},
      ]},
     {'slug': 'netzwerksicherheit', 'title': 'Netzwerksicherheit', 'text': 'Angriffe im LAN verstehen und abwehren.',
      'topics': [

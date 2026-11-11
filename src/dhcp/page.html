@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DHCP und ip helper-address</title>
+<style>
+/*BASECSS*/
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 12px}
+.tabs button{padding:9px 14px;border-radius:4px;border:1.5px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--ink);color:#fff}
+.stepbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.stepno{font:600 15px var(--ui);margin-left:auto;color:var(--mute)}
+.stepbox{display:grid;grid-template-columns:1.1fr 1fr;gap:12px;margin-top:12px}
+@media(max-width:760px){.stepbox{grid-template-columns:1fr}}
+.steptext h3{font:400 21px var(--head);margin:0 0 4px}
+.steptext p{margin:0 0 6px}
+.dora{display:inline-block;font:700 12px var(--ui);color:#fff;padding:2px 8px;border-radius:3px;margin-right:6px;letter-spacing:.5px}
+.d-D{background:#e65100}.d-O{background:#1565c0}.d-R{background:#7b1fa2}.d-A{background:#2e7d32}.d-X{background:#455a64}
+.hdr{width:100%;border-collapse:collapse;font-size:14px}
+.hdr th,.hdr td{border:1px solid #cfd8dc;padding:5px 8px;text-align:left}
+.hdr th{background:var(--soft);font-weight:600;width:36%}
+.hdr td{font-family:var(--mono);font-size:13px}
+.hdr td.chg{background:#fff8e1;font-weight:700}
+.hdr caption{text-align:left;font:600 14px var(--ui);margin-bottom:4px}
+.cmdwin{border:1px solid #455a64;border-radius:6px;overflow:hidden;margin-top:10px}
+.cmdwin pre{margin:0;background:#0c0c0c;color:#ccc;font:12.5px/1.45 Consolas,ui-monospace,monospace;padding:8px 10px;overflow-x:auto}
+.cmdwin pre .hl{background:#61a229;color:#fff}
+.qh{font:600 16px var(--ui);margin:16px 0 4px}
+.fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px 18px;margin-top:6px}
+.fld label{display:block;font:600 14px var(--ui);margin-bottom:3px}
+.fld input{width:100%;padding:7px 9px;border:1.5px solid #90a4ae;border-radius:4px;font:600 15px var(--mono)}
+.fld input.right{border-color:var(--ok);background:#e3f4e6}.fld input.wrong{border-color:var(--bad);background:#fde3e3}
+.fld small{display:block;font-size:12.5px;color:var(--bad);min-height:1em}
+svg.rt .ifck{cursor:pointer}svg.rt .ifck:focus{outline:none}svg.rt .ifck:focus-visible rect{stroke:#61a229;stroke-width:3}
+.iflist{list-style:none;padding:0;margin:6px 0 0;font-size:14.5px}
+.iflist li{margin:4px 0;padding:5px 10px;border-radius:4px}
+.iflist li.ok{background:#e3f4e6}.iflist li.no{background:#fde3e3}.iflist li.miss{background:#fff8e1}
+.cfgs{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-top:8px}
+.cfgs pre{margin:0}
+.big{font:700 15px var(--mono)}
+</style>
+</head>
+<body>
+<main class="vmain">
+<h1>DHCP und ip helper-address</h1>
+<p class="sub">Ein PC ohne IP-Adresse ruft per <b>Broadcast</b> nach einem DHCP-Server. Steht der Server in einem anderen Netz, bleibt dieser Ruf am Router hängen – außer, der Router ist mit <code>ip helper-address</code> als <b>DHCP-Relay</b> eingerichtet.</p>
+<nav class="jumps" aria-label="Abschnitte"><a href="#dora">DHCP-Ablauf (DORA)</a><a href="#helper">Wo kommt der Helper hin?</a><a href="#regeln">Regelwerk</a><a href="#uebungen">Übungen</a><a href="#generator">🎲 Zufallsgenerator</a></nav>
+
+<h2 class="part" id="dora">Der DHCP-Ablauf: Discover, Offer, Request, Ack</h2>
+<div class="tabs" role="tablist"><button type="button" role="tab" id="m-same" aria-selected="false">Server im selben Netz</button><button type="button" role="tab" id="m-relay" aria-selected="true">Server in anderem Netz (Relay)</button></div>
+<div class="card">
+ <div id="dSvg"></div>
+ <div class="stepbar"><button class="btn ghost" id="sPrev" type="button">‹ Zurück</button><button class="btn" id="sNext" type="button">Weiter ›</button><button class="btn ghost" id="sPlay" type="button">▶ Abspielen</button><span class="stepno" id="sNo"></span></div>
+ <div class="stepbox">
+  <div class="steptext" aria-live="polite"><h3 id="sTitle"></h3><div id="sText"></div></div>
+  <table class="hdr"><caption>Das Paket in diesem Moment</caption><tbody id="sHdr"></tbody></table>
+ </div>
+</div>
+
+<h2 class="part" id="helper">Wo kommt ip helper-address hin – und was steht dahinter?</h2>
+<div class="rules">
+ <div class="card"><h3>Wo?</h3><ul>
+  <li>Auf dem <b>Router-Interface, an dem die Clients hängen</b> – also dort, wo ihr Broadcast ankommt.</li>
+  <li>Das ist das Interface, dessen IP die Clients als <b>Gateway</b> haben (bei VLANs: das Subinterface bzw. die SVI des VLANs).</li>
+  <li><b>Nicht</b> auf dem Interface Richtung Server, nicht auf Routern dazwischen.</li>
+  <li>Für <b>jedes</b> Client-Netz ohne eigenen DHCP-Server ein Helper.</li></ul></div>
+ <div class="card"><h3>Was dahinter?</h3><ul>
+  <li>Die <b>IP-Adresse des DHCP-Servers</b> – das Ziel ganz am Ende des Weges.</li>
+  <li><b>Nicht</b> der nächste Router, nicht das Gateway des Server-Netzes, keine Broadcast-Adresse.</li>
+  <li>Der Router schickt den Broadcast als <b>Unicast</b> an diese IP – normal geroutet, über beliebig viele Router.</li></ul>
+  <pre class="cli">interface GigabitEthernet0/0
+ ip address 192.168.10.1 255.255.255.0
+ ip helper-address 10.0.0.10</pre></div>
+ <div class="card"><h3>Woher weiß der Server, welcher Pool?</h3><ul>
+  <li>Der Relay trägt seine Interface-IP als <b>giaddr</b> (Gateway-Adresse) ins Paket ein: 192.168.10.1.</li>
+  <li>Der Server sucht den Pool, in dessen Netz giaddr liegt → 192.168.10.0/24.</li>
+  <li>Die Antwort geht an giaddr zurück – der Server braucht also eine <b>Route zum Client-Netz</b>.</li></ul></div>
+ <div class="card"><h3>Merksatz</h3>
+  <p style="margin:0;font-size:17px"><b>Helper sitzt bei den Clients – und zeigt auf den Server.</b></p>
+  <p class="hint">Ist ein Router selbst der DHCP-Server, braucht sein eigenes Client-LAN keinen Helper. Die anderen Router zeigen mit dem Helper auf eine IP dieses Routers.</p></div>
+</div>
+
+<h2 class="part" id="regeln">Regelwerk</h2>
+<div class="rules">
+ <div class="card"><h3>Router als DHCP-Server</h3>
+  <pre class="cli">ip dhcp excluded-address 192.168.10.1 192.168.10.10
+ip dhcp pool LAN10
+ network 192.168.10.0 255.255.255.0
+ default-router 192.168.10.1
+ dns-server 8.8.8.8</pre>
+  <ul><li><code>excluded-address</code>: Adressen, die nicht vergeben werden (Gateway, Server, Drucker).</li>
+  <li><code>default-router</code>: das <b>Gateway der Clients</b> – die Router-IP in <i>ihrem</i> LAN, nicht die IP des DHCP-Servers.</li></ul></div>
+ <div class="card"><h3>Die vier Pakete</h3><ul>
+  <li><span class="dora d-D">D</span><b>Discover</b> – Client: „Gibt es einen DHCP-Server?“ (Broadcast)</li>
+  <li><span class="dora d-O">O</span><b>Offer</b> – Server: „Nimm 192.168.10.11.“</li>
+  <li><span class="dora d-R">R</span><b>Request</b> – Client: „Ich nehme sie.“ (wieder Broadcast)</li>
+  <li><span class="dora d-A">A</span><b>Ack</b> – Server: „Bestätigt.“ Ab jetzt gilt die Adresse.</li></ul>
+  <p class="hint">UDP: Client Port 68, Server Port 67. Der Client hat anfangs die IP 0.0.0.0.</p></div>
+ <div class="card"><h3>Nachschauen</h3>
+  <pre class="cli">show ip dhcp binding
+show ip dhcp pool
+show running-config | include helper</pre>
+  <p class="hint">Am Windows-PC: <code>ipconfig /release</code> und <code>ipconfig /renew</code> starten den Ablauf neu, <code>ipconfig /all</code> zeigt DHCP-Server und Lease.</p></div>
+ <div class="card"><h3>Typische Fehler</h3><ul>
+  <li>Helper auf dem Interface Richtung Server statt bei den Clients.</li>
+  <li>Hinter dem Helper die IP des nächsten Routers statt des Servers.</li>
+  <li><code>default-router</code> = IP des DHCP-Servers – falsch, es ist das Gateway der Clients.</li>
+  <li>Kein Pool für das Client-Netz, oder keine Route vom Server zurück.</li></ul></div>
+</div>
+
+<h2 class="part" id="uebungen">Übungen</h2>
+<p class="sub">Alle Clients sollen ihre Adresse vom DHCP-Server bekommen. Hake im Plan die Interfaces an, auf denen <code>ip helper-address</code> konfiguriert werden muss, und beantworte die Fragen darunter.</p>
+<div class="pager"><button class="btn ghost" id="pprev" type="button">‹ Zurück</button><div class="pinfo"><b id="pnum"></b><span id="ppart"></span></div><button class="btn" id="pnext" type="button">Weiter ›</button><div class="toc" id="ptoc"></div></div>
+<div id="tasks"></div>
+
+<h2 class="part" id="generator">🎲 Zufallsgenerator</h2>
+<p class="sub">Jede Aufgabe hat eine Nummer. Mit der Nummer bekommt jede Schülerin und jeder Schüler genau dasselbe Netz.</p>
+<div class="genbar"><label for="glvl">Stufe</label><select id="glvl"><option value="L">Leicht (3–4 Router, Server im LAN)</option><option value="M" selected>Mittel (Ring, manchmal Router als Server)</option><option value="S">Schwer (5–6 Router)</option></select>
+<button class="btn" id="gnew" type="button">Neue Aufgabe</button><label for="gcode">Nummer</label><input id="gcode" size="8" placeholder="M-123" autocomplete="off"><button class="btn ghost" id="gload" type="button">Laden</button><span id="gmsg" class="err"></span></div>
+<div id="gout"></div>
+</main>
+<script>
+/*RTJS*/
+</script>
+<script>
+/*DHJS*/
+</script>
+<script>
+(function(){
+'use strict';
+var H=window.DH,R=window.RT,$=function(i){return document.getElementById(i);},reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+/* ---------- DORA-Demo ---------- */
+var PCMAC='00aa.aaaa.aaaa',R0MAC='0001.1111.0000',R1MAC='0001.1111.0001',SMAC='00bb.0000.0010',SAME_SMAC='00bb.0000.0020';
+var N={pc:[90,215],pc2:[230,70],sw:[230,215],r:[440,215],sw2:[640,215],srv:[800,215]};
+var NS={pc:[110,215],pc2:[330,70],sw:[330,215],srv:[560,215]};
+function el(kind,x,y,label,sub,col){
+  var ic={pc:'<rect x="-17" y="-18" width="34" height="24" rx="2" fill="#2f7392"/><rect x="-14" y="-15" width="28" height="18" fill="#d8ecf5"/><rect x="-12" y="9" width="24" height="5" rx="1" fill="#2f7392"/>',
+    sw:'<path d="M-30 -3l10 -10h42l-10 10z" fill="#6aaecb" stroke="#1f5872"/><path d="M-30 -3h42v13h-42z" fill="#2f7392"/><path d="M12 -3l10 -10v13l-10 10z" fill="#1f5872"/>',
+    r:'<ellipse cx="0" cy="8" rx="28" ry="10" fill="#1f5872"/><rect x="-28" y="-8" width="56" height="16" fill="#2f7392"/><ellipse cx="0" cy="-8" rx="28" ry="10" fill="#5a9dbb" stroke="#1f5872"/>',
+    srv:'<rect x="-14" y="-24" width="28" height="44" rx="2" fill="#2e7d32"/><path d="M-9 -16h18M-9 -8h18M-9 0h18" stroke="#c8e6c9" stroke-width="2"/>'}[kind];
+  return'<g transform="translate('+x+' '+y+')">'+ic+'</g><text x="'+x+'" y="'+(y+42)+'" text-anchor="middle" font-size="14" font-weight="700" font-family="Open Sans,Arial,sans-serif" fill="'+(col||'#1c2b33')+'">'+label+'</text>'+(sub?'<text x="'+x+'" y="'+(y+57)+'" text-anchor="middle" font-size="11.5" font-family="ui-monospace,Menlo,Consolas,monospace" fill="#546e7a">'+sub+'</text>':'');
+}
+function line(a,b){return'<line x1="'+a[0]+'" y1="'+a[1]+'" x2="'+b[0]+'" y2="'+b[1]+'" stroke="#1c2b33" stroke-width="3"/>';}
+function scene(mode,st,pc){
+  var h='<svg viewBox="0 0 900 300" role="img" aria-label="DHCP-Ablauf"><g class="hl"></g>';
+  if(mode==='relay'){
+    h+=line(N.pc,N.sw)+line(N.pc2,N.sw)+line(N.sw,N.r)+line(N.r,N.sw2)+line(N.sw2,N.srv);
+    h+='<rect x="20" y="20" width="370" height="270" rx="8" fill="#1565c0" fill-opacity=".05" stroke="#1565c0" stroke-dasharray="6 4"/><text x="30" y="40" font-size="13" font-weight="700" fill="#1565c0" font-family="Open Sans,Arial,sans-serif">LAN 192.168.10.0/24</text>';
+    h+='<rect x="500" y="20" width="380" height="270" rx="8" fill="#2e7d32" fill-opacity=".05" stroke="#2e7d32" stroke-dasharray="6 4"/><text x="870" y="40" text-anchor="end" font-size="13" font-weight="700" fill="#2e7d32" font-family="Open Sans,Arial,sans-serif">Server-Netz 10.0.0.0/24</text>';
+    h+='<text x="390" y="200" text-anchor="end" font-size="11.5" font-family="ui-monospace,monospace" fill="#455a64">Gi0/0 .1</text><text x="490" y="200" font-size="11.5" font-family="ui-monospace,monospace" fill="#455a64">Gi0/1 .1</text>';
+    h+='<text x="440" y="284" text-anchor="middle" font-size="12" font-weight="700" font-family="ui-monospace,monospace" fill="#e65100">Gi0/0: ip helper-address 10.0.0.10</text>';
+    h+=el('pc',N.pc[0],N.pc[1],'PC',pc||'0.0.0.0')+el('pc',N.pc2[0],N.pc2[1],'','')+'<text x="'+(N.pc2[0]+26)+'" y="'+(N.pc2[1]+5)+'" font-size="14" font-weight="700" font-family="Open Sans,Arial,sans-serif" fill="#1c2b33">PC 2</text>'+el('sw',N.sw[0],N.sw[1],'','')+el('r',N.r[0],N.r[1]-0,'R1','')+el('sw',N.sw2[0],N.sw2[1],'','')+el('srv',N.srv[0],N.srv[1],'DHCP-Server','10.0.0.10','#2e7d32');
+  } else {
+    h+=line(NS.pc,NS.sw)+line(NS.pc2,NS.sw)+line(NS.sw,NS.srv);
+    h+='<rect x="20" y="20" width="660" height="270" rx="8" fill="#1565c0" fill-opacity=".05" stroke="#1565c0" stroke-dasharray="6 4"/><text x="30" y="40" font-size="13" font-weight="700" fill="#1565c0" font-family="Open Sans,Arial,sans-serif">LAN 192.168.10.0/24</text>';
+    h+=el('pc',NS.pc[0],NS.pc[1],'PC',pc||'0.0.0.0')+el('pc',NS.pc2[0],NS.pc2[1],'','')+'<text x="'+(NS.pc2[0]+26)+'" y="'+(NS.pc2[1]+5)+'" font-size="14" font-weight="700" font-family="Open Sans,Arial,sans-serif" fill="#1c2b33">PC 2</text>'+el('sw',NS.sw[0],NS.sw[1],'','')+el('srv',NS.srv[0],NS.srv[1],'DHCP-Server','192.168.10.2','#2e7d32');
+  }
+  return h+'<g class="pk"></g></svg>';
+}
+function hd(srcMac,dstMac,srcIp,dstIp,ports,giaddr,info,chg){return{rows:[['Quell-MAC',srcMac],['Ziel-MAC',dstMac],['Quell-IP',srcIp],['Ziel-IP',dstIp],['UDP-Ports',ports],['giaddr (Relay)',giaddr],['Inhalt',info]],chg:chg||[]};}
+var BC='ffff.ffff.ffff';
+var STEPS={
+ relay:[
+  {t:'X',title:'Ausgangslage',text:'<p>Der PC startet und hat noch <b>keine IP-Adresse</b>. Der DHCP-Server steht in einem anderen Netz, hinter Router R1. Auf R1 Gi0/0 – dem Interface zu den Clients – ist <code>ip helper-address 10.0.0.10</code> konfiguriert.</p>',h:null},
+  {t:'D',title:'Discover – Broadcast ins LAN',path:[['pc','sw','r'],['pc','sw','pc2']],col:'#e65100',text:'<p>Der PC ruft per <b>Broadcast</b>: „Gibt es hier einen DHCP-Server?“ Er kennt weder eine IP noch einen Server – also Quelle 0.0.0.0, Ziel 255.255.255.255.</p><p>Alle im LAN bekommen den Broadcast, auch PC 2 und R1. <b>Router leiten Broadcasts nicht weiter</b> – ohne Helper wäre hier Schluss.</p>',
+   h:hd(PCMAC,BC,'0.0.0.0','255.255.255.255','68 → 67','0.0.0.0','DHCPDISCOVER',['Ziel-MAC','Ziel-IP'])},
+  {t:'D',title:'R1 leitet als Relay weiter',path:[['r','sw2','srv']],col:'#e65100',text:'<p>Der Broadcast kam auf <b>Gi0/0</b> an, und dort steht <code>ip helper-address 10.0.0.10</code>. R1 macht daraus einen <b>Unicast an 10.0.0.10</b> und trägt die IP seines Eingangs-Interfaces als <b>giaddr = 192.168.10.1</b> ein.</p><p>Ab jetzt ist es ein ganz normales Paket, das geroutet wird – egal über wie viele Router.</p>',
+   h:hd(R1MAC,SMAC,'192.168.10.1','10.0.0.10','67 → 67','192.168.10.1','DHCPDISCOVER',['Quell-MAC','Ziel-MAC','Quell-IP','Ziel-IP','giaddr (Relay)'])},
+  {t:'O',title:'Offer – der Server macht ein Angebot',path:[['srv','sw2','r']],col:'#1565c0',text:'<p>Der Server schaut auf <b>giaddr 192.168.10.1</b> und weiß: Der Client sitzt im Netz <b>192.168.10.0/24</b>. Er nimmt eine freie Adresse aus diesem Pool – <b>192.168.10.11</b> – und schickt das Angebot zurück an giaddr, also an R1.</p>',
+   h:hd(SMAC,R1MAC,'10.0.0.10','192.168.10.1','67 → 67','192.168.10.1','DHCPOFFER: 192.168.10.11, Gateway 192.168.10.1, DNS 8.8.8.8',['Inhalt'])},
+  {t:'O',title:'R1 gibt das Offer an den PC weiter',path:[['r','sw','pc']],col:'#1565c0',text:'<p>R1 reicht das Angebot ins LAN weiter, an die MAC-Adresse des PCs. Der PC hat noch keine IP – er erkennt das Paket an seiner MAC und an der Transaktions-ID.</p>',
+   h:hd(R0MAC,PCMAC,'192.168.10.1','192.168.10.11','67 → 68','192.168.10.1','DHCPOFFER: 192.168.10.11',['Quell-MAC','Ziel-MAC'])},
+  {t:'R',title:'Request – „Ich nehme sie“ (wieder Broadcast)',path:[['pc','sw','r'],['pc','sw','pc2']],col:'#7b1fa2',text:'<p>Der PC nimmt das Angebot an – wieder per <b>Broadcast</b>. So erfahren auch andere DHCP-Server, dass ihr Angebot nicht gebraucht wird.</p><p>Er hat die Adresse noch nicht fest – Quelle ist immer noch 0.0.0.0.</p>',
+   h:hd(PCMAC,BC,'0.0.0.0','255.255.255.255','68 → 67','0.0.0.0','DHCPREQUEST: 192.168.10.11 von Server 10.0.0.10',['Inhalt'])},
+  {t:'R',title:'R1 leitet den Request weiter',path:[['r','sw2','srv']],col:'#7b1fa2',text:'<p>Auch der Request kommt auf Gi0/0 an – derselbe Helper, derselbe Weg: Unicast an 10.0.0.10 mit giaddr 192.168.10.1.</p>',
+   h:hd(R1MAC,SMAC,'192.168.10.1','10.0.0.10','67 → 67','192.168.10.1','DHCPREQUEST: 192.168.10.11',['Quell-IP','Ziel-IP','giaddr (Relay)'])},
+  {t:'A',title:'Ack – bestätigt',path:[['srv','sw2','r']],col:'#2e7d32',text:'<p>Der Server trägt die Adresse als vergeben ein (<code>show ip dhcp binding</code>) und bestätigt.</p>',
+   h:hd(SMAC,R1MAC,'10.0.0.10','192.168.10.1','67 → 67','192.168.10.1','DHCPACK: 192.168.10.11, Lease 1 Tag',['Inhalt'])},
+  {t:'A',title:'Fertig – der PC hat seine Adresse',path:[['r','sw','pc']],col:'#2e7d32',pc:'192.168.10.11',text:'<p>Ab jetzt nutzt der PC 192.168.10.11/24 mit Gateway 192.168.10.1. Nach der halben Lease-Zeit fragt er per Unicast direkt beim Server nach Verlängerung.</p>'+
+   '<div class="cmdwin"><pre>C:\\&gt;ipconfig /all\n   DHCP aktiviert. . . . . . . : Ja\n   IPv4-Adresse  . . . . . . . : <span class="hl">192.168.10.11</span>(Bevorzugt)\n   Subnetzmaske  . . . . . . . : 255.255.255.0\n   Standardgateway . . . . . . : 192.168.10.1\n   DHCP-Server . . . . . . . . : <span class="hl">10.0.0.10</span>\n   DNS-Server  . . . . . . . . : 8.8.8.8</pre></div>',
+   h:hd(R0MAC,PCMAC,'192.168.10.1','192.168.10.11','67 → 68','192.168.10.1','DHCPACK: 192.168.10.11',['Ziel-MAC'])}],
+ same:[
+  {t:'X',title:'Ausgangslage',text:'<p>Der PC hat noch keine IP. Der DHCP-Server steht im <b>selben LAN</b> – ein Helper ist nicht nötig, der Broadcast erreicht ihn direkt.</p>',h:null},
+  {t:'D',title:'Discover',path:[['pc','sw','srv'],['pc','sw','pc2']],col:'#e65100',text:'<p>Broadcast an alle im LAN – der Server hört mit.</p>',h:hd(PCMAC,BC,'0.0.0.0','255.255.255.255','68 → 67','0.0.0.0','DHCPDISCOVER',['Ziel-MAC','Ziel-IP'])},
+  {t:'O',title:'Offer',path:[['srv','sw','pc']],col:'#1565c0',text:'<p>Der Server bietet 192.168.10.11 an – aus dem Pool für sein eigenes Netz.</p>',h:hd(SAME_SMAC,PCMAC,'192.168.10.2','192.168.10.11','67 → 68','0.0.0.0','DHCPOFFER: 192.168.10.11',['Inhalt'])},
+  {t:'R',title:'Request',path:[['pc','sw','srv'],['pc','sw','pc2']],col:'#7b1fa2',text:'<p>Wieder Broadcast: „Ich nehme 192.168.10.11.“</p>',h:hd(PCMAC,BC,'0.0.0.0','255.255.255.255','68 → 67','0.0.0.0','DHCPREQUEST: 192.168.10.11',['Inhalt'])},
+  {t:'A',title:'Ack – fertig',path:[['srv','sw','pc']],col:'#2e7d32',pc:'192.168.10.11',text:'<p>Bestätigt. Der PC nutzt jetzt 192.168.10.11/24.</p>',h:hd(SAME_SMAC,PCMAC,'192.168.10.2','192.168.10.11','67 → 68','0.0.0.0','DHCPACK: 192.168.10.11',['Inhalt'])}]
+};
+var mode='relay',step=0,raf=0,timer=0,playing=false;
+function P(k){return(mode==='relay'?N:NS)[k];}
+function renderStep(){
+  var S=STEPS[mode][step],pcIp=null;for(var i=0;i<=step;i++)if(STEPS[mode][i].pc)pcIp=STEPS[mode][i].pc;
+  $('dSvg').innerHTML=scene(mode,step,pcIp);
+  $('sTitle').innerHTML='<span class="dora d-'+S.t+'">'+({D:'DISCOVER',O:'OFFER',R:'REQUEST',A:'ACK',X:'START'})[S.t]+'</span>'+esc(S.title);
+  $('sText').innerHTML=S.text;
+  $('sHdr').innerHTML=S.h?S.h.rows.map(function(r){return'<tr><th>'+r[0]+'</th><td'+(S.h.chg.indexOf(r[0])>=0?' class="chg"':'')+'>'+esc(r[1])+'</td></tr>';}).join(''):'<tr><td colspan="2" style="font-family:var(--body)">Noch kein Paket unterwegs.</td></tr>';
+  $('sNo').textContent='Schritt '+(step+1)+' von '+STEPS[mode].length;$('sPrev').disabled=step===0;$('sNext').disabled=step===STEPS[mode].length-1;
+  if(S.path)anim(S);
+}
+function anim(S){
+  var svg=$('dSvg').querySelector('svg'),g=svg.querySelector('.pk'),paths=S.path.map(function(p){return p.map(P);});
+  var hl=svg.querySelector('.hl');hl.innerHTML=paths.map(function(p){return'<polyline points="'+p.map(function(q){return q.join(',');}).join(' ')+'" fill="none" stroke="'+S.col+'" stroke-opacity=".25" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>';}).join('');
+  cancelAnimationFrame(raf);if(reduce)return;
+  var dots=paths.map(function(){var c=document.createElementNS('http://www.w3.org/2000/svg','g');c.innerHTML='<rect x="-13" y="-9" width="26" height="18" rx="2" fill="'+S.col+'"/><path d="M-13 -9l13 10 13 -10" fill="none" stroke="#fff" stroke-width="1.8"/>';g.appendChild(c);return c;});
+  var t0=null,dur=1700;
+  function f(ts){if(t0===null)t0=ts;var k=Math.min(1,(ts-t0)/dur);paths.forEach(function(p,j){var seg=p.length-1,x=k*seg,i=Math.min(seg-1,Math.floor(x)),u=x-i,a=p[i],b=p[i+1];dots[j].setAttribute('transform','translate('+(a[0]+(b[0]-a[0])*u)+' '+(a[1]+(b[1]-a[1])*u)+')');});if(k<1)raf=requestAnimationFrame(f);}
+  raf=requestAnimationFrame(f);
+}
+function go(n){step=Math.max(0,Math.min(STEPS[mode].length-1,n));renderStep();}
+function stop(){playing=false;clearTimeout(timer);$('sPlay').textContent='▶ Abspielen';}
+$('sPrev').onclick=function(){stop();go(step-1);};$('sNext').onclick=function(){stop();go(step+1);};
+$('sPlay').onclick=function(){if(playing){stop();return;}playing=true;$('sPlay').textContent='❚❚ Pause';if(step>=STEPS[mode].length-1)go(0);(function tick(){timer=setTimeout(function(){if(!playing)return;if(step<STEPS[mode].length-1){go(step+1);tick();}else stop();},3800);})();};
+function setMode(m){mode=m;stop();$('m-same').setAttribute('aria-selected',m==='same');$('m-relay').setAttribute('aria-selected',m==='relay');go(0);}
+$('m-same').onclick=function(){setMode('same');};$('m-relay').onclick=function(){setMode('relay');};go(0);
+
+/* ---------- Aufgaben ---------- */
+var cache={},ST={};
+function taskOf(card){var c=card.dataset.code;if(!cache[c]){var m=c.split('-');cache[c]=H.makeTask(+m[1],m[0]);}return cache[c];}
+function st(card){return ST[card.id]=ST[card.id]||{sel:{},res:false};}
+function taskHTML(D,id,label){
+  var T=D.T,pr=T.routers[D.poolR],srvTxt=D.mode==='host'?'Der DHCP-Server <b>'+D.srvIp+'</b> steht im LAN von '+T.routers[D.srv].name+'.':'<b>'+T.routers[D.srv].name+'</b> (grün markiert) ist selbst der DHCP-Server.';
+  return'<div class="card task" id="'+id+'" data-code="'+D.code+'"><h3>'+label+' <span class="tag">'+H.LVNAME[D.level]+'</span><span class="tag">Nr. '+D.code+'</span></h3>'+
+   '<p style="margin:2px 0 6px">'+srvTxt+' Alle anderen LANs haben Clients, die ihre Adresse per DHCP bekommen sollen.</p>'+
+   '<p class="qh">1. Hake im Plan alle Interfaces an, auf denen <code>ip helper-address</code> konfiguriert werden muss.</p><div class="board"></div><ul class="iflist"></ul>'+
+   '<p class="qh">2. Welche IP-Adresse kommt hinter <code>ip helper-address</code>?</p><div class="fields"><div class="fld"><label for="'+id+'-t">ip helper-address …</label><input id="'+id+'-t" data-q="t" autocomplete="off" spellcheck="false"><small></small></div></div>'+
+   '<p class="qh">3. Der Pool für die Clients hinter <b>'+pr.name+'</b>:</p><div class="fields">'+
+   '<div class="fld"><label for="'+id+'-n">network – Netzadresse</label><input id="'+id+'-n" data-q="n" autocomplete="off" spellcheck="false"><small></small></div>'+
+   '<div class="fld"><label for="'+id+'-m">network – Subnetzmaske</label><input id="'+id+'-m" data-q="m" autocomplete="off" spellcheck="false"><small></small></div>'+
+   '<div class="fld"><label for="'+id+'-g">default-router</label><input id="'+id+'-g" data-q="g" autocomplete="off" spellcheck="false"><small></small></div></div>'+
+   '<div class="acts"><button class="btn" type="button" data-act="check">Prüfen</button><button class="btn ghost" type="button" data-act="sol">Lösung anzeigen</button><span class="fb" aria-live="polite"></span></div><div class="sol"></div></div>';
+}
+function drawCard(card){var D=taskOf(card),s=st(card);card.querySelector('.board').innerHTML=H.draw(D,{clickable:true,sel:s.sel,res:s.res});}
+function mark(inp,ok,msg){inp.classList.remove('right','wrong');if(inp.value.trim())inp.classList.add(ok?'right':'wrong');inp.parentNode.querySelector('small').textContent=ok||!inp.value.trim()?'':msg;}
+function check(card){
+  var D=taskOf(card),s=st(card),T=D.T,ok=0,tot=0;s.res=true;drawCard(card);
+  var g=H.gradeIf(D,s.sel),items=[];
+  Object.keys(s.sel).filter(function(k){return s.sel[k];}).forEach(function(k){items.push('<li class="'+(D.need[k]?'ok':'no')+'">'+(D.need[k]?'✓ ':'✕ ')+esc(H.explainIf(D,k))+'</li>');});
+  if(g.missing.length)items.push('<li class="miss">Es fehl'+(g.missing.length>1?'en noch '+g.missing.length+' Interfaces':'t noch 1 Interface')+' (im Plan gestrichelt).</li>');
+  card.querySelector('.iflist').innerHTML=items.join('');tot++;if(g.solved)ok++;
+  var ti=card.querySelector('[data-q="t"]'),tr=H.checkTarget(D,ti.value);mark(ti,tr.ok,tr.msg);tot++;if(tr.ok)ok++;
+  var ni=card.querySelector('[data-q="n"]'),nv=ni.value.trim().split('/')[0],nok=nv===D.pool.net;mark(ni,nok,nv===D.pool.gw?'Das ist das Gateway – gesucht ist die Netzadresse.':'stimmt nicht');tot++;if(nok)ok++;
+  var mi=card.querySelector('[data-q="m"]'),mv=mi.value.trim(),mok=mv===D.pool.mask;mark(mi,mok,/^\/?\d+$/.test(mv)?'Bitte ausgeschrieben, z. B. '+D.pool.mask:'stimmt nicht');tot++;if(mok)ok++;
+  var gi=card.querySelector('[data-q="g"]'),gv=gi.value.trim(),gok=gv===D.pool.gw,gm='stimmt nicht';
+  if(!gok){if(D.targets.indexOf(gv)>=0)gm='Das ist der DHCP-Server. default-router ist das Gateway der Clients.';else if(gv===D.pool.net)gm='Das ist die Netzadresse. Gesucht ist die Router-IP in diesem LAN.';else if(T.links.some(function(l){return l.ipA===gv||l.ipB===gv;}))gm='Das ist eine Router-IP auf einem Router-Router-Kabel. Das Gateway liegt im LAN der Clients.';}
+  mark(gi,gok,gm);tot++;if(gok)ok++;
+  var fb=card.querySelector('.fb'),all=ok===tot;fb.className='fb '+(all?'good':'bad');fb.textContent=all?'Alles richtig! ✓':ok+' von '+tot+' richtig.';
+  if(all)card.dataset.solved='1';markToc();
+}
+function solHTML(D){
+  var T=D.T,pr=T.routers[D.poolR];
+  return'<h3 style="font:400 20px var(--head);margin:0">Lösung</h3>'+
+   '<p><b>1.</b> Helper auf jedem LAN-Interface mit Clients – '+Object.keys(D.need).map(function(k){var p=k.split(':');return T.routers[+p[0]].name+' '+p[1];}).join(', ')+'. '+(D.mode==='host'?'Im LAN des Servers ('+T.routers[D.srv].name+') nicht – dort erreicht der Broadcast den Server direkt.':T.routers[D.srv].name+' ist selbst der Server – sein eigenes LAN braucht keinen Helper.')+' Auf den Router-Router-Kabeln nie.</p>'+
+   '<p><b>2.</b> '+(D.mode==='host'?'Die IP des DHCP-Servers: <span class="big">'+D.srvIp+'</span>.':'Eine IP von '+T.routers[D.srv].name+' – meist die des Interfaces, das zu den Clients zeigt: '+D.targets.join(', ')+'.')+'</p>'+
+   '<p><b>3.</b> network <span class="big">'+D.pool.net+' '+D.pool.mask+'</span>, default-router <span class="big">'+D.pool.gw+'</span> – die IP von '+pr.name+' im LAN der Clients.</p>'+
+   '<div class="cfgs">'+H.helperCfg(D).map(function(c){return'<pre class="cli">'+esc(c.r+'(config)#\n'+c.lines.join('\n'))+'</pre>';}).join('')+'</div>'+
+   '<p class="qh">Pools auf dem DHCP-Server'+(D.mode==='router'?' ('+T.routers[D.srv].name+')':'')+'</p><pre class="cli">'+esc(H.serverCfg(D).join('\n'))+'</pre>';
+}
+function toggle(g){var card=g.closest('.task'),s=st(card),k=g.dataset.if;s.sel[k]=!s.sel[k];s.res=false;drawCard(card);var n=card.querySelector('.ifck[data-if="'+k+'"]');if(n&&document.activeElement===document.body)return;}
+document.addEventListener('click',function(e){
+  var g=e.target.closest&&e.target.closest('.ifck');if(g){toggle(g);return;}
+  var t=e.target.closest&&e.target.closest('[data-act]');if(!t)return;var card=t.closest('.task');if(!card)return;
+  if(t.dataset.act==='check')check(card);
+  if(t.dataset.act==='sol'){var so=card.querySelector('.sol');if(!so.innerHTML)so.innerHTML=solHTML(taskOf(card));var o=so.classList.toggle('open');t.textContent=o?'Lösung ausblenden':'Lösung anzeigen';}
+});
+document.addEventListener('keydown',function(e){var g=e.target.closest&&e.target.closest('.ifck');if(g&&(e.key===' '||e.key==='Enter')){e.preventDefault();var k=g.dataset.if,card=g.closest('.task');toggle(g);var n=card.querySelector('.ifck[data-if="'+k+'"]');if(n)n.focus();}});
+
+/* ---------- Blättern ---------- */
+var list=['L-1','L-2','L-3','L-4','M-1','M-2','M-3','M-4','S-1','S-2','S-3','S-4'];
+var host=$('tasks'),cur=0;
+list.forEach(function(code,i){var m=code.split('-'),D=H.makeTask(+m[1],m[0]);cache[code]=D;var d=document.createElement('div');d.className='page';d.hidden=i!==0;
+  d.innerHTML=taskHTML(D,'t'+(i+1),'Aufgabe '+(i+1))+'<div class="navrow">'+(i>0?'<button class="btn ghost" type="button" data-go="'+(i-1)+'">‹ Aufgabe '+i+'</button>':'<span></span>')+(i<list.length-1?'<button class="btn" type="button" data-go="'+(i+1)+'">Aufgabe '+(i+2)+' ›</button>':'<a class="btn" href="#generator" style="text-decoration:none">🎲 Weiter mit dem Zufallsgenerator</a>')+'</div>';host.appendChild(d);});
+var pages=[].slice.call(host.children);pages.forEach(function(p){drawCard(p.querySelector('.task'));});
+list.forEach(function(c,i){var b=document.createElement('button');b.type='button';b.textContent=i+1;b.dataset.go=i;$('ptoc').appendChild(b);});
+function markToc(){[].forEach.call($('ptoc').children,function(b,i){b.classList.toggle('on',i===cur);b.classList.toggle('ok',pages[i].querySelector('.task').dataset.solved==='1');});}
+function show(i,scroll){i=Math.max(0,Math.min(pages.length-1,i));cur=i;pages.forEach(function(p,j){p.hidden=j!==i;});$('pnum').textContent='Aufgabe '+(i+1)+' von '+pages.length;$('ppart').textContent=H.LVNAME[list[i][0]];$('pprev').disabled=i===0;$('pnext').disabled=i===pages.length-1;markToc();if(scroll){var top=$('uebungen').getBoundingClientRect().top+window.pageYOffset;if(window.pageYOffset>top)window.scrollTo({top:top,behavior:reduce?'auto':'smooth'});}}
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-go]');if(b)show(+b.dataset.go,true);});
+$('pprev').onclick=function(){show(cur-1,true);};$('pnext').onclick=function(){show(cur+1,true);};show(0,false);
+
+/* ---------- Generator ---------- */
+function gen(lvl,seed){var D=H.makeTask(seed,lvl);if(!D){$('gmsg').textContent='Zu dieser Nummer gibt es keine Aufgabe.';return;}$('gmsg').textContent='';cache[D.code]=D;delete ST['g'+D.code];$('gout').innerHTML=taskHTML(D,'g'+D.code,'Aufgabe '+D.code);drawCard($('g'+D.code));$('gcode').value=D.code;$('glvl').value=lvl;}
+$('gnew').onclick=function(){gen($('glvl').value,1+Math.floor(Math.random()*99999));};
+function load(){var m=/^\s*([LMS])\s*-?\s*(\d{1,6})\s*$/i.exec($('gcode').value);if(!m){$('gmsg').textContent='Bitte eine Nummer wie L-12, M-305 oder S-4711 eingeben.';return;}gen(m[1].toUpperCase(),+m[2]);}
+$('gload').onclick=load;$('gcode').addEventListener('keydown',function(e){if(e.key==='Enter')load();});
+gen('M',1+Math.floor(Math.random()*99999));
+})();
+</script>
+</body>
+</html>
