@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title><!--SUB-->Subnetting und VLSM<!--/SUB--><!--SUP-->Supernetting<!--/SUP--></title>
+<style>
+/*BASECSS*/
+.fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px 18px;margin-top:12px}
+.fld label{display:block;font:600 14px var(--ui);margin-bottom:3px}
+.fld input,.vt input{width:100%;padding:7px 9px;border:1.5px solid #90a4ae;border-radius:4px;font:600 15px var(--mono)}
+.fld input.right,.vt input.right,.vt select.right{border-color:var(--ok);background:#e3f4e6}
+.fld input.wrong,.vt input.wrong,.vt select.wrong{border-color:var(--bad);background:#fde3e3}
+.fld .opts label{display:inline-flex;font:400 15px var(--body);margin:0}
+.fld.wide{grid-column:1/-1}
+.fld small,.vt small{display:block;font-size:12.5px;color:var(--bad);min-height:1em}
+.given{font-size:16px;margin:4px 0 2px}
+.given code{font-size:16px;font-weight:700;background:var(--soft);padding:2px 6px;border-radius:3px}
+.glist{border-collapse:collapse;margin:8px 0;font-size:15px}
+.glist td,.glist th{border:1px solid #cfd8dc;padding:4px 12px;text-align:left}
+.glist th{background:var(--soft)}
+.vt{border-collapse:collapse;width:100%;margin-top:10px;font-size:14.5px}
+.vt th,.vt td{border:1px solid #cfd8dc;padding:5px 6px;text-align:left;vertical-align:top}
+.vt th{background:var(--soft);font:600 13.5px var(--ui)}
+.vt td:first-child{width:2.2em;text-align:center;font-weight:700}
+.vt select{width:100%;padding:6px;border:1.5px solid #90a4ae;border-radius:4px;font:500 14px var(--body)}
+@media(max-width:700px){.vt thead{display:none}.vt tr{display:grid;grid-template-columns:1fr 1fr;border:1px solid #cfd8dc;margin-bottom:8px}.vt td{border:0}.vt td:first-child{grid-column:1/-1;text-align:left}.vt td::before{content:attr(data-l);display:block;font:600 12px var(--ui);color:var(--mute)}}
+.steps{border-collapse:collapse;font-size:14.5px;margin:8px 0;width:100%}
+.steps th,.steps td{border:1px solid #cfd8dc;padding:5px 8px;text-align:left}
+.steps th{background:var(--soft)}
+.steps td.m{font-family:var(--mono)}
+.bits{display:flex;flex-wrap:wrap;gap:2px;margin:10px 0;font:700 13px var(--mono)}
+.bits span{width:22px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:3px;color:#fff}
+.bits span.n{background:#1565c0}.bits span.h{background:#ef6c00}.bits i{width:8px}
+.bitleg{font-size:13.5px;color:var(--mute)}
+.bitleg b.n{color:#1565c0}.bitleg b.h{color:#ef6c00}
+.demo-in{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:8px}
+.demo-in input[type=number]{width:7em;padding:7px 9px;border:1.5px solid #90a4ae;border-radius:4px;font:600 16px var(--mono)}
+.demo-in input[type=range]{flex:1;min-width:160px}
+.bar{margin:10px 0}
+.legend2{list-style:none;padding:0;margin:6px 0;font-size:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:4px 14px}
+.legend2 li{display:flex;gap:6px;align-items:baseline}
+.legend2 i{flex:none;width:12px;height:12px;border-radius:2px;display:inline-block}
+.legend2 code{font-size:13px}
+.bin{border-collapse:collapse;font:14px var(--mono);margin:8px 0}
+.bin td{padding:2px 8px;white-space:nowrap}
+.bin .c{background:#e3f2fd;color:#0d47a1;font-weight:700}
+.bin .d{color:#90a4ae}
+.bin tr.res td{border-top:2px solid var(--ink);font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.chips button{padding:5px 11px;border-radius:14px;border:1.5px solid #90a4ae;background:#fff;cursor:pointer;font:600 13.5px var(--ui)}
+.chips button[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.stepbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.stepno{font:600 15px var(--ui);margin-left:auto;color:var(--mute)}
+.explain{background:var(--soft);border-radius:4px;padding:10px 14px;margin-top:10px;font-size:15.5px;min-height:3.2em}
+.tbl{border-collapse:collapse;font-size:14px}
+.tbl th,.tbl td{border:1px solid #cfd8dc;padding:3px 9px;text-align:right;font-family:var(--mono)}
+.tbl th{background:var(--soft);font-family:var(--ui)}
+.tbl tr.hl td{background:#fff8e1}
+.wrapx{overflow-x:auto}
+.vin{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px 18px;max-width:560px}
+.vg{border-collapse:collapse;margin-top:10px;font-size:15px}
+.vg th{font:600 14px var(--ui);text-align:left;padding:2px 6px}
+.vg td{padding:3px 6px}
+.vg input{padding:6px 8px;border:1.5px solid #90a4ae;border-radius:4px;font:500 15px var(--body)}
+.vg input.c{width:7em;font-family:var(--mono)}
+.vg button{border:0;background:none;font-size:18px;cursor:pointer;color:var(--bad);padding:2px 8px}
+</style>
+</head>
+<body>
+<main class="vmain">
+<!--SUB--><h1>Subnetting und VLSM</h1>
+<p class="sub">Ein großes Netz wird in kleinere Subnetze geteilt – entweder gleich groß (klassisches Subnetting) oder genau so groß, wie jede Gruppe es braucht (<b>VLSM</b>, Variable Length Subnet Mask). Dabei sollen so wenig Adressen wie möglich verschwendet werden.</p>
+<nav class="jumps" aria-label="Abschnitte"><a href="#groesse">Wie groß muss das Netz sein?</a><a href="#vlsm">VLSM Schritt für Schritt</a><a href="#regeln">Regelwerk</a><a href="#uebungen">Übungen</a><a href="#generator">🎲 Zufallsgenerator</a></nav>
+
+<h2 class="part" id="groesse">Wie groß muss das Netz sein?</h2>
+<div class="card">
+ <div class="demo-in"><label for="dn"><b>Anzahl Clients</b></label><input type="number" id="dn" min="1" max="60000" value="26"><input type="range" id="dr" min="1" max="1100" value="26" aria-label="Anzahl Clients"></div>
+ <div id="dOut"></div>
+</div>
+
+<h2 class="part" id="vlsm">VLSM Schritt für Schritt</h2>
+<div class="card">
+ <p class="hint" style="margin-top:0">Gib dein eigenes Beispiel ein – Netz, Maske und wie viele Clients jede Gruppe braucht – und lass es dir Schritt für Schritt erklären.</p>
+ <div class="vin"><div class="fld"><label for="vBase">Netzadresse</label><input id="vBase" value="192.168.10.0" autocomplete="off" spellcheck="false"></div>
+ <div class="fld"><label for="vMask">Subnetzmaske oder Präfix</label><input id="vMask" value="255.255.255.0" autocomplete="off" spellcheck="false"></div></div>
+ <table class="vg"><thead><tr><th>Gruppe</th><th>Clients</th><th></th></tr></thead><tbody id="vGroups"></tbody></table>
+ <div class="acts" style="margin-top:8px"><button class="btn ghost" type="button" id="vAdd">+ Gruppe</button><button class="btn" type="button" id="vGo">Erklären</button><span class="err" id="vErr" aria-live="polite"></span></div>
+ <p class="given" id="vGiven"></p>
+ <div id="vBar" class="bar"></div>
+ <div class="stepbar"><button class="btn ghost" id="vPrev" type="button">‹ Zurück</button><button class="btn" id="vNext" type="button">Weiter ›</button><span class="stepno" id="vNo"></span></div>
+ <div class="explain" id="vTxt" aria-live="polite"></div>
+ <div class="wrapx"><table class="steps" id="vTab"></table></div>
+</div>
+
+<h2 class="part" id="regeln">Regelwerk</h2>
+<div class="rules">
+ <div class="card"><h3>Wie viele Adressen?</h3><ul>
+  <li>In jedem Subnetz gehen <b>2 Adressen</b> weg: die <b>Netzadresse</b> (alle Hostbits 0) und die <b>Broadcastadresse</b> (alle Hostbits 1).</li>
+  <li>Nutzbare Hosts = <b>2<sup>h</sup> − 2</b> (h = Anzahl Hostbits).</li>
+  <li>Suche das kleinste h mit 2<sup>h</sup> − 2 ≥ Clients. Präfix = 32 − h.</li>
+  <li>Vorsicht bei Grenzfällen: 30 Clients → /27 (30 Hosts), aber 31 Clients → /26!</li></ul></div>
+ <div class="card"><h3>Netz- und Broadcastadresse</h3><ol style="margin:0;padding-left:20px">
+  <li>Das <b>interessante Oktett</b> suchen – dort, wo die Maske weder 255 noch 0 ist.</li>
+  <li><b>Blockgröße</b> = 256 − Maskenwert in diesem Oktett (z. B. 256 − 224 = 32).</li>
+  <li>Netzadresse = größtes <b>Vielfaches der Blockgröße</b> ≤ dem Wert der IP.</li>
+  <li>Broadcast = nächste Netzadresse − 1. Dahinter alles 255.</li>
+  <li>Erster Host = Netz + 1, letzter Host = Broadcast − 1.</li></ol></div>
+ <div class="card"><h3>VLSM-Rezept</h3><ol style="margin:0;padding-left:20px">
+  <li>Für jede Gruppe die Größe bestimmen (2<sup>h</sup>).</li>
+  <li><b>Nach Größe sortieren – das größte Netz zuerst.</b> Dann landet jedes Netz automatisch auf einer passenden Grenze.</li>
+  <li>Am Anfang des gegebenen Netzes beginnen und lückenlos vergeben: nächste Netzadresse = Broadcast + 1.</li>
+  <li>Für Router-Verbindungen (2 Adressen) reicht ein /30.</li></ol></div>
+ <div class="card wrapx"><h3>Spickzettel</h3><table class="tbl"><thead><tr><th>Präfix</th><th>Maske</th><th>Adressen</th><th>Hosts</th></tr></thead><tbody id="cheat"></tbody></table></div>
+</div>
+
+<h2 class="part" id="uebungen">Übungen</h2>
+<p class="sub">Drei Arten von Aufgaben: ein Subnetz berechnen, ein Netz in gleich große Subnetze teilen, und VLSM wie beim Test.</p>
+<!--/SUB-->
+<!--SUP--><h1>Supernetting</h1>
+<p class="sub">Beim Supernetting (Route Summarization) fasst man mehrere Netze zu <b>einem größeren</b> zusammen. Statt vier Routen genügt dann eine – die Routing-Tabelle wird kleiner. Der Trick: die Netze binär untereinander schreiben und schauen, wie viele Bits von links gleich sind.</p>
+<nav class="jumps" aria-label="Abschnitte"><a href="#erklaert">So geht's</a><a href="#regeln">Regelwerk</a><a href="#uebungen">Übungen</a><a href="#generator">🎲 Zufallsgenerator</a></nav>
+
+<h2 class="part" id="erklaert">So geht's</h2>
+<div class="card">
+ <div class="chips" id="sEx" role="group" aria-label="Beispiel wählen"></div>
+ <div class="wrapx" id="sBin"></div>
+ <div class="stepbar"><button class="btn ghost" id="sPrev" type="button">‹ Zurück</button><button class="btn" id="sNext" type="button">Weiter ›</button><span class="stepno" id="sNo"></span></div>
+ <div class="explain" id="sTxt" aria-live="polite"></div>
+ <div id="sBar" class="bar"></div>
+</div>
+
+<h2 class="part" id="regeln">Regelwerk</h2>
+<div class="rules">
+ <div class="card"><h3>Das Rezept</h3><ol style="margin:0;padding-left:20px">
+  <li>Alle Netze <b>binär</b> untereinander schreiben – oft reicht das Oktett, in dem sie sich unterscheiden.</li>
+  <li>Von links die Bits zählen, die bei <b>allen</b> gleich sind. Das ist das neue <b>Präfix</b>.</li>
+  <li>Die gleichen Bits übernehmen, den Rest auf 0 setzen – das ist die <b>Netzadresse</b> der Zusammenfassung.</li>
+  <li>Bei Netzen mit verschiedener Größe zählt auch das <b>Ende</b> (Broadcast) des letzten Netzes mit.</li></ol></div>
+ <div class="card"><h3>Schnell im Kopf</h3><ul>
+  <li>2 Netze → 1 Bit weniger, 4 Netze → 2 Bits, 8 Netze → 3 Bits …</li>
+  <li>Das klappt aber nur, wenn das erste Netz auf einer passenden Grenze liegt: 4 × /24 ab einem <b>Vielfachen von 4</b> im 3. Oktett.</li>
+  <li>192.168.4.0 – 192.168.7.0 → <b>192.168.4.0/22</b>.</li></ul></div>
+ <div class="card"><h3>Vorsicht: zu viel zusammengefasst</h3><ul>
+  <li>Liegen die Netze nicht schön auf einer Grenze, wird die Zusammenfassung größer und enthält <b>Adressen, die es gar nicht gibt</b>.</li>
+  <li>Beispiel: 192.168.3.0/24 und 192.168.4.0/24 → erst <b>192.168.0.0/21</b> umfasst beide – das sind 8 Netze statt 2.</li>
+  <li>Ein Router schickt dann auch Pakete für die „fremden“ Netze dorthin.</li></ul></div>
+ <div class="card"><h3>Wofür?</h3><ul>
+  <li>Eine statische Route statt vieler: <code>ip route 192.168.4.0 255.255.252.0 10.0.0.2</code></li>
+  <li>Kleinere Routing-Tabellen, weniger Updates bei Routing-Protokollen.</li>
+  <li>Supernetting ist das Gegenteil von Subnetting: Bits werden dem Hostteil <b>dazugegeben</b> statt weggenommen.</li></ul></div>
+</div>
+
+<h2 class="part" id="uebungen">Übungen</h2>
+<!--/SUP-->
+<div class="pager"><button class="btn ghost" id="pprev" type="button">‹ Zurück</button><div class="pinfo"><b id="pnum"></b><span id="ppart"></span></div><button class="btn" id="pnext" type="button">Weiter ›</button><div class="toc" id="ptoc"></div></div>
+<div id="tasks"></div>
+
+<h2 class="part" id="generator">🎲 Zufallsgenerator</h2>
+<p class="sub">Jede Aufgabe hat eine Nummer. Mit der Nummer bekommt jede Schülerin und jeder Schüler genau dieselbe Aufgabe.</p>
+<div class="genbar"><!--SUB--><label for="gtyp">Art</label><select id="gtyp"><option value="vlsm" selected>VLSM</option><option value="calc">Subnetz berechnen</option><option value="equal">Gleich große Subnetze</option></select><!--/SUB-->
+<label for="glvl">Stufe</label><select id="glvl"><option value="L">Leicht</option><option value="M" selected>Mittel</option><option value="S">Schwer</option></select>
+<button class="btn" id="gnew" type="button">Neue Aufgabe</button><label for="gcode">Nummer</label><input id="gcode" size="10" placeholder="M-123" autocomplete="off"><button class="btn ghost" id="gload" type="button">Laden</button><span id="gmsg" class="err"></span></div>
+<div id="gout"></div>
+</main>
+<script>
+/*SNJS*/
+</script>
+<script>
+(function(){
+'use strict';
+var PAGE='/*PAGE*/',N=window.SN,$=function(i){return document.getElementById(i);},reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+var COL=['#1565c0','#ef6c00','#2e7d32','#7b1fa2','#c62828','#00838f','#6d4c41','#ad1457'];
+function fmt(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,'.');}
+
+/* Adressraum als Balken: blocks [{lo,size,label,col}] */
+function bar(lo,total,blocks,opts){
+  opts=opts||{};var W=900,H=46,x=function(v){return 10+(v-lo)/total*(W-20);};
+  var h='<svg viewBox="0 0 '+W+' '+(H+26)+'" role="img" aria-label="Adressraum">';
+  h+='<rect x="10" y="8" width="'+(W-20)+'" height="'+H+'" fill="'+(opts.free||'#eceff1')+'" stroke="#90a4ae"/>';
+  blocks.forEach(function(b){var x0=x(b.lo),w=Math.max(3,x(b.lo+b.size)-x0);h+='<rect x="'+x0.toFixed(1)+'" y="8" width="'+w.toFixed(1)+'" height="'+H+'" fill="'+b.col+'" fill-opacity="'+(b.ghost?'.25':'.85')+'" stroke="#fff" stroke-width="1"'+(b.ghost?' stroke-dasharray="4 3"':'')+'/>';
+    if(w>70)h+='<text x="'+(x0+w/2).toFixed(1)+'" y="'+(8+H/2+5)+'" text-anchor="middle" font-size="14" font-weight="700" fill="#fff" font-family="Open Sans,Arial,sans-serif">'+esc(b.label)+'</text>';});
+  h+='<text x="10" y="'+(H+24)+'" font-size="12" fill="#546e7a" font-family="ui-monospace,monospace">'+N.n2ip(lo)+'</text><text x="'+(W-10)+'" y="'+(H+24)+'" text-anchor="end" font-size="12" fill="#546e7a" font-family="ui-monospace,monospace">'+N.n2ip(lo+total-1)+'</text>';
+  return h+'</svg>';
+}
+function bitsHTML(p,ip){var o='<div class="bits" aria-hidden="true">',b=ip?N.binIp(ip).replace(/\./g,''):null;for(var i=0;i<32;i++){if(i&&i%8===0)o+='<i></i>';o+='<span class="'+(i<p?'n':'h')+'">'+(b?b[i]:(i<p?'1':'0'))+'</span>';}return o+'</div>';}
+
+/* ---------- Fälle, die beide Seiten brauchen ---------- */
+var cache={},state={};
+function key(T){return T.type+':'+T.code;}
+function taskOf(card){var c=card.dataset.key;if(!cache[c]){var m=c.split(':'),q=m[1].split('-');cache[c]=N.makeTask(+q[1],q[0],m[0]);}return cache[c];}
+function fld(id,label,kind,ph){return'<div class="fld"><label for="'+id+'">'+label+'</label><input id="'+id+'" data-f="'+id.split('-').pop()+'" data-kind="'+kind+'" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="'+(kind==='num'?'numeric':'decimal')+'"'+(ph?' placeholder="'+ph+'"':'')+'><small></small></div>';}
+
+function taskHTML(T,id,label){
+  var h='<div class="card task" id="'+id+'" data-key="'+key(T)+'"><h3>'+label+' <span class="tag">'+N.TYPES[T.type]+'</span><span class="tag">'+N.LVNAME[T.level]+'</span><span class="tag">Nr. '+T.code+'</span></h3>';
+  if(T.type==='calc'){
+    h+='<p class="given">Ein Host hat die Adresse <code>'+T.ip+'/'+T.p+'</code>.</p><div class="fields">'+fld(id+'-mask','Subnetzmaske (ausgeschrieben)','mask','255.255.…')+fld(id+'-net','Netzadresse','ip')+fld(id+'-bc','Broadcastadresse','ip')+fld(id+'-first','Erster Host','ip')+fld(id+'-last','Letzter Host','ip')+fld(id+'-hosts','Anzahl nutzbarer Hosts','num')+'</div>';
+  } else if(T.type==='equal'){
+    h+='<p class="given">Teile das Netz <code>'+T.base+'/'+T.bp+'</code> in <b>mindestens '+T.want+'</b> gleich große Subnetze.</p><div class="fields">'+fld(id+'-p','Neues Präfix','prefix','/..')+fld(id+'-mask','Neue Subnetzmaske','mask')+fld(id+'-count','Wie viele Subnetze entstehen?','num')+fld(id+'-hosts','Nutzbare Hosts pro Subnetz','num')+fld(id+'-net','Netzadresse des '+T.idx+'. Subnetzes','ip')+fld(id+'-bc','Broadcast des '+T.idx+'. Subnetzes','ip')+'</div>';
+  } else if(T.type==='vlsm'){
+    h+='<p class="given">Gegeben ist das Netz <code>'+T.base+'/'+T.bp+'</code>. Bring folgende Clients unter und verschwende so wenig Adressen wie möglich:</p>'+
+     '<table class="glist"><thead><tr><th>Gruppe</th><th>Clients</th></tr></thead><tbody>'+T.groups.map(function(g){return'<tr><td>'+esc(g.name)+'</td><td>'+fmt(g.hosts)+'</td></tr>';}).join('')+'</tbody></table>'+
+     '<p class="hint" style="margin:0">Trag die Subnetze in der Reihenfolge ein, in der du sie vergibst.</p>'+
+     '<table class="vt"><thead><tr><th>#</th><th>Name</th><th>Subnetzmaske</th><th>Netzadresse</th><th>Broadcastadresse</th></tr></thead><tbody>'+T.groups.map(function(g,i){
+       return'<tr data-row="'+i+'"><td>'+(i+1)+'.</td><td data-l="Name"><select data-v="name" aria-label="Name '+(i+1)+'"><option value="">– Gruppe –</option>'+T.groups.map(function(x,j){return'<option value="'+j+'">'+esc(x.name)+'</option>';}).join('')+'</select><small></small></td>'+
+        '<td data-l="Subnetzmaske"><input data-v="mask" aria-label="Maske '+(i+1)+'" autocomplete="off" spellcheck="false"><small></small></td><td data-l="Netzadresse"><input data-v="net" aria-label="Netzadresse '+(i+1)+'" autocomplete="off" spellcheck="false"><small></small></td><td data-l="Broadcast"><input data-v="bc" aria-label="Broadcast '+(i+1)+'" autocomplete="off" spellcheck="false"><small></small></td></tr>';}).join('')+'</tbody></table>';
+  } else {
+    h+='<p class="given">Fasse diese Netze zu <b>einer</b> möglichst kleinen Route zusammen:</p><table class="glist"><tbody>'+T.nets.map(function(x){return'<tr><td><code>'+x.net+'/'+x.p+'</code></td></tr>';}).join('')+'</tbody></table>'+
+     '<div class="fields">'+fld(id+'-net','Netzadresse der Zusammenfassung','ip')+fld(id+'-p','Präfix','prefix','/..')+fld(id+'-mask','Subnetzmaske (ausgeschrieben)','mask')+
+     '<div class="fld wide"><label>Enthält die Zusammenfassung Adressen, die in keinem der Netze liegen?</label><div class="opts"><label><input type="radio" name="'+id+'-x" value="ja"> Ja</label><label><input type="radio" name="'+id+'-x" value="nein"> Nein</label></div><small></small></div></div>';
+  }
+  return h+'<div class="acts"><button class="btn" type="button" data-act="check">Prüfen</button><button class="btn ghost" type="button" data-act="sol">Lösung anzeigen</button><span class="fb" aria-live="polite"></span></div><div class="sol"></div></div>';
+}
+
+function mark(inp,res){inp.classList.remove('right','wrong');if(!res.empty||inp.tagName==='SELECT')inp.classList.add(res.ok?'right':'wrong');var sm=inp.parentNode.querySelector('small');if(sm)sm.textContent=res.ok||res.empty?'':res.msg;}
+function check(card){
+  var T=taskOf(card),ok=0,tot=0,empty=0;
+  function one(inp,kind,want,wp){var r=N.checkField(kind,inp.value,want,wp);mark(inp,r);tot++;if(r.ok)ok++;if(r.empty)empty++;return r.ok;}
+  if(T.type==='calc'||T.type==='equal'||T.type==='sup'){
+    card.querySelectorAll('.fld input[data-f]').forEach(function(inp){var f=inp.dataset.f,want=T.ans[f];one(inp,inp.dataset.kind,want,f==='net'&&T.type==='sup'?T.ans.p:undefined);});
+    if(T.type==='sup'){var x=card.querySelector('input[name$="-x"]:checked'),want=T.extra>0?'ja':'nein';tot++;card.querySelectorAll('input[name$="-x"]').forEach(function(rb){var l=rb.parentNode;l.classList.remove('right','wrong');if(rb.checked)l.classList.add(rb.value===want?'right':'wrong');});if(x&&x.value===want)ok++;else if(!x)empty++;}
+  } else {
+    card.querySelectorAll('.vt tbody tr').forEach(function(tr,i){
+      var exp=T.order[i],sel=tr.querySelector('select'),g=sel.value===''?-1:+sel.value,sm=sel.parentNode.querySelector('small');
+      tot++;sel.classList.remove('right','wrong');
+      if(g<0){sm.textContent='';empty++;}
+      else if(g===exp){sel.classList.add('right');sm.textContent='';ok++;}
+      else{sel.classList.add('wrong');sm.textContent=N.hostBits(T.groups[g].hosts)<N.hostBits(T.groups[exp].hosts)?'Reihenfolge: das größere Netz kommt zuerst':N.hostBits(T.groups[g].hosts)===N.hostBits(T.groups[exp].hosts)?'gleich groß – nimm die Reihenfolge der Angabe':'dieses Netz kommt später';}
+      /* Maske passend zur gewählten Gruppe, Adressen passend zur richtigen Position */
+      var mi=tr.querySelector('[data-v="mask"]'),ni=tr.querySelector('[data-v="net"]'),bi=tr.querySelector('[data-v="bc"]');
+      one(mi,'mask',T.ans[g>=0?g:exp].mask);
+      var rn=one(ni,'ip',T.ans[exp].net,T.ans[exp].p);
+      var rb=N.checkField('ip',bi.value,T.ans[exp].bc);tot++;if(rb.ok)ok++;if(rb.empty)empty++;
+      if(!rb.ok&&!rb.empty&&!rn&&N.isIp(ni.value.trim().split('/')[0])&&g>=0){var mine=N.ip2n(ni.value.trim().split('/')[0])+N.size(T.ans[g].p)-1;if(N.n2ip(mine)===bi.value.trim())rb={ok:false,msg:'passt zu deiner Netzadresse – die stimmt aber nicht'};}
+      mark(bi,rb);
+    });
+  }
+  var fb=card.querySelector('.fb'),all=ok===tot;
+  fb.className='fb '+(all?'good':'bad');fb.textContent=all?'Alles richtig! ✓':empty===tot?'Noch nichts ausgefüllt.':ok+' von '+tot+' richtig.';
+  if(all)card.dataset.solved='1';markToc();
+}
+
+/* ---------- Lösungen ---------- */
+function solCalc(T){var b=N.block(T.ip,T.p),a=T.ans,oc=T.ip.split('.');
+  return'<h3 style="font:400 20px var(--head);margin:0">Lösung</h3>'+bitsHTML(T.p,T.ip)+'<p class="bitleg"><b class="n">blau</b> = Netzteil ('+T.p+' Bits), <b class="h">orange</b> = Hostteil ('+(32-T.p)+' Bits)</p>'+
+  '<table class="steps"><tr><th>Schritt</th><th>Rechnung</th></tr>'+
+  '<tr><td>Maske</td><td class="m">/'+T.p+' = '+a.mask+'</td></tr>'+
+  '<tr><td>Interessantes Oktett</td><td>'+b.oct+'. Oktett ('+oc[b.oct-1]+'), Maske dort '+a.mask.split('.')[b.oct-1]+' → Blockgröße 256 − '+a.mask.split('.')[b.oct-1]+' = <b>'+b.bs+'</b></td></tr>'+
+  '<tr><td>Block</td><td>'+b.v+' liegt im Block <b>'+b.lo+' – '+b.hi+'</b></td></tr>'+
+  '<tr><td>Netzadresse</td><td class="m">'+a.net+'</td></tr><tr><td>Broadcast</td><td class="m">'+a.bc+'</td></tr>'+
+  '<tr><td>Hosts</td><td class="m">'+a.first+' – '+a.last+'</td></tr><tr><td>Anzahl Hosts</td><td>2<sup>'+(32-T.p)+'</sup> − 2 = <b>'+fmt(a.hosts)+'</b></td></tr></table>';}
+function solEqual(T){var a=T.ans,k=a.p-T.bp,sz=N.size(a.p),lo=N.ip2n(T.base),rows='';
+  for(var i=1;i<=Math.min(a.count,Math.max(T.idx+1,4));i++){var n=lo+(i-1)*sz;rows+='<tr'+(i===T.idx?' class="hl"':'')+'><td>'+i+'.</td><td>'+N.n2ip(n)+'</td><td>'+N.n2ip(n+sz-1)+'</td></tr>';}
+  var blocks=[];for(i=0;i<a.count;i++)blocks.push({lo:lo+i*sz,size:sz,label:a.count<=16?String(i+1):'',col:i+1===T.idx?'#ef6c00':'#1565c0'});
+  return'<h3 style="font:400 20px var(--head);margin:0">Lösung</h3><table class="steps"><tr><th>Schritt</th><th>Rechnung</th></tr>'+
+  '<tr><td>Subnetzbits</td><td>2<sup>'+k+'</sup> = '+a.count+' ≥ '+T.want+' → <b>'+k+' Bits</b> vom Hostteil borgen</td></tr>'+
+  '<tr><td>Neues Präfix</td><td class="m">/'+T.bp+' + '+k+' = /'+a.p+' = '+a.mask+'</td></tr>'+
+  '<tr><td>Subnetze</td><td>'+a.count+(a.count>T.want?' (mehr als gebraucht – geht nur in Zweierpotenzen)':'')+'</td></tr>'+
+  '<tr><td>Hosts pro Subnetz</td><td>2<sup>'+(32-a.p)+'</sup> − 2 = <b>'+fmt(a.hosts)+'</b></td></tr>'+
+  '<tr><td>Blockgröße</td><td>'+fmt(sz)+' Adressen – jedes Subnetz beginnt '+fmt(sz)+' Adressen nach dem vorigen</td></tr></table>'+
+  bar(lo,N.size(T.bp),blocks)+'<table class="tbl"><thead><tr><th>#</th><th>Netzadresse</th><th>Broadcast</th></tr></thead><tbody>'+rows+'</tbody></table>';}
+function vlsmSteps(T,upto){
+  return'<thead><tr><th>#</th><th>Gruppe</th><th>Clients</th><th>+ 2</th><th>Größe</th><th>Präfix</th><th>Maske</th><th>Netzadresse</th><th>Broadcast</th></tr></thead><tbody>'+T.order.map(function(g,i){var G2=T.groups[g],a=T.ans[g],hb=N.hostBits(G2.hosts),show=upto===undefined||i<upto;
+    return'<tr'+(upto!==undefined&&i===upto-1?' class="hl"':'')+'><td>'+(i+1)+'.</td><td>'+esc(G2.name)+'</td><td class="m">'+fmt(G2.hosts)+'</td><td class="m">'+fmt(G2.hosts+2)+'</td><td class="m">2<sup>'+hb+'</sup> = '+fmt(a.size)+'</td><td class="m">'+(show?'/'+a.p:'')+'</td><td class="m">'+(show?a.mask:'')+'</td><td class="m">'+(show?a.net:'')+'</td><td class="m">'+(show?a.bc:'')+'</td></tr>';}).join('')+'</tbody>';}
+/* Bei großen Netzen nur den benutzten Anfang zeigen, sonst sieht man die Blöcke nicht */
+function vlsmBar(T,upto){var tot=N.size(T.bp),z=tot;while(z/2>=T.used&&z>256)z/=2;
+  return bar(N.ip2n(T.base),z,vlsmBlocks(T,upto))+(z<tot?'<p class="hint" style="margin:0">Ausschnitt: die ersten '+fmt(z)+' von '+fmt(tot)+' Adressen – der Rest des Netzes bleibt frei.</p>':'');}
+function vlsmBlocks(T,upto){return T.order.slice(0,upto===undefined?T.order.length:upto).map(function(g,i){var a=T.ans[g];return{lo:N.ip2n(a.net),size:a.size,label:T.groups[g].name,col:COL[i%COL.length]};});}
+function solVlsm(T){var lo=N.ip2n(T.base),tot=N.size(T.bp);
+  return'<h3 style="font:400 20px var(--head);margin:0">Lösung</h3><p>Sortiert nach Größe, größtes zuerst, lückenlos ab '+T.base+':</p><div class="wrapx"><table class="steps">'+vlsmSteps(T)+'</table></div>'+
+   vlsmBar(T)+'<ul class="legend2">'+T.order.map(function(g,i){var a=T.ans[g];return'<li><i style="background:'+COL[i%COL.length]+'"></i>'+esc(T.groups[g].name)+' <code>'+a.net+'/'+a.p+'</code></li>';}).join('')+'<li><i style="background:#eceff1;border:1px solid #90a4ae"></i>frei: '+fmt(T.free)+' Adressen</li></ul>';}
+function binRows(nets,p,res){
+  var o=nets.map(function(x){return{l:x.net+'/'+x.p,b:N.binIp(x.net)};});
+  return'<table class="bin"><tbody>'+o.map(function(r){return'<tr><td>'+r.l+'</td><td>'+colorBits(r.b,p)+'</td></tr>';}).join('')+
+   (res?'<tr class="res"><td>'+res.net+'/'+res.p+'</td><td>'+colorBits(N.binIp(res.net),res.p,true)+'</td></tr>':'')+'</tbody></table>';
+}
+function colorBits(b,p,isRes){var o='',k=0;for(var i=0;i<b.length;i++){var c=b[i];if(c==='.'){o+='.';continue;}o+=(p!==null&&k<p?'<span class="c">'+c+'</span>':(isRes?'<span class="d">'+c+'</span>':c));k++;}return o;}
+function solSup(T){var a=T.ans,lo=N.ip2n(a.net),tot=N.size(a.p),list=T.nets.map(function(x,i){return{lo:N.ip2n(x.net),size:N.size(x.p),label:'',col:'#1565c0'};});
+  return'<h3 style="font:400 20px var(--head);margin:0">Lösung</h3><p>Binär untereinander – die ersten <b>'+a.p+' Bits</b> sind bei allen gleich (blau):</p><div class="wrapx">'+binRows(T.nets,a.p,a)+'</div>'+
+   '<div class="ans"><b>'+a.net+'/'+a.p+'</b> – Maske '+a.mask+'</div>'+bar(lo,tot,list)+
+   '<p>'+(T.extra>0?'Die Zusammenfassung umfasst '+fmt(T.covered)+' Adressen, die Netze nur '+fmt(T.covered-T.extra)+'. <b>'+fmt(T.extra)+' Adressen</b> (grau) gehören zu keinem der Netze – also <b>Ja</b>.':'Die Netze füllen die Zusammenfassung genau aus – also <b>Nein</b>, keine fremden Adressen.')+'</p>'+
+   '<pre class="cli">ip route '+a.net+' '+a.mask+' &lt;Next Hop&gt;</pre>';}
+var SOL={calc:solCalc,equal:solEqual,vlsm:solVlsm,sup:solSup};
+document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('[data-act]');if(!t)return;var card=t.closest('.task');if(!card)return;
+  if(t.dataset.act==='check')check(card);
+  if(t.dataset.act==='sol'){var so=card.querySelector('.sol'),T=taskOf(card);if(!so.innerHTML)so.innerHTML=SOL[T.type](T);var o=so.classList.toggle('open');t.textContent=o?'Lösung ausblenden':'Lösung anzeigen';}});
+document.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target.closest&&e.target.closest('.task input')){var c=e.target.closest('.task');if(c)check(c);}});
+
+/* ---------- Seiten-spezifisch ---------- */
+var list;
+if(PAGE==='sub'){
+  /* Größen-Demo */
+  function dshow(n){n=Math.max(1,Math.min(60000,Math.round(+n||1)));var h=N.hostBits(n),p=32-h,sz=Math.pow(2,h),b=N.block('0.0.0.0',p);
+    $('dOut').innerHTML='<table class="steps"><tr><th>Schritt</th><th>Rechnung</th></tr>'+
+     '<tr><td>Clients</td><td><b>'+fmt(n)+'</b></td></tr><tr><td>+ Netz- und Broadcastadresse</td><td>'+fmt(n)+' + 2 = <b>'+fmt(n+2)+'</b> Adressen</td></tr>'+
+     '<tr><td>Nächste Zweierpotenz</td><td>2<sup>'+h+'</sup> = <b>'+fmt(sz)+'</b> ≥ '+fmt(n+2)+(h>2&&Math.pow(2,h-1)>=n+1?'':' (2<sup>'+(h-1)+'</sup> = '+fmt(sz/2)+' wäre zu wenig)')+'</td></tr>'+
+     '<tr><td>Hostbits → Präfix</td><td>'+h+' Hostbits → 32 − '+h+' = <b>/'+p+'</b></td></tr><tr><td>Subnetzmaske</td><td class="m"><b>'+N.maskTxt(p)+'</b></td></tr>'+
+     '<tr><td>Nutzbare Hosts</td><td>'+fmt(sz)+' − 2 = '+fmt(sz-2)+(sz-2-n>0?' (davon '+fmt(sz-2-n)+' übrig)':' – passt genau')+'</td></tr>'+
+     '<tr><td>Blockgröße</td><td>'+fmt(b.bs)+' im '+b.oct+'. Oktett</td></tr></table>'+bitsHTML(p)+'<p class="bitleg"><b class="n">Netzteil</b> = 1 in der Maske, <b class="h">Hostteil</b> = 0</p>';
+    $('dn').value=n;if(n<=1100)$('dr').value=n;}
+  $('dn').addEventListener('input',function(){dshow(this.value);});$('dr').addEventListener('input',function(){dshow(this.value);});dshow(26);
+  /* VLSM-Demo: eigenes Beispiel */
+  var V=null,vs=0,VN=0;
+  var START=[['Verwaltung',50],['Schüler',100],['Drucker',10],['Router-Verbindung',2]];
+  function vrow(n,c){var tr=document.createElement('tr');tr.innerHTML='<td><input class="nm" value="'+esc(n)+'" aria-label="Gruppe"></td><td><input class="c" type="number" min="1" value="'+c+'" aria-label="Clients"></td><td><button type="button" aria-label="Gruppe entfernen">✕</button></td>';$('vGroups').appendChild(tr);}
+  START.forEach(function(g){vrow(g[0],g[1]);});
+  $('vAdd').onclick=function(){vrow('Gruppe '+($('vGroups').children.length+1),20);};
+  $('vGroups').addEventListener('click',function(e){var b=e.target.closest('button');if(b&&$('vGroups').children.length>1){b.closest('tr').remove();}});
+  function vbuild(){
+    var err='',base=$('vBase').value.trim(),m=$('vMask').value.trim().replace(/^\//,''),bp=/^\d{1,2}$/.test(m)?+m:N.mask2p(m);
+    if(!N.isIp(base))err='Bitte eine gültige Netzadresse eingeben, z. B. 192.168.10.0.';
+    else if(bp<0||bp>30)err='Bitte eine gültige Subnetzmaske (z. B. 255.255.255.0) oder ein Präfix (z. B. /24) eingeben.';
+    var groups=[];[].forEach.call($('vGroups').children,function(tr){var n=tr.querySelector('.nm').value.trim()||'Gruppe',c=Math.round(+tr.querySelector('.c').value);if(c>=1)groups.push({name:n,hosts:c});});
+    if(!err&&!groups.length)err='Bitte mindestens eine Gruppe mit Clients eingeben.';
+    if(err){$('vErr').textContent=err;return false;}
+    var note='',nb=N.netN(N.ip2n(base),bp);
+    if(N.n2ip(nb)!==base){note='Hinweis: '+base+' ist keine Netzadresse für /'+bp+' – das Netz heißt '+N.n2ip(nb)+'. Damit wird weitergerechnet.';base=N.n2ip(nb);}
+    var order=groups.map(function(g,i){return i;}).sort(function(a,b){return N.hostBits(groups[b].hosts)-N.hostBits(groups[a].hosts)||a-b;});
+    var need=groups.reduce(function(a,g){return a+Math.pow(2,N.hostBits(g.hosts));},0),cap=N.size(bp);
+    if(need>cap){$('vErr').textContent='Das passt nicht: Die Gruppen brauchen zusammen '+fmt(need)+' Adressen, /'+bp+' hat nur '+fmt(cap)+'. Nimm ein größeres Netz (kleineres Präfix) oder weniger Clients.';return false;}
+    var W={type:'vlsm',base:base,bp:bp,groups:groups,order:order,ans:{},used:need,free:cap-need,note:note},cur=nb;
+    order.forEach(function(g){var p=32-N.hostBits(groups[g].hosts);W.ans[g]={p:p,mask:N.maskTxt(p),net:N.n2ip(cur),bc:N.n2ip(cur+N.size(p)-1),size:N.size(p)};cur+=N.size(p);});
+    $('vErr').textContent='';V=W;VN=order.length+2;vgo(0);return true;
+  }
+  function vgo(n){vs=Math.max(0,Math.min(VN-1,n));var cnt=vs===0?0:Math.min(vs,V.order.length),t;
+    $('vGiven').innerHTML='Netz <code>'+V.base+'/'+V.bp+'</code> ('+N.maskTxt(V.bp)+', '+fmt(N.size(V.bp))+' Adressen) für: '+V.groups.map(function(g){return esc(g.name)+' ('+fmt(g.hosts)+')';}).join(', ')+(V.note?'<br><small style="color:var(--warn)">'+esc(V.note)+'</small>':'');
+    if(vs===0){var same=V.order.some(function(g,i){return i>0&&N.hostBits(V.groups[g].hosts)===N.hostBits(V.groups[V.order[i-1]].hosts);});
+      t='<b>Schritt 1 – Größe bestimmen und sortieren.</b> Für jede Gruppe: Clients + 2 (Netz- und Broadcastadresse), auf die nächste Zweierpotenz aufrunden. Dann das <b>größte Netz zuerst</b>: '+V.order.map(function(g){return esc(V.groups[g].name)+' ('+fmt(V.ans[g].size)+')';}).join(', ')+'.'+(same?' Gleich große Netze bleiben in der Reihenfolge der Angabe.':'');}
+    else if(vs<=V.order.length){var g=V.order[vs-1],a=V.ans[g],G2=V.groups[g],hb=N.hostBits(G2.hosts),bk=N.block(a.net,a.p);
+      t='<b>'+esc(G2.name)+'</b>: '+fmt(G2.hosts)+' + 2 = '+fmt(G2.hosts+2)+' → 2<sup>'+hb+'</sup> = '+fmt(a.size)+' Adressen → /'+a.p+' = '+a.mask+'. '+
+       (vs===1?'Wir beginnen am Anfang des Netzes: ':'Nächste freie Adresse (Broadcast davor + 1): ')+'<b>'+a.net+'</b>'+(a.size>=256||vs===1?'':' – im '+bk.oct+'. Oktett ein Vielfaches der Blockgröße '+bk.bs+', passt')+'. Broadcast = '+a.net+' + '+fmt(a.size-1)+' = <b>'+a.bc+'</b>.'+(vs===1&&V.order.length>1?' Weil das größte Netz zuerst kommt, liegt jedes weitere Netz automatisch auf seiner Grenze.':'');}
+    else{var last=V.ans[V.order[V.order.length-1]];t='<b>Fertig.</b> Verbraucht: '+fmt(V.used)+' von '+fmt(N.size(V.bp))+' Adressen.'+(V.free?' Frei bleibt '+N.n2ip(N.ip2n(last.bc)+1)+' – '+N.n2ip(N.ip2n(V.base)+N.size(V.bp)-1)+' ('+fmt(V.free)+' Adressen) für spätere Netze.':' Das Netz ist genau voll.');}
+    $('vTxt').innerHTML=t;$('vTab').innerHTML=vlsmSteps(V,cnt);
+    $('vBar').innerHTML=vlsmBar(V,cnt);
+    $('vNo').textContent='Schritt '+(vs+1)+' von '+VN;$('vPrev').disabled=vs===0;$('vNext').disabled=vs===VN-1;}
+  $('vPrev').onclick=function(){vgo(vs-1);};$('vNext').onclick=function(){vgo(vs+1);};
+  $('vGo').onclick=vbuild;[$('vBase'),$('vMask')].forEach(function(i){i.addEventListener('keydown',function(e){if(e.key==='Enter')vbuild();});});
+  $('vGroups').addEventListener('keydown',function(e){if(e.key==='Enter')vbuild();});
+  vbuild();
+  /* Spickzettel */
+  var ch='';[16,17,18,19,20,21,22,23,24,25,26,27,28,29,30].forEach(function(p){ch+='<tr><td>/'+p+'</td><td>'+N.maskTxt(p)+'</td><td>'+fmt(N.size(p))+'</td><td>'+fmt(N.size(p)-2)+'</td></tr>';});$('cheat').innerHTML=ch;
+  list=[['calc','L',1],['equal','L',1],['vlsm','L',1],['vlsm','L',2],['calc','M',1],['equal','M',1],['vlsm','M',1],['vlsm','M',2],['calc','S',1],['equal','S',1],['vlsm','S',1],['vlsm','S',2]];
+} else {
+  var EX=[{t:'4 × /24',nets:[{net:'192.168.4.0',p:24},{net:'192.168.5.0',p:24},{net:'192.168.6.0',p:24},{net:'192.168.7.0',p:24}]},
+          {t:'nicht auf der Grenze',nets:[{net:'192.168.3.0',p:24},{net:'192.168.4.0',p:24}]},
+          {t:'verschieden groß',nets:[{net:'10.1.8.0',p:24},{net:'10.1.9.0',p:25},{net:'10.1.9.128',p:25},{net:'10.1.10.0',p:23}]}],ex=0,ss=0;
+  function sshow(){var E=EX[ex],s=N.summary(E.nets),steps=4;
+    $('sEx').innerHTML=EX.map(function(e,i){return'<button type="button" data-ex="'+i+'" aria-pressed="'+(i===ex)+'">'+e.t+'</button>';}).join('');
+    var p=ss>=1?(ss===1?null:s.p):null;
+    $('sBin').innerHTML=binRows(E.nets,ss>=2?s.p:null,ss>=3?{net:s.net,p:s.p}:null);
+    var t=['<b>Schritt 1:</b> Die Netze untereinander – '+E.nets.map(function(x){return x.net+'/'+x.p;}).join(', ')+'.',
+      '<b>Schritt 2:</b> Binär schreiben. Gesucht: wie viele Bits sind von links bei <b>allen</b> gleich?'+(E.nets.some(function(x){return x.p!==E.nets[0].p;})?' Bei verschieden großen Netzen muss auch das Ende des größten Netzes hineinpassen.':''),
+      '<b>Schritt 3:</b> Die ersten <b>'+s.p+' Bits</b> sind überall gleich (blau). Das neue Präfix ist also <b>/'+s.p+'</b>, Maske '+N.maskTxt(s.p)+'.',
+      '<b>Schritt 4:</b> Gleiche Bits übernehmen, Rest auf 0: <b>'+s.net+'/'+s.p+'</b>. '+(N.size(s.p)>E.nets.reduce(function(a,x){return a+N.size(x.p);},0)?'Achtung: Die Zusammenfassung ist größer als die Netze zusammen – sie enthält auch fremde Adressen (grau).':'Die Netze füllen sie genau aus.')][ss];
+    $('sTxt').innerHTML=t;$('sNo').textContent='Schritt '+(ss+1)+' von '+steps;$('sPrev').disabled=ss===0;$('sNext').disabled=ss===steps-1;
+    $('sBar').innerHTML=ss===3?bar(N.ip2n(s.net),N.size(s.p),E.nets.map(function(x){return{lo:N.ip2n(x.net),size:N.size(x.p),label:x.net+'/'+x.p,col:'#1565c0'};})):'';}
+  document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-ex]');if(b){ex=+b.dataset.ex;ss=0;sshow();}});
+  $('sPrev').onclick=function(){ss=Math.max(0,ss-1);sshow();};$('sNext').onclick=function(){ss=Math.min(3,ss+1);sshow();};sshow();
+  list=[['sup','L',1],['sup','L',2],['sup','L',3],['sup','L',4],['sup','M',1],['sup','M',2],['sup','M',3],['sup','M',4],['sup','S',1],['sup','S',2],['sup','S',3],['sup','S',4]];
+}
+
+/* ---------- Blättern ---------- */
+var host=$('tasks'),cur=0;
+list.forEach(function(x,i){var T=N.makeTask(x[2],x[1],x[0]);cache[key(T)]=T;var d=document.createElement('div');d.className='page';d.hidden=i!==0;
+  d.innerHTML=taskHTML(T,'t'+(i+1),'Aufgabe '+(i+1))+'<div class="navrow">'+(i>0?'<button class="btn ghost" type="button" data-go="'+(i-1)+'">‹ Aufgabe '+i+'</button>':'<span></span>')+(i<list.length-1?'<button class="btn" type="button" data-go="'+(i+1)+'">Aufgabe '+(i+2)+' ›</button>':'<a class="btn" href="#generator" style="text-decoration:none">🎲 Weiter mit dem Zufallsgenerator</a>')+'</div>';host.appendChild(d);});
+var pages=[].slice.call(host.children);
+list.forEach(function(c,i){var b=document.createElement('button');b.type='button';b.textContent=i+1;b.dataset.go=i;$('ptoc').appendChild(b);});
+function markToc(){[].forEach.call($('ptoc').children,function(b,i){b.classList.toggle('on',i===cur);b.classList.toggle('ok',pages[i].querySelector('.task').dataset.solved==='1');});}
+function show(i,scroll){i=Math.max(0,Math.min(pages.length-1,i));cur=i;pages.forEach(function(p,j){p.hidden=j!==i;});$('pnum').textContent='Aufgabe '+(i+1)+' von '+pages.length;$('ppart').textContent=N.LVNAME[list[i][1]]+(PAGE==='sub'?' · '+N.TYPES[list[i][0]]:'');$('pprev').disabled=i===0;$('pnext').disabled=i===pages.length-1;markToc();if(scroll){var top=$('uebungen').getBoundingClientRect().top+window.pageYOffset;if(window.pageYOffset>top)window.scrollTo({top:top,behavior:reduce?'auto':'smooth'});}}
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-go]');if(b)show(+b.dataset.go,true);});
+$('pprev').onclick=function(){show(cur-1,true);};$('pnext').onclick=function(){show(cur+1,true);};show(0,false);
+
+/* ---------- Generator ---------- */
+function gtype(){return PAGE==='sub'?$('gtyp').value:'sup';}
+var GT={calc:'R',equal:'G',vlsm:'V',sup:'X'};
+function gen(type,lvl,seed){var T=N.makeTask(seed,lvl,type);if(!T){$('gmsg').textContent='Zu dieser Nummer gibt es keine Aufgabe.';return;}$('gmsg').textContent='';cache[key(T)]=T;
+  $('gout').innerHTML=taskHTML(T,'g'+GT[type]+T.code,'Aufgabe '+(PAGE==='sub'?GT[type]:'')+T.code);$('gcode').value=(PAGE==='sub'?GT[type]:'')+T.code;$('glvl').value=lvl;if(PAGE==='sub')$('gtyp').value=type;}
+$('gnew').onclick=function(){gen(gtype(),$('glvl').value,1+Math.floor(Math.random()*99999));};
+function load(){var re=PAGE==='sub'?/^\s*([RGV])\s*([LMS])\s*-?\s*(\d{1,6})\s*$/i:/^\s*()([LMS])\s*-?\s*(\d{1,6})\s*$/i,m=re.exec($('gcode').value);
+  if(!m){$('gmsg').textContent=PAGE==='sub'?'Bitte eine Nummer wie VM-12, RL-5 oder GS-4711 eingeben.':'Bitte eine Nummer wie L-12, M-305 oder S-4711 eingeben.';return;}
+  var t=PAGE==='sub'?{R:'calc',G:'equal',V:'vlsm'}[m[1].toUpperCase()]:'sup';gen(t,m[2].toUpperCase(),+m[3]);}
+$('gload').onclick=load;$('gcode').addEventListener('keydown',function(e){if(e.key==='Enter')load();});
+if(PAGE==='sub')$('gtyp').addEventListener('change',function(){gen(gtype(),$('glvl').value,1+Math.floor(Math.random()*99999));});
+gen(gtype(),'M',1+Math.floor(Math.random()*99999));
+})();
+</script>
+</body>
+</html>

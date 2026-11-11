@@ -12,7 +12,8 @@ SITE = {
     'intro': '<strong>Analyze</strong> – Topologien durchschauen. <strong>Explain</strong> – verstehen, warum das Netz so entscheidet. '
              '<strong>Configure</strong> – selbst Hand anlegen. <strong>Practice</strong> – üben, bis es sitzt. '
              'Vom OSI-Modell bis zu Angriffen im LAN, mit Animationen, Lösungen zum Aufklappen und Zufallsgenerator.',
-    'news': ['<strong>Neu:</strong> <a href="routing/statisches-routing/">Statisches Routing</a> – ip route-Befehle zusammenstecken, eintippen und prüfen lassen. '
+    'news': ['<strong>Neu:</strong> <a href="grundlagen/subnetting/">Subnetting und VLSM</a> und <a href="grundlagen/supernetting/">Supernetting</a> – mit VLSM-Erklärung für eigene Beispiele. '
+             'Außerdem <a href="routing/statisches-routing/">Statisches Routing</a> – ip route-Befehle zusammenstecken, eintippen und prüfen lassen. '
              'Außerdem <a href="routing/rip/">RIP</a> – welche Netze in die network-Befehle gehören, mit Übungen und Zufallsgenerator. '
              'Außerdem <a href="grundlagen/collision-broadcast-domains/">Collision und Broadcast Domains</a> – Domains im Netzplan einkreisen, mit Zufallsgenerator. '
              'Außerdem <a href="grundlagen/osi-modell/">Das OSI-Modell zum Ziehen</a> – Schichten, PDUs, Geräte und Protokolle zuordnen, mit Lückentext-Generator. '
@@ -26,7 +27,10 @@ AREAS = [
      'topics': [
          {'slug': 'osi-modell', 'title': 'Das OSI- und TCP/IP-Modell', 'tool': 'osi-modell',
           'text': 'Schichten, PDUs, Geräte und Protokolle per Drag-and-Drop zuordnen – plus Lückentext-Generator, Eselsbrücken und Kapselung.'},
-         {'slug': 'ip-adressierung', 'title': 'IP-Adressierung und Subnetting', 'text': 'Netzanteil, Hostanteil, Subnetzmasken und CIDR rechnen.'},
+         {'slug': 'subnetting', 'title': 'Subnetting und VLSM', 'tool': 'subnetting',
+          'text': 'Subnetzmaske, Netz- und Broadcastadresse, gleich große Subnetze und VLSM – mit eigenem Beispiel Schritt für Schritt erklärt.'},
+         {'slug': 'supernetting', 'title': 'Supernetting', 'tool': 'supernetting',
+          'text': 'Netze zu einer Route zusammenfassen – binär erklärt, mit Übungen und Zufallsgenerator.'},
          {'slug': 'collision-broadcast-domains', 'title': 'Collision und Broadcast Domains', 'tool': 'collision-broadcast-domains',
           'text': 'Hub, Switch oder Router – wer trennt was? Domains im Netzplan einkreisen, mit 18 Übungen und Zufallsgenerator.'},
          {'slug': 'ethernet-switching', 'title': 'Ethernet und Switching', 'text': 'MAC-Adressen, Frames und wie ein Switch lernt.'},
