@@ -12,7 +12,8 @@ SITE = {
     'intro': '<strong>Analyze</strong> – Topologien durchschauen. <strong>Explain</strong> – verstehen, warum das Netz so entscheidet. '
              '<strong>Configure</strong> – selbst Hand anlegen. <strong>Practice</strong> – üben, bis es sitzt. '
              'Vom OSI-Modell bis zu Angriffen im LAN, mit Animationen, Lösungen zum Aufklappen und Zufallsgenerator.',
-    'news': ['<strong>Neu:</strong> <a href="switching/vlan/">VLANs und Trunking</a> – Broadcasts verfolgen, 802.1Q-Tags verstehen, '
+    'news': ['<strong>Neu:</strong> <a href="routing/inter-vlan-routing/">Inter-VLAN-Routing</a> – Paketweg Schritt für Schritt und Fehlersuche in echten Configs. '
+             'Außerdem <a href="switching/vlan/">VLANs und Trunking</a> – Broadcasts verfolgen, 802.1Q-Tags verstehen, '
              'Native-VLAN-Mismatch entdecken. Dazu <a href="switching/spanning-tree/">Spanning Tree und RSTP</a> mit 50 Übungen.'],
 }
 
@@ -32,7 +33,8 @@ AREAS = [
      ]},
     {'slug': 'routing', 'title': 'Routing', 'text': 'Wie Pakete zwischen Netzen ihren Weg finden.',
      'topics': [
-         {'slug': 'inter-vlan-routing', 'title': 'Inter-VLAN-Routing', 'text': 'Router-on-a-Stick und Layer-3-Switch.'},
+         {'slug': 'inter-vlan-routing', 'title': 'Inter-VLAN-Routing', 'tool': 'inter-vlan-routing',
+          'text': 'Router-on-a-Stick und Layer-3-Switch – Schritt für Schritt, mit Fehlersuche-Übungen und Zufallsgenerator.'},
          {'slug': 'rip', 'title': 'RIP', 'text': 'Distanzvektor-Routing, Hop Count und Timer.'},
      ]},
     {'slug': 'ip-services', 'title': 'IP-Services', 'text': 'Dienste, die ein Netz erst benutzbar machen.',

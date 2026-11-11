@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Inter-VLAN-Routing</title>
+<style>
+
+:root{
+  /* AECP-Stil: weiß, schwarz, Belgrano/Bitter/Open Sans; VLAN-Farben tragen Bedeutung */
+  --ink:#1c2b33; --mute:#546e7a; --line:#e3e1e8; --soft:#f3f5f7; --ok:#2e7d32; --bad:#c62828; --warn:#e65100; --accent:#61a229;
+  --head:"Belgrano",Georgia,serif; --ui:"Bitter",Georgia,serif; --body:"Open Sans","Helvetica Neue",Arial,sans-serif; --mono:ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#fff;color:var(--ink);font:16px/1.65 var(--body)}
+.vmain{max-width:980px;margin:0 auto;padding:24px 20px 60px}
+.vmain h1{font:400 clamp(30px,4.5vw,42px)/1.15 var(--head);letter-spacing:.5px;margin:.3em 0 .2em;text-wrap:balance}
+.vmain h2{font:400 26px/1.2 var(--head);letter-spacing:.5px;margin:0 0 .4em;text-wrap:balance}
+.sub{color:var(--mute);max-width:72ch;margin:0 0 14px}
+.jumps{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 6px}
+.jumps a{font:600 15px var(--ui);letter-spacing:.4px;color:#fff;background:var(--ink);padding:8px 14px;border-radius:4px;text-decoration:none}
+.jumps a:hover{background:#000}
+.part{border-top:3px solid var(--ink);margin-top:40px;padding-top:12px}
+.card{border:1px solid var(--line);border-radius:4px;background:#fff;padding:18px 20px;margin:14px 0}
+svg{width:100%;height:auto;display:block;background:#fbfcfd;border:1px solid var(--line);border-radius:4px}
+button,select,input{font:600 15px var(--ui);letter-spacing:.3px}
+.btn{padding:9px 16px;border-radius:4px;border:1.5px solid var(--ink);background:var(--ink);color:#fff;cursor:pointer}
+.btn:hover{background:#000}
+.btn.ghost{background:#fff;color:var(--ink)}
+.btn.ghost:hover{background:var(--soft)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Schritt-Animation */
+.sbgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+@media(max-width:760px){.sbgrid{grid-template-columns:1fr}}
+.cfg{background:var(--soft);border-radius:4px;padding:10px 14px;font-size:14px}
+.cfg h3{font:600 15px var(--ui);margin:0 0 6px}
+.cfg label{margin-right:12px;white-space:nowrap}
+.cfg select{font:500 14px var(--body);padding:2px 4px}
+.hint{font-size:14px;color:var(--mute);margin:8px 0 0}
+.result{margin-top:10px;font-size:15px;min-height:1.6em}
+.frames{margin-top:12px;font:13px var(--mono)}
+.frame{display:flex;flex-wrap:wrap;margin:6px 0;align-items:stretch}
+.frame span{border:1.5px solid var(--ink);border-right:0;padding:5px 8px;background:#fff;white-space:nowrap}
+.frame span:last-child{border-right:1.5px solid var(--ink)}
+.frame .ftag{background:#fff8e1;font-weight:700}
+.frame .ftag.none{background:var(--soft);color:var(--mute);border-style:dashed;font-weight:400}
+.frame b{font-family:var(--body)}
+.flab{font:600 14px var(--ui);margin-top:8px}
+
+/* Regelwerk */
+.rules{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:760px){.rules{grid-template-columns:1fr}}
+.rules .card{margin:0}
+.rules h3{font:400 19px var(--head);margin:0 0 6px}
+.rules ul{margin:0;padding-left:20px}
+.rules li{margin:3px 0}
+code,pre{font-family:var(--mono);font-size:13.5px}
+pre.cli{background:#1c2b33;color:#e6edf2;border-radius:4px;padding:10px 12px;margin:8px 0 0;overflow-x:auto;line-height:1.5}
+.check{background:#fff8e1;border:1px solid #ffe082}
+
+/* Übungen */
+.pager{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:4px;padding:12px 14px;margin:14px 0}
+.pinfo{text-align:center;line-height:1.3}
+.pinfo span{display:block;font-size:13px;color:var(--mute)}
+.toc{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:5px}
+.toc button{min-width:36px;padding:4px 0;border:1px solid #cfd8dc;background:#fff;color:var(--ink);border-radius:4px;cursor:pointer;font-size:13px}
+.toc button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.toc button.ok{background:#e3f4e6;border-color:#a5d6a7}
+.toc button.on.ok{background:var(--ok);border-color:var(--ok)}
+.task h3{font:400 22px var(--head);margin:0 0 4px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.tag{font:400 12px var(--head);text-transform:uppercase;letter-spacing:1.5px;color:#3d6e14;background:#eef6e6;padding:2px 8px;border-radius:2px}
+.trunks{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px;margin-top:10px}
+.trunks pre{margin:0}
+.q{margin-top:16px;padding-top:12px;border-top:1px dashed #cfd8dc}
+.q p{margin:0 0 6px;font-weight:600}
+.opts{display:flex;flex-wrap:wrap;gap:6px 10px}
+.opts label{display:inline-flex;align-items:center;gap:6px;border:1.5px solid #cfd8dc;border-radius:4px;padding:5px 10px;cursor:pointer;font-size:15px;background:#fff}
+.opts label.right{border-color:var(--ok);background:#e3f4e6}
+.opts label.wrong{border-color:var(--bad);background:#fde3e3}
+.opts label.missed{border-color:var(--ok);border-style:dashed}
+.dot{width:11px;height:11px;border-radius:50%;display:inline-block}
+.acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;align-items:center}
+.fb{font-weight:600}
+.fb.good{color:var(--ok)} .fb.bad{color:var(--bad)}
+.sol{display:none;margin-top:14px;border-top:2px solid var(--ink);padding-top:12px}
+.sol.open{display:block}
+.sol ul{list-style:none;padding:0;margin:10px 0}
+.sol li{margin:4px 0;padding-left:4px}
+.ans{background:var(--soft);border-left:4px solid var(--accent);padding:8px 12px;margin:8px 0}
+.navrow{display:flex;justify-content:space-between;margin-top:14px;gap:8px}
+.genbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
+.genbar select,.genbar input{padding:8px;border:1.5px solid #90a4ae;border-radius:4px;font-family:var(--body);font-weight:500}
+.err{color:var(--bad)}
+@media print{.jumps,.pager,.acts,.navrow,.genbar,#sandbox,#generator{display:none!important}.task{display:block!important;break-inside:avoid}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 12px}
+.tabs button{padding:9px 14px;border-radius:4px;border:1.5px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--ink);color:#fff}
+.stepbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.stepno{font:600 15px var(--ui);margin-left:auto;color:var(--mute)}
+.stepbox{display:grid;grid-template-columns:1.1fr 1fr;gap:12px;margin-top:12px}
+@media(max-width:760px){.stepbox{grid-template-columns:1fr}}
+.steptext h3{font:400 21px var(--head);margin:0 0 4px}
+.steptext p{margin:0}
+.hdr{width:100%;border-collapse:collapse;font-size:14px}
+.hdr th,.hdr td{border:1px solid #cfd8dc;padding:5px 8px;text-align:left}
+.hdr th{background:var(--soft);font-weight:600;width:42%}
+.hdr td{font-family:var(--mono);font-size:13px}
+.hdr td.chg{background:#fff8e1;font-weight:700}
+.hdr caption{text-align:left;font:600 14px var(--ui);margin-bottom:4px}
+pre.rt{background:#1c2b33;color:#e6edf2;border-radius:4px;padding:8px 10px;font:12.5px/1.5 var(--mono);margin:10px 0 0;overflow-x:auto}
+pre.rt .use{background:#61a229;color:#fff}
+.plan{border-collapse:collapse;font-size:14px;margin-top:10px}
+.plan th,.plan td{border:1px solid #cfd8dc;padding:4px 10px;text-align:left}
+.plan th{background:var(--soft)}
+.cfgs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+@media(max-width:760px){.cfgs{grid-template-columns:1fr}}
+.cfgs pre{margin:0;max-height:none}
+.opts.col{flex-direction:column;align-items:flex-start}
+.way h4{font:600 15px var(--ui);margin:10px 0 2px}
+.way li.x{color:var(--bad)} .way li.ok{color:var(--ok)}
+.fix{background:#fde3e3;border-left:4px solid var(--bad);padding:8px 12px;margin:8px 0}
+.fix.none{background:#e3f4e6;border-color:var(--ok)}
+</style>
+</head>
+<body>
+<main class="vmain">
+<h1>Inter-VLAN-Routing</h1>
+<p class="sub">Jedes VLAN ist ein eigenes IP-Netz. Damit PCs aus verschiedenen VLANs miteinander reden können, braucht es einen Router oder einen Layer-3-Switch. Er ist das Gateway jedes VLANs und leitet die Pakete von einem Netz ins andere weiter.</p>
+<nav class="jumps" aria-label="Abschnitte"><a href="#weg">▶ Schritt für Schritt</a><a href="#regeln">Regelwerk</a><a href="#uebungen">Fehlersuche</a><a href="#generator">🎲 Zufallsgenerator</a></nav>
+
+<h2 class="part" id="weg">Schritt für Schritt: PC1 (VLAN 10) pingt PC3 (VLAN 20)</h2>
+<div class="tabs" role="tablist"><button type="button" role="tab" id="m-roas" aria-selected="true">Router-on-a-Stick</button><button type="button" role="tab" id="m-l3" aria-selected="false">Layer-3-Switch</button></div>
+<div class="card">
+ <div id="svgA"></div>
+ <div class="stepbar"><button class="btn ghost" id="sPrev" type="button">‹ Zurück</button><button class="btn" id="sNext" type="button">Weiter ›</button><button class="btn ghost" id="sPlay" type="button">▶ Abspielen</button><span class="stepno" id="sNo"></span></div>
+ <div class="stepbox">
+  <div class="steptext" aria-live="polite"><h3 id="sTitle"></h3><p id="sText"></p><pre class="rt" id="sRt" hidden></pre></div>
+  <table class="hdr"><caption>Das Paket in diesem Moment</caption><tbody id="sHdr"></tbody></table>
+ </div>
+</div>
+
+<h2 class="part" id="regeln">Regelwerk</h2>
+<div class="rules">
+ <div class="card"><h3>Router-on-a-Stick</h3><ul>
+  <li>ein physisches Router-Interface, darauf ein <b>Subinterface pro VLAN</b></li>
+  <li><code>encapsulation dot1Q</code> muss genau die VLAN-Nummer sein</li>
+  <li>die IP des Subinterfaces ist das <b>Gateway</b> der PCs im VLAN</li>
+  <li>der Switchport zum Router ist ein <b>Trunk</b> mit allen VLANs</li></ul>
+  <pre class="cli">interface Gi0/0
+ no shutdown
+interface Gi0/0.10
+ encapsulation dot1Q 10
+ ip address 192.168.10.1 255.255.255.0</pre></div>
+ <div class="card"><h3>Layer-3-Switch</h3><ul>
+  <li>pro VLAN ein virtuelles Interface (<b>SVI</b>): <code>interface Vlan10</code></li>
+  <li>die SVI-IP ist das Gateway der PCs</li>
+  <li><b>ip routing</b> einschalten – sonst wird nicht geroutet</li>
+  <li>kein Trunk zum Router nötig, schneller (Routing in Hardware)</li></ul>
+  <pre class="cli">ip routing
+interface Vlan10
+ ip address 192.168.10.1 255.255.255.0
+ no shutdown</pre></div>
+ <div class="card"><h3>Was sich unterwegs ändert</h3><ul>
+  <li><b>IP-Adressen bleiben gleich</b> – Quelle und Ziel von Anfang bis Ende</li>
+  <li><b>MAC-Adressen ändern sich</b> am Router: neue Quell-MAC (Router), neue Ziel-MAC (Empfänger)</li>
+  <li><b>VLAN-Tag wechselt</b> von 10 auf 20</li><li>der Router zieht 1 von der <b>TTL</b> ab</li></ul></div>
+ <div class="card"><h3>Was der PC entscheidet</h3><ul>
+  <li>liegt das Ziel laut <b>eigener Maske</b> im eigenen Netz? → direkt per ARP</li>
+  <li>sonst → ans <b>Default-Gateway</b> (muss im eigenen Netz liegen)</li>
+  <li>eine falsche Maske kann den PC glauben lassen, das Ziel sei „nebenan“</li></ul></div>
+</div>
+<div class="card check"><b>Fehlersuche – so gehst du vor:</b> Verfolge den <b>Hinweg</b>: Maske und Gateway des Senders → Access-Port im richtigen VLAN → Trunk lässt das VLAN durch → Subinterface/SVI mit passender VLAN-Nummer und Gateway-IP → Router kennt das Zielnetz → raus ins richtige VLAN. Dann dasselbe für den <b>Rückweg</b> – ein Ping braucht beide Richtungen!</div>
+
+<h2 class="part" id="uebungen">Fehlersuche</h2>
+<p class="sub">Vergleiche die Konfiguration mit dem Adressplan. Kreuze an und klicke auf „Prüfen“. In manchen Aufgaben ist alles richtig.</p>
+<div class="pager"><button class="btn ghost" id="pprev" type="button">‹ Zurück</button><div class="pinfo"><b id="pnum"></b><span id="ppart"></span></div><button class="btn" id="pnext" type="button">Weiter ›</button><div class="toc" id="ptoc"></div></div>
+<div id="tasks"></div>
+
+<h2 class="part" id="generator">🎲 Zufallsgenerator</h2>
+<p class="sub">Neue Fehlersuche-Aufgaben auf Knopfdruck. Gleiche Nummer = gleiche Aufgabe für die ganze Klasse.</p>
+<div class="genbar"><label for="glvl">Stufe</label><select id="glvl"><option value="L">Leicht (Router-on-a-Stick, 2 VLANs)</option><option value="M" selected>Mittel (Router oder L3-Switch, mehr Fehlerarten)</option><option value="S">Schwer (auch Masken- und Rückweg-Fehler)</option></select>
+<button class="btn" id="gnew" type="button">Neue Aufgabe</button><label for="gcode">Nummer</label><input id="gcode" size="8" placeholder="M-123" autocomplete="off"><button class="btn ghost" id="gload" type="button">Laden</button><span id="gmsg" class="err"></span></div>
+<div id="gout"></div>
+</main>
+
+<script>/* AECP · Inter-VLAN-Routing: Ping-Modell (Router-on-a-Stick und Layer-3-Switch), Fehler-Generator, Zeichnen.
+   Browser: window.IVR · Node: globalThis.IVR */
+(function (G) {
+'use strict';
+
+var VC = {10: '#1565c0', 20: '#ef6c00', 30: '#7b1fa2', 40: '#2e7d32', 11: '#455a64', 21: '#455a64', 31: '#455a64', 41: '#455a64'};
+function vcol(v) { return VC[v] || '#455a64'; }
+
+/* ---------- IP-Rechnen ---------- */
+function ip2n(ip) { return ip.split('.').reduce(function (a, b) { return a * 256 + (+b); }, 0); }
+function mask(p) { return p === 0 ? 0 : (0xFFFFFFFF << (32 - p)) >>> 0; }
+function sameNet(a, b, p) { var m = mask(p); return ((ip2n(a) & m) >>> 0) === ((ip2n(b) & m) >>> 0); }
+function maskTxt(p) { var m = mask(p); return [m >>> 24, (m >>> 16) & 255, (m >>> 8) & 255, m & 255].join('.'); }
+function netOf(ip, p) { var n = (ip2n(ip) & mask(p)) >>> 0; return [n >>> 24, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join('.') + '/' + p; }
+
+function pcBy(T, n) { return T.pcs.filter(function (p) { return p.name === n; })[0]; }
+function allows(list, v) { return list === null || list.indexOf(v) >= 0; }
+
+/* Erreicht ein Frame aus VLAN v das L3-Interface? Liefert {ok, ip, prefix, name, why}. */
+function l3In(T, v) {
+  if (T.mode === 'l3') {
+    var s = T.l3.svis.filter(function (x) { return x.vlan === v; })[0];
+    if (!s) return {ok: false, why: 'Auf ' + T.sw.name + ' gibt es kein interface Vlan' + v + '.'};
+    if (s.shutdown) return {ok: false, why: 'interface Vlan' + v + ' auf ' + T.sw.name + ' ist shutdown.'};
+    return {ok: true, ip: s.ip, prefix: s.prefix, name: 'interface Vlan' + v, vlan: v};
+  }
+  var up = T.sw.up;
+  if (up.mode !== 'trunk') return {ok: false, why: T.sw.name + ' ' + up.port + ' (zum Router) ist ein Access-Port in VLAN ' + up.accessVlan + ' statt Trunk – der Router bekommt keine getaggten Frames.'};
+  if (!allows(up.allowed, v)) return {ok: false, why: 'VLAN ' + v + ' ist auf dem Trunk ' + T.sw.name + ' ' + up.port + ' nicht erlaubt.'};
+  if (T.router.shutdown) return {ok: false, why: T.router.name + ' ' + T.router.phys + ' ist shutdown – damit sind alle Subinterfaces down.'};
+  var sub = T.router.subs.filter(function (x) { return x.dot1q === v; })[0];
+  if (!sub) return {ok: false, why: T.router.name + ' hat kein Subinterface mit encapsulation dot1Q ' + v + ' – Frames mit Tag ' + v + ' werden verworfen.'};
+  return {ok: true, ip: sub.ip, prefix: sub.prefix, name: sub.ifname, vlan: v};
+}
+
+/* Alle L3-Interfaces, über die der Router hinaus kann */
+function l3All(T) {
+  if (T.mode === 'l3') return T.l3.svis.map(function (s) { return {vlan: s.vlan, ip: s.ip, prefix: s.prefix, name: 'interface Vlan' + s.vlan}; });
+  return T.router.subs.map(function (s) { return {vlan: s.dot1q, ip: s.ip, prefix: s.prefix, name: s.ifname}; });
+}
+
+/* Ein Weg src → dst. Liefert {ok, steps[]} */
+function forward(T, src, dst) {
+  var S = pcBy(T, src), D = pcBy(T, dst), st = [];
+  if (sameNet(S.ip, D.ip, S.prefix)) {
+    st.push(['i', src + ': ' + D.ip + ' liegt laut eigener Maske /' + S.prefix + ' im selben Netz → ' + src + ' fragt direkt per ARP, ohne Gateway.']);
+    if (S.vlan === D.vlan) { st.push(['ok', 'Beide hängen in VLAN ' + S.vlan + ' – der Switch stellt direkt zu.']); return {ok: true, steps: st}; }
+    st.push(['x', dst + ' hängt aber in VLAN ' + D.vlan + ', ' + src + ' in VLAN ' + S.vlan + '. Der ARP-Broadcast bleibt in VLAN ' + S.vlan + ' – keine Antwort.']);
+    return {ok: false, steps: st};
+  }
+  st.push(['i', src + ': ' + D.ip + ' liegt nicht im eigenen Netz ' + netOf(S.ip, S.prefix) + ' → Paket geht an das Gateway ' + S.gw + '.']);
+  if (!sameNet(S.gw, S.ip, S.prefix)) { st.push(['x', 'Das Gateway ' + S.gw + ' liegt gar nicht im Netz von ' + src + ' – ' + src + ' kann es nicht erreichen.']); return {ok: false, steps: st}; }
+  var g = l3In(T, S.vlan);
+  if (!g.ok) { st.push(['x', g.why]); return {ok: false, steps: st}; }
+  if (g.ip !== S.gw) { st.push(['x', 'In VLAN ' + S.vlan + ' hat das L3-Interface (' + g.name + ') die Adresse ' + g.ip + ', nicht ' + S.gw + ' – niemand antwortet auf den ARP für das Gateway.']); return {ok: false, steps: st}; }
+  if (!sameNet(S.ip, g.ip, g.prefix)) { st.push(['x', g.name + ' (' + g.ip + '/' + g.prefix + ') liegt in einem anderen Netz als ' + src + ' – der Router nimmt das nicht an.']); return {ok: false, steps: st}; }
+  st.push(['ok', 'Das Gateway ' + S.gw + ' ist ' + (T.mode === 'l3' ? T.sw.name + ' ' : T.router.name + ' ') + g.name + ' in VLAN ' + S.vlan + ' – erreicht.']);
+  if (T.mode === 'l3' && !T.l3.routing) { st.push(['x', 'Auf ' + T.sw.name + ' fehlt der Befehl ip routing – der Switch leitet nicht zwischen den VLANs weiter.']); return {ok: false, steps: st}; }
+  var out = null;
+  l3All(T).forEach(function (c) { if (!out && sameNet(D.ip, c.ip, c.prefix)) out = c; });
+  if (!out) { st.push(['x', 'Der Router hat kein Interface im Netz von ' + D.ip + ' – er kennt keinen Weg dorthin.']); return {ok: false, steps: st}; }
+  var r = l3In(T, out.vlan);
+  if (!r.ok) { st.push(['x', 'Raus Richtung ' + D.ip + ' ginge es über ' + out.name + ' – aber: ' + r.why]); return {ok: false, steps: st}; }
+  st.push(['ok', 'Routing: ' + D.ip + ' liegt im Netz von ' + out.name + ' (' + out.ip + '/' + out.prefix + ') → raus in VLAN ' + out.vlan + '.']);
+  if (D.vlan !== out.vlan) { st.push(['x', dst + ' hängt aber in VLAN ' + D.vlan + ' – das Paket kommt in VLAN ' + out.vlan + ' nicht bei ihm an.']); return {ok: false, steps: st}; }
+  st.push(['ok', 'Der Switch stellt in VLAN ' + out.vlan + ' an ' + dst + ' zu.']);
+  return {ok: true, steps: st};
+}
+
+function ping(T, a, b) {
+  var f = forward(T, a, b), r = forward(T, b, a);
+  return {ok: f.ok && r.ok, there: f, back: r};
+}
+
+/* ---------- Generator ---------- */
+function rng(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function pick(r, a) { return a[Math.floor(r() * a.length)]; }
+function clone(o) { return JSON.parse(JSON.stringify(o)); }
+var LVNAME = {L: 'Leicht', M: 'Mittel', S: 'Schwer'}, LVCODE = {L: 1, M: 2, S: 3};
+
+function base(r, mode, vlans, gwHost) {
+  var T = {mode: mode, vlans: vlans, plan: {}, pcs: [], gwHost: gwHost};
+  var k = 1, port = 1;
+  vlans.forEach(function (v) {
+    T.plan[v] = {net: '192.168.' + v + '.0/24', gw: '192.168.' + v + '.' + gwHost};
+    var n = 1 + (r() < 0.5 ? 1 : 0);
+    for (var i = 0; i < n; i++) T.pcs.push({name: 'PC' + (k++), port: 'Fa0/' + (port++), vlan: v, ip: '192.168.' + v + '.' + (10 + i + (r() < 0.5 ? 0 : 10)), prefix: 24, gw: '192.168.' + v + '.' + gwHost});
+  });
+  if (mode === 'roas') {
+    T.sw = {name: 'SW1', up: {port: 'Gi0/1', mode: 'trunk', allowed: r() < 0.5 ? null : vlans.slice(), accessVlan: 1}};
+    T.router = {name: 'R1', phys: 'Gi0/0', shutdown: false, subs: vlans.map(function (v) { return {ifname: 'Gi0/0.' + v, dot1q: v, ip: '192.168.' + v + '.' + gwHost, prefix: 24}; })};
+  } else {
+    T.sw = {name: 'L3-SW1'};
+    T.l3 = {routing: true, svis: vlans.map(function (v) { return {vlan: v, ip: '192.168.' + v + '.' + gwHost, prefix: 24, shutdown: false}; })};
+  }
+  return T;
+}
+
+/* Fehlerarten: [Name, Stufen, nur Router-on-a-Stick/L3, anwenden(T,r,a,b) → {loc, label, fix} oder null] */
+var FAULTS = [
+  ['gw', 'LMS', '*', function (T, r, a, b) { var p = pcBy(T, pick(r, [a, b])); var wrong = '192.168.' + p.vlan + '.' + (T.gwHost === 1 ? 254 : 1); p.gw = wrong; return {loc: 'pc:' + p.name, fix: p.name + ': Gateway auf ' + T.plan[p.vlan].gw + ' ändern (eingetragen ist ' + wrong + ').'}; }],
+  ['access', 'LMS', '*', function (T, r, a, b) { var p = pcBy(T, pick(r, [a, b])); var o = T.vlans.filter(function (v) { return v !== p.vlan; }); var w = pick(r, o); var old = p.vlan; p.vlan = w; return {loc: 'acc:' + p.name, fix: T.sw.name + ': interface ' + p.port + ' → switchport access vlan ' + old + ' (steht auf VLAN ' + w + ').'}; }],
+  ['trunkallow', 'LMS', 'roas', function (T, r, a, b) { var v = pcBy(T, pick(r, [a, b])).vlan; T.sw.up.allowed = T.vlans.filter(function (x) { return x !== v; }); return {loc: 'trunk', fix: T.sw.name + ': interface ' + T.sw.up.port + ' → switchport trunk allowed vlan add ' + v + '.'}; }],
+  ['pcip', 'MS', '*', function (T, r, a, b) { var p = pcBy(T, pick(r, [a, b])); var o = T.vlans.filter(function (v) { return v !== p.vlan; }); var w = pick(r, o); var old = p.ip; p.ip = '192.168.' + w + '.' + old.split('.')[3]; return {loc: 'pc:' + p.name, fix: p.name + ': IP-Adresse ' + p.ip + ' passt nicht zu VLAN ' + p.vlan + ' – richtig wäre ' + old + '.'}; }],
+  ['trunkmode', 'MS', 'roas', function (T, r) { T.sw.up.mode = 'access'; T.sw.up.accessVlan = pick(r, [1].concat(T.vlans)); return {loc: 'trunk', fix: T.sw.name + ': interface ' + T.sw.up.port + ' → switchport mode trunk.'}; }],
+  ['dot1q', 'MS', 'roas', function (T, r, a, b) { var v = pcBy(T, pick(r, [a, b])).vlan; var s = T.router.subs.filter(function (x) { return x.dot1q === v; })[0]; s.dot1q = v + 1; return {loc: 'sub:' + v, fix: T.router.name + ': interface ' + s.ifname + ' → encapsulation dot1Q ' + v + ' (steht auf ' + (v + 1) + ').'}; }],
+  ['subip', 'MS', 'roas', function (T, r, a, b) { var v = pcBy(T, pick(r, [a, b])).vlan; var s = T.router.subs.filter(function (x) { return x.dot1q === v; })[0]; var o = T.vlans.filter(function (x) { return x !== v; }); var w = pick(r, o); var old = s.ip; s.ip = '192.168.' + v + '.' + (T.gwHost === 1 ? 2 : 253); return {loc: 'sub:' + v, fix: T.router.name + ': interface ' + s.ifname + ' → ip address ' + old + ' 255.255.255.0 (eingetragen ist ' + s.ip + ').'}; }],
+  ['phys', 'MS', 'roas', function (T) { T.router.shutdown = true; return {loc: 'phys', fix: T.router.name + ': interface ' + T.router.phys + ' → no shutdown.'}; }],
+  ['norouting', 'MS', 'l3', function (T) { T.l3.routing = false; return {loc: 'routing', fix: T.sw.name + ': im Konfigurationsmodus ip routing eingeben.'}; }],
+  ['svidown', 'MS', 'l3', function (T, r, a, b) { var v = pcBy(T, pick(r, [a, b])).vlan; T.l3.svis.filter(function (x) { return x.vlan === v; })[0].shutdown = true; return {loc: 'svi:' + v, fix: T.sw.name + ': interface Vlan' + v + ' → no shutdown.'}; }],
+  ['sviip', 'MS', 'l3', function (T, r, a, b) { var v = pcBy(T, pick(r, [a, b])).vlan; var s = T.l3.svis.filter(function (x) { return x.vlan === v; })[0]; var old = s.ip; s.ip = '192.168.' + v + '.' + (T.gwHost === 1 ? 2 : 253); return {loc: 'svi:' + v, fix: T.sw.name + ': interface Vlan' + v + ' → ip address ' + old + ' 255.255.255.0 (eingetragen ist ' + s.ip + ').'}; }],
+  ['mask', 'S', '*', function (T, r, a, b) { var p = pcBy(T, pick(r, [a, b])); p.prefix = 16; return {loc: 'pc:' + p.name, fix: p.name + ': Subnetzmaske 255.255.255.0 statt 255.255.0.0 – mit /16 hält er die anderen VLAN-Netze für sein eigenes Netz und fragt das Gateway gar nicht.'}; }]
+];
+
+function tryMake(r, lvl) {
+  var mode = lvl === 'L' ? 'roas' : (r() < 0.35 ? 'l3' : 'roas');
+  var vlans = lvl === 'L' ? [10, 20] : (r() < 0.5 ? [10, 20, 30] : [10, 20, 30, 40]);
+  var T = base(r, mode, vlans, lvl === 'S' && r() < 0.4 ? 254 : 1);
+  // Paar: meist verschiedene VLANs
+  var A = pick(r, T.pcs), others = T.pcs.filter(function (p) { return p !== A && (p.vlan !== A.vlan || r() < 0.15); });
+  if (!others.length) return null;
+  var B = pick(r, others), a = A.name, b = B.name;
+  if (!ping(T, a, b).ok) return null;
+  var clean = clone(T), fault = null;
+  var pFault = lvl === 'L' ? 0.55 : 0.8;
+  if (r() < pFault) {
+    var cand = FAULTS.filter(function (f) { return f[1].indexOf(lvl) >= 0 && (f[2] === '*' || f[2] === mode); });
+    if (A.vlan === B.vlan) cand = cand.filter(function (f) { return f[0] === 'access' || f[0] === 'pcip'; });
+    if (!cand.length) return null;
+    var f = pick(r, cand);
+    fault = f[3](T, r, a, b);
+    fault.kind = f[0];
+    if (ping(T, a, b).ok) return null;               // Fehler muss den Ping wirklich verhindern
+  }
+  T.pair = [a, b]; T.fault = fault; T.clean = clean;
+  return T;
+}
+
+function makeTask(seed, lvl) {
+  if (!LVCODE[lvl]) return null;
+  for (var att = 0; att < 3000; att++) {
+    var T = tryMake(rng((seed * 7919 + att * 104729 + LVCODE[lvl] * 1000003) >>> 0), lvl);
+    if (T) { T.seed = seed; T.level = lvl; T.code = lvl + '-' + seed; return T; }
+  }
+  return null;
+}
+
+/* Antwortmöglichkeiten für „Wo liegt der Fehler?“ */
+function options(T) {
+  var a = pcBy(T, T.pair[0]), b = pcBy(T, T.pair[1]), o = [];
+  [a, b].forEach(function (p) { o.push(['pc:' + p.name, 'Konfiguration von ' + p.name + ' (IP, Maske, Gateway)']); });
+  [a, b].forEach(function (p) { o.push(['acc:' + p.name, 'Access-Port von ' + p.name + ' (' + T.sw.name + ' ' + p.port + ')']); });
+  var vs = [];
+  [a, b].forEach(function (p) { if (vs.indexOf(p.vlan) < 0) vs.push(p.vlan); });
+  [10, 20, 30, 40].forEach(function (v) { if (vs.indexOf(v) < 0 && T.vlans.indexOf(v) >= 0 && vs.length < 2) vs.push(v); });
+  vs.sort(function (x, y) { return x - y; });
+  if (T.mode === 'roas') {
+    o.push(['trunk', 'Port ' + T.sw.name + ' ' + T.sw.up.port + ' zum Router']);
+    o.push(['phys', T.router.name + ' ' + T.router.phys + ' (physisches Interface)']);
+    vs.forEach(function (v) { o.push(['sub:' + v, T.router.name + ' Subinterface Gi0/0.' + v]); });
+  } else {
+    o.push(['routing', T.sw.name + ': ip routing']);
+    vs.forEach(function (v) { o.push(['svi:' + v, T.sw.name + ': interface Vlan' + v]); });
+  }
+  o.push(['none', 'Kein Fehler – der Ping klappt']);
+  return o;
+}
+
+/* ---------- Konfigurationen als Text ---------- */
+function cfgRouter(T) {
+  var R = T.router, s = R.name + '#show running-config\n!\ninterface GigabitEthernet' + R.phys.slice(2) + '\n no ip address\n' + (R.shutdown ? ' shutdown\n' : ' no shutdown\n') + '!\n';
+  R.subs.forEach(function (x) { s += 'interface GigabitEthernet' + x.ifname.slice(2) + '\n encapsulation dot1Q ' + x.dot1q + '\n ip address ' + x.ip + ' ' + maskTxt(x.prefix) + '\n!\n'; });
+  return s;
+}
+function cfgSwitch(T) {
+  var s = T.sw.name + '#show running-config\n!\n';
+  if (T.mode === 'l3') s += (T.l3.routing ? 'ip routing\n' : '') + '!\n';
+  T.pcs.forEach(function (p) { s += 'interface FastEthernet' + p.port.slice(2) + '\n switchport mode access\n switchport access vlan ' + p.vlan + '\n!\n'; });
+  if (T.mode === 'roas') {
+    var u = T.sw.up;
+    s += 'interface GigabitEthernet' + u.port.slice(2) + '\n' + (u.mode === 'trunk' ? ' switchport mode trunk\n' + (u.allowed ? ' switchport trunk allowed vlan ' + u.allowed.join(',') + '\n' : '') : ' switchport mode access\n switchport access vlan ' + u.accessVlan + '\n') + '!\n';
+  } else {
+    T.l3.svis.forEach(function (x) { s += 'interface Vlan' + x.vlan + '\n ip address ' + x.ip + ' ' + maskTxt(x.prefix) + '\n' + (x.shutdown ? ' shutdown\n' : ' no shutdown\n') + '!\n'; });
+  }
+  return s;
+}
+
+/* ---------- Zeichnen ---------- */
+var W = 760;
+function t(x, y, s, o) { o = o || {}; return '<text x="' + x + '" y="' + y + '" text-anchor="' + (o.a || 'middle') + '" font-size="' + (o.fs || 12) + '" font-weight="' + (o.fw || 400) + '" fill="' + (o.c || '#1c2b33') + '">' + s + '</text>'; }
+function layout(T) {
+  var pos = {}, n = T.pcs.length, roas = T.mode === 'roas';
+  pos.R = [W / 2, 52]; pos.SW = [W / 2, roas ? 172 : 120];
+  var py = roas ? 300 : 250, sp = Math.min(150, (W - 130) / Math.max(1, n - 1));
+  T.pcs.forEach(function (p, i) { pos[p.name] = [n === 1 ? W / 2 : W / 2 + (i - (n - 1) / 2) * sp, py]; });
+  pos.H = roas ? 360 : 312;
+  return pos;
+}
+function draw(T, opt) {
+  opt = opt || {};
+  var pos = layout(T), roas = T.mode === 'roas', o = ['<svg viewBox="0 0 ' + W + ' ' + pos.H + '" role="img" aria-label="Topologie Inter-VLAN-Routing">'];
+  var hl = opt.hl || {};
+  if (roas) {
+    var up = T.sw.up, trunk = up.mode === 'trunk';
+    o.push('<line x1="' + W / 2 + '" y1="76" x2="' + W / 2 + '" y2="146" stroke="#1c2b33" stroke-width="' + (trunk ? 5 : 2.5) + '"' + (trunk ? '' : ' stroke-dasharray="6 5"') + '/>');
+    o.push(t(W / 2 + 10, 98, T.router.phys, {a: 'start', fs: 11, c: '#546e7a'}), t(W / 2 + 10, 140, up.port, {a: 'start', fs: 11, c: '#546e7a'}));
+    o.push(t(W / 2 - 10, 118, trunk ? 'Trunk (802.1Q)' : 'Access-Port!', {a: 'end', fs: 12, fw: 700, c: trunk ? '#1c2b33' : '#c62828'}));
+  }
+  T.pcs.forEach(function (p) {
+    var s = pos.SW, q = pos[p.name], c = vcol(p.vlan), on = hl[p.name];
+    o.push('<line x1="' + s[0] + '" y1="' + (s[1] + 24) + '" x2="' + q[0] + '" y2="' + (q[1] - 30) + '" stroke="' + c + '" stroke-width="2.5"/>');
+    var mx = s[0] + (q[0] - s[0]) * .6, my = s[1] + 24 + (q[1] - 30 - s[1] - 24) * .6;
+    o.push('<rect x="' + (mx - 18) + '" y="' + (my - 8) + '" width="36" height="16" rx="4" fill="#fff"/>' + t(mx, my + 4, p.port, {fs: 10, c: '#546e7a'}));
+    o.push('<rect x="' + (q[0] - 58) + '" y="' + (q[1] - 30) + '" width="116" height="62" rx="6" fill="' + (on ? '#fff8e1' : '#fff') + '" stroke="' + (on ? '#1c2b33' : '#90a4ae') + '" stroke-width="' + (on ? 2.5 : 1.5) + '"/>');
+    o.push(t(q[0], q[1] - 13, p.name, {fs: 13, fw: 700}), t(q[0], q[1] + 3, p.ip + '/' + p.prefix, {fs: 11}), t(q[0], q[1] + 17, 'GW ' + p.gw, {fs: 10.5, c: '#546e7a'}));
+    o.push('<rect x="' + (q[0] - 26) + '" y="' + (q[1] + 22) + '" width="52" height="13" rx="6.5" fill="' + c + '"/>' + t(q[0], q[1] + 32, 'VLAN ' + p.vlan, {fs: 9.5, fw: 700, c: '#fff'}));
+  });
+  function box(p, w, h, label, sub, fill) { o.push('<rect x="' + (p[0] - w / 2) + '" y="' + (p[1] - h / 2) + '" width="' + w + '" height="' + h + '" rx="8" fill="' + fill + '" stroke="#1c2b33" stroke-width="1.5"/>' + t(p[0], p[1] + (sub ? -2 : 5), label, {fs: 16, fw: 700}) + (sub ? t(p[0], p[1] + 14, sub, {fs: 10.5, c: '#546e7a'}) : '')); }
+  if (roas) box(pos.R, 150, 48, T.router.name, 'Router', '#e8f0fe');
+  box(pos.SW, roas ? 150 : 180, 48, T.sw.name, roas ? 'Switch' : 'Layer-3-Switch', roas ? '#f4f6f8' : '#e8f0fe');
+  if (opt.extra) o.push(opt.extra(pos));
+  o.push('</svg>');
+  return o.join('');
+}
+
+G.IVR = {forward: forward, ping: ping, makeTask: makeTask, options: options, cfgRouter: cfgRouter, cfgSwitch: cfgSwitch, draw: draw, layout: layout, vcol: vcol, LVNAME: LVNAME, maskTxt: maskTxt, sameNet: sameNet, base: base, rng: rng, pcBy: pcBy};
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>
+(function(){
+'use strict';
+var I=window.IVR,$=function(id){return document.getElementById(id);},reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+/* ---------- Schritt-Animation ---------- */
+function demo(mode){
+  var T=I.base(I.rng(1),mode,[10,20],1);
+  T.pcs=[{name:'PC1',port:'Fa0/1',vlan:10,ip:'192.168.10.10',prefix:24,gw:'192.168.10.1'},{name:'PC2',port:'Fa0/2',vlan:10,ip:'192.168.10.11',prefix:24,gw:'192.168.10.1'},
+         {name:'PC3',port:'Fa0/3',vlan:20,ip:'192.168.20.10',prefix:24,gw:'192.168.20.1'},{name:'PC4',port:'Fa0/4',vlan:20,ip:'192.168.20.11',prefix:24,gw:'192.168.20.1'}];
+  if(mode==='roas')T.sw.up.allowed=[10,20];
+  return T;
+}
+var MAC={PC1:'0050.7966.0001',PC3:'0050.7966.0003',R:'001a.2b3c.4d00',SVI:'001a.2b3c.5e00'};
+var STEPS={
+ roas:[
+  {t:'Ausgangslage',x:'PC1 (192.168.10.10, VLAN 10) will PC3 (192.168.20.10, VLAN 20) anpingen. Der Router R1 hat für jedes VLAN ein Subinterface auf Gi0/0.',hl:['PC1','PC3'],f:null},
+  {t:'PC1 entscheidet',x:'192.168.20.10 liegt nicht im eigenen Netz 192.168.10.0/24. Also schickt PC1 das Paket an sein Gateway 192.168.10.1. Dessen MAC-Adresse kennt er per ARP.',hl:['PC1'],f:null},
+  {t:'PC1 → SW1 (Access-Port)',x:'Der Frame geht ohne Tag zum Switch. Ziel-MAC ist der Router, die Ziel-IP bleibt aber PC3.',seg:['PC1','SW'],f:{d:MAC.R+' (R1)',s:MAC.PC1+' (PC1)',tag:'– (Access-Port)',si:'192.168.10.10',di:'192.168.20.10',ttl:64}},
+  {t:'SW1 → R1 (Trunk)',x:'Der Switch kennt die Router-MAC über den Trunk Gi0/1. Auf dem Trunk bekommt der Frame den Tag VLAN 10.',seg:['SW','R'],f:{d:MAC.R+' (R1)',s:MAC.PC1+' (PC1)',tag:'VLAN 10',si:'192.168.10.10',di:'192.168.20.10',ttl:64}},
+  {t:'R1 routet',x:'Gi0/0.10 nimmt den Frame an (Tag 10 passt zu encapsulation dot1Q 10). Laut Routing-Tabelle liegt 192.168.20.0/24 an Gi0/0.20. R1 baut einen neuen Frame: Quell-MAC jetzt R1, Ziel-MAC PC3, Tag 20, TTL minus 1.',at:'R',rt:1,f:{d:MAC.PC3+' (PC3)',s:MAC.R+' (R1)',tag:'VLAN 20',si:'192.168.10.10',di:'192.168.20.10',ttl:63}},
+  {t:'R1 → SW1 (Trunk)',x:'Der Frame geht mit Tag VLAN 20 über denselben Trunk zurück zum Switch, deshalb der Name „Router-on-a-Stick“.',seg:['R','SW'],f:{d:MAC.PC3+' (PC3)',s:MAC.R+' (R1)',tag:'VLAN 20',si:'192.168.10.10',di:'192.168.20.10',ttl:63}},
+  {t:'SW1 → PC3 (Access-Port)',x:'Der Switch entfernt den Tag und stellt in VLAN 20 an PC3 zu. Die Antwort nimmt denselben Weg zurück.',seg:['SW','PC3'],f:{d:MAC.PC3+' (PC3)',s:MAC.R+' (R1)',tag:'– (Access-Port)',si:'192.168.10.10',di:'192.168.20.10',ttl:63}},
+  {t:'Zusammenfassung',x:'Die IP-Adressen bleiben von Anfang bis Ende gleich. MAC-Adressen und VLAN-Tag wechseln am Router, und die TTL sinkt um 1.',hl:['PC1','PC3'],f:null}],
+ l3:[
+  {t:'Ausgangslage',x:'Statt Router und Trunk gibt es einen Layer-3-Switch mit den SVIs interface Vlan10 und Vlan20, dazu ip routing.',hl:['PC1','PC3'],f:null},
+  {t:'PC1 entscheidet',x:'Das Ziel liegt in einem anderen Netz, also geht das Paket ans Gateway 192.168.10.1. Das ist die SVI Vlan10 des Switches.',hl:['PC1'],f:null},
+  {t:'PC1 → L3-SW1',x:'Der Frame geht ohne Tag an die MAC-Adresse der SVI Vlan10.',seg:['PC1','SW'],f:{d:MAC.SVI+' (Vlan10)',s:MAC.PC1+' (PC1)',tag:'– (Access-Port)',si:'192.168.10.10',di:'192.168.20.10',ttl:64}},
+  {t:'L3-SW1 routet intern',x:'Mit ip routing schaut der Switch in seine Routing-Tabelle: 192.168.20.0/24 liegt an Vlan20. Er baut einen neuen Frame mit der eigenen MAC als Quelle, ganz ohne Trunk und Router.',at:'SW',rt:1,f:{d:MAC.PC3+' (PC3)',s:MAC.SVI+' (Vlan20)',tag:'– (intern VLAN 20)',si:'192.168.10.10',di:'192.168.20.10',ttl:63}},
+  {t:'L3-SW1 → PC3',x:'Zustellung in VLAN 20 an PC3.',seg:['SW','PC3'],f:{d:MAC.PC3+' (PC3)',s:MAC.SVI+' (Vlan20)',tag:'– (Access-Port)',si:'192.168.10.10',di:'192.168.20.10',ttl:63}},
+  {t:'Zusammenfassung',x:'Gleiches Prinzip wie beim Router: IP bleibt, MAC wechselt, TTL sinkt. Weil alles im Switch passiert, ist es schneller, und der Router-Trunk fällt als Engpass weg.',hl:['PC1','PC3'],f:null}]
+};
+var mode='roas', step=0, T=demo('roas'), animT=1, raf=0, playing=false, timer=0;
+function rtText(){var g=mode==='roas'?['GigabitEthernet0/0.10','GigabitEthernet0/0.20']:['Vlan10','Vlan20'],n=mode==='roas'?'R1':'L3-SW1';return esc(n+'#show ip route connected\n')+'C    192.168.10.0/24 is directly connected, '+g[0]+'\n<span class="use">C    192.168.20.0/24 is directly connected, '+g[1]+'</span>';}
+function renderStep(){
+  var S=STEPS[mode], s=S[step], prev=step>0?S[step-1].f:null, hl={};
+  (s.hl||[]).forEach(function(n){hl[n]=1;});
+  $('svgA').innerHTML=I.draw(T,{hl:hl,extra:function(pos){
+    var o='';
+    function P(k){return k==='R'?[pos.R[0],pos.R[1]+24]:k==='SW'?pos.SW:[pos[k][0],pos[k][1]-30];}
+    if(s.seg){var a=P(s.seg[0]),b=P(s.seg[1]);if(s.seg[0]==='SW')a=[pos.SW[0],pos.SW[1]+(s.seg[1]==='R'?-24:24)];if(s.seg[1]==='SW')b=[pos.SW[0],pos.SW[1]+(s.seg[0]==='R'?-24:24)];
+      var e=Math.min(1,animT),x=a[0]+(b[0]-a[0])*e,y=a[1]+(b[1]-a[1])*e,c=s.f&&/VLAN 20/.test(s.f.tag)?I.vcol(20):s.f&&/VLAN 10/.test(s.f.tag)?I.vcol(10):'#1c2b33';
+      o+='<line x1="'+a[0]+'" y1="'+a[1]+'" x2="'+b[0]+'" y2="'+b[1]+'" stroke="#61a229" stroke-width="7" opacity=".35"/>';
+      o+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="10" fill="'+c+'" stroke="#fff" stroke-width="2.5"/>';
+      if(s.f&&/VLAN/.test(s.f.tag)){var lab='802.1Q · '+s.f.tag.replace(/[–()]/g,'').trim(),w=lab.length*6.4+16;o+='<rect x="'+(x+16)+'" y="'+(y-10)+'" width="'+w+'" height="20" rx="10" fill="#fff" stroke="'+c+'" stroke-width="1.5"/><text x="'+(x+16+w/2)+'" y="'+(y+4)+'" text-anchor="middle" font-size="11" font-weight="700" fill="'+c+'">'+lab+'</text>';}
+    }
+    if(s.at){var p=s.at==='R'?pos.R:pos.SW;o+='<rect x="'+(p[0]-82)+'" y="'+(p[1]-30)+'" width="164" height="60" rx="10" fill="none" stroke="#61a229" stroke-width="4"/>';}
+    return o;}});
+  $('sTitle').textContent=(step+1)+'. '+s.t; $('sText').textContent=s.x; $('sNo').textContent='Schritt '+(step+1)+' von '+S.length;
+  $('sRt').hidden=!s.rt; if(s.rt)$('sRt').innerHTML=rtText();
+  var rows=[['Ziel-MAC','d'],['Quell-MAC','s'],['802.1Q-Tag','tag'],['Quell-IP','si'],['Ziel-IP','di'],['TTL','ttl']];
+  $('sHdr').innerHTML=s.f?rows.map(function(r){var ch=prev&&prev[r[1]]!==s.f[r[1]];return'<tr><th>'+r[0]+'</th><td'+(ch?' class="chg"':'')+'>'+esc(s.f[r[1]])+'</td></tr>';}).join(''):'<tr><td colspan="2" style="font-family:var(--body)">'+(step===0?'Noch kein Paket unterwegs.':step===S.length-1?'Paket ist angekommen.':'Der PC bereitet das Paket vor.')+'</td></tr>';
+  $('sPrev').disabled=step===0;$('sNext').disabled=step===S.length-1;
+}
+function go(n){step=Math.max(0,Math.min(STEPS[mode].length-1,n));animT=reduce?1:0;cancelAnimationFrame(raf);var t0=null;function f(ts){if(t0===null)t0=ts;animT=(ts-t0)/900;renderStep();if(animT<1)raf=requestAnimationFrame(f);}if(STEPS[mode][step].seg&&!reduce)raf=requestAnimationFrame(f);else renderStep();}
+function stop(){playing=false;clearTimeout(timer);$('sPlay').textContent='▶ Abspielen';}
+function play(){if(playing){stop();return;}playing=true;$('sPlay').textContent='❚❚ Pause';if(step>=STEPS[mode].length-1)go(0);(function tick(){timer=setTimeout(function(){if(!playing)return;if(step<STEPS[mode].length-1){go(step+1);tick();}else stop();},2600);})();}
+$('sPrev').onclick=function(){stop();go(step-1);};$('sNext').onclick=function(){stop();go(step+1);};$('sPlay').onclick=play;
+function setMode(m){mode=m;T=demo(m);stop();$('m-roas').setAttribute('aria-selected',m==='roas');$('m-l3').setAttribute('aria-selected',m==='l3');go(0);}
+$('m-roas').onclick=function(){setMode('roas');};$('m-l3').onclick=function(){setMode('l3');};
+go(0);
+
+/* ---------- Aufgaben ---------- */
+var cache={};
+function taskOf(card){var c=card.getAttribute('data-code');if(!cache[c]){var m=c.split('-');cache[c]=I.makeTask(+m[1],m[0]);}return cache[c];}
+function taskHTML(T,id,label){
+  var plan='<table class="plan"><tr><th>VLAN</th><th>Netz</th><th>Gateway</th></tr>'+T.vlans.map(function(v){return'<tr><td><i class="dot" style="background:'+I.vcol(v)+'"></i> '+v+'</td><td>'+T.plan[v].net+'</td><td>'+T.plan[v].gw+'</td></tr>';}).join('')+'</table>';
+  var cf='<div class="cfgs">'+(T.mode==='roas'?'<pre class="cli">'+esc(I.cfgRouter(T))+'</pre>':'')+'<pre class="cli">'+esc(I.cfgSwitch(T))+'</pre></div>';
+  var opts=I.options(T).map(function(o){return'<label><input type="radio" name="'+id+'-f" value="'+o[0]+'"> '+esc(o[1])+'</label>';}).join('');
+  return '<div class="card task" id="'+id+'" data-code="'+T.code+'"><h3>'+label+' <span class="tag">'+I.LVNAME[T.level]+'</span><span class="tag">'+(T.mode==='roas'?'Router-on-a-Stick':'Layer-3-Switch')+'</span><span class="tag">Nr. '+T.code+'</span></h3>'+
+   I.draw(T,{hl:(function(){var h={};h[T.pair[0]]=1;h[T.pair[1]]=1;return h;})()})+
+   '<div><b>Adressplan</b>'+plan+'</div>'+cf+
+   '<div class="q" data-q="1"><p>1. Kann '+T.pair[0]+' den '+T.pair[1]+' anpingen?</p><div class="opts"><label><input type="radio" name="'+id+'-p" value="ja"> Ja</label><label><input type="radio" name="'+id+'-p" value="nein"> Nein</label></div></div>'+
+   '<div class="q" data-q="2"><p>2. Wo liegt der Fehler?</p><div class="opts col">'+opts+'</div></div>'+
+   '<div class="acts"><button class="btn" type="button" data-act="check">Prüfen</button><button class="btn ghost" type="button" data-act="sol">Lösung anzeigen</button><span class="fb" aria-live="polite"></span></div><div class="sol"></div></div>';
+}
+function wayHTML(title,w){return'<div class="way"><h4>'+title+(w.ok?' ✓':' ✕')+'</h4><ul>'+w.steps.map(function(s){return'<li class="'+(s[0]==='x'?'x':s[0]==='ok'?'ok':'')+'">'+(s[0]==='x'?'✕ ':s[0]==='ok'?'✓ ':'→ ')+esc(s[1])+'</li>';}).join('')+'</ul></div>';}
+function solHTML(T){
+  var p=I.ping(T,T.pair[0],T.pair[1]);
+  var lab=I.options(T).filter(function(o){return o[0]===(T.fault?T.fault.loc:'none');})[0][1];
+  return '<h3 style="font:400 20px var(--head);margin:0">Lösung</h3><div class="ans"><b>1. '+(p.ok?'Ja':'Nein')+'.</b> '+(p.ok?'Hin- und Rückweg funktionieren.':'Mindestens eine Richtung scheitert.')+'</div>'+
+   wayHTML('Hinweg '+T.pair[0]+' → '+T.pair[1],p.there)+wayHTML('Rückweg '+T.pair[1]+' → '+T.pair[0],p.back)+
+   '<div class="fix'+(T.fault?'':' none')+'"><b>2. '+esc(lab)+'.</b> '+(T.fault?'Korrektur: '+esc(T.fault.fix):'Alles passt zum Adressplan.')+'</div>';
+}
+function check(card){
+  var T=taskOf(card),p=I.ping(T,T.pair[0],T.pair[1]),ans=T.fault?T.fault.loc:'none',good=0;
+  var r1=card.querySelector('[data-q="1"] input:checked'),r2=card.querySelector('[data-q="2"] input:checked');
+  card.querySelectorAll('[data-q] label').forEach(function(l){l.classList.remove('right','wrong','missed');});
+  card.querySelectorAll('[data-q="1"] label').forEach(function(l){var c=l.querySelector('input'),should=(c.value==='ja')===p.ok;if(c.checked)l.classList.add(should?'right':'wrong');else if(should&&r1)l.classList.add('missed');});
+  card.querySelectorAll('[data-q="2"] label').forEach(function(l){var c=l.querySelector('input'),should=c.value===ans;if(c.checked)l.classList.add(should?'right':'wrong');else if(should&&r2)l.classList.add('missed');});
+  if(r1&&(r1.value==='ja')===p.ok)good++; if(r2&&r2.value===ans)good++;
+  var fb=card.querySelector('.fb');fb.className='fb '+(good===2?'good':'bad');
+  fb.textContent=!r1||!r2?'Bitte beide Fragen beantworten.':good===2?'Alles richtig! ✓':good+' von 2 richtig – grün gestrichelt = richtige Antwort.';
+  if(good===2)card.dataset.solved='1';markToc();
+}
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-act]');if(!b)return;var card=b.closest('.task');
+  if(b.dataset.act==='check')check(card);
+  if(b.dataset.act==='sol'){var s=card.querySelector('.sol');if(!s.innerHTML)s.innerHTML=solHTML(taskOf(card));var o=s.classList.toggle('open');b.textContent=o?'Lösung ausblenden':'Lösung anzeigen';}});
+
+var list=[];[['L',8],['M',8],['S',8]].forEach(function(p){for(var i=1;i<=p[1];i++)list.push(p[0]+'-'+i);});
+var host=$('tasks'),cur=0;
+list.forEach(function(code,i){var m=code.split('-'),T=I.makeTask(+m[1],m[0]);cache[code]=T;var d=document.createElement('div');d.className='page';d.hidden=i!==0;
+  d.innerHTML=taskHTML(T,'t'+(i+1),'Aufgabe '+(i+1))+'<div class="navrow">'+(i>0?'<button class="btn ghost" type="button" data-go="'+(i-1)+'">‹ Aufgabe '+i+'</button>':'<span></span>')+(i<list.length-1?'<button class="btn" type="button" data-go="'+(i+1)+'">Aufgabe '+(i+2)+' ›</button>':'<a class="btn" href="#generator" style="text-decoration:none">🎲 Weiter mit dem Zufallsgenerator</a>')+'</div>';host.appendChild(d);});
+var pages=[].slice.call(host.children);
+list.forEach(function(c,i){var b=document.createElement('button');b.type='button';b.textContent=i+1;b.dataset.go=i;$('ptoc').appendChild(b);});
+function markToc(){[].forEach.call($('ptoc').children,function(b,i){b.classList.toggle('on',i===cur);b.classList.toggle('ok',pages[i].querySelector('.task').dataset.solved==='1');});}
+function show(i,scroll){i=Math.max(0,Math.min(pages.length-1,i));cur=i;pages.forEach(function(p,j){p.hidden=j!==i;});$('pnum').textContent='Aufgabe '+(i+1)+' von '+pages.length;$('ppart').textContent=I.LVNAME[list[i][0]];$('pprev').disabled=i===0;$('pnext').disabled=i===pages.length-1;markToc();if(scroll){var top=$('uebungen').getBoundingClientRect().top+window.pageYOffset;if(window.pageYOffset>top)window.scrollTo({top:top,behavior:reduce?'auto':'smooth'});}}
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-go]');if(b)show(+b.dataset.go,true);});
+$('pprev').onclick=function(){show(cur-1,true);};$('pnext').onclick=function(){show(cur+1,true);};show(0,false);
+
+function gen(lvl,seed){var T=I.makeTask(seed,lvl);if(!T){$('gmsg').textContent='Zu dieser Nummer gibt es keine Aufgabe.';return;}$('gmsg').textContent='';cache[T.code]=T;$('gout').innerHTML=taskHTML(T,'g'+T.code,'Aufgabe '+T.code);$('gcode').value=T.code;$('glvl').value=lvl;}
+$('gnew').onclick=function(){gen($('glvl').value,1+Math.floor(Math.random()*99999));};
+function load(){var m=/^\s*([LMS])\s*-?\s*(\d{1,6})\s*$/i.exec($('gcode').value);if(!m){$('gmsg').textContent='Bitte eine Nummer wie L-12, M-305 oder S-4711 eingeben.';return;}gen(m[1].toUpperCase(),+m[2]);}
+$('gload').onclick=load;$('gcode').addEventListener('keydown',function(e){if(e.key==='Enter')load();});
+gen('M',1+Math.floor(Math.random()*99999));
+})();
+</script>
+</body>
+</html>

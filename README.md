@@ -8,8 +8,8 @@ Lernplattform Netzwerktechnik für **nwt.joergzambo.com** – eine ganz normale 
 | Pfad | Inhalt |
 |---|---|
 | `content.py` | Themenbereiche und Themen – hier neue Themen eintragen |
-| `tools/<name>.html` | fertige interaktive Seiten (z. B. `spanning-tree.html`, `vlan.html`) |
-| `src/<name>/` | Quellen einer Einheit, z. B. `src/vlan/` (Engine, Seite, unabhängige Gegenrechnung `check.py`) |
+| `tools/<name>.html` | fertige interaktive Seiten (z. B. `spanning-tree.html`, `vlan.html`, `inter-vlan-routing.html`) |
+| `src/<name>/` | Quellen einer Einheit, z. B. `src/vlan/`, `src/intervlan/` (Engine, Seite, unabhängige Gegenrechnung `check.py`) |
 | `static/` | Design (`aecp.css`), Schriften (lokal, kein Google), Logo |
 | `build.py` | erzeugt die fertige Seite im Ordner `site/` |
 
