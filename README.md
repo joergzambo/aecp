@@ -20,19 +20,19 @@ Lernplattform Netzwerktechnik für **nwt.joergzambo.com** – eine ganz normale 
 
 Themen ohne `tool` erscheinen als „in Vorbereitung“.
 
-## Automatisch hochladen (GitHub → hosting.de per FTP)
+## Veröffentlichen mit GitHub Pages
 
-Einmalig im GitHub-Repo unter *Settings → Secrets and variables → Actions* anlegen:
+Jeder Push auf `main` baut die Seite (`build.py`) und veröffentlicht sie auf **https://nwt.joergzambo.com**
+(Workflow `.github/workflows/pages.yml`).
 
-| Secret | Wert |
-|---|---|
-| `FTP_SERVER` | FTP-Server von hosting.de |
-| `FTP_USERNAME` | FTP-Benutzer |
-| `FTP_PASSWORD` | FTP-Passwort |
-| `FTP_DIR` | Zielordner der Subdomain, mit `/` am Ende, z. B. `/nwt.joergzambo.com/` |
+Einmalig einrichten:
 
-Danach lädt jeder Push auf `main` die Seite hoch (Workflow `.github/workflows/deploy.yml`).
-Ohne GitHub: `python3 build.py` ausführen und den Inhalt von `site/` per FTP in den Ordner der Subdomain kopieren.
+1. Repo öffentlich auf GitHub anlegen (z. B. `joergzambo/aecp`) und diesen Inhalt pushen.
+2. *Settings → Pages → Build and deployment → Source:* **GitHub Actions**.
+3. *Settings → Pages → Custom domain:* `nwt.joergzambo.com` eintragen und speichern.
+4. DNS bei hosting.de (Zone joergzambo.com): **CNAME** `nwt` → `joergzambo.github.io`
+   (eine eventuell vorhandene Webspace-Subdomain `nwt` vorher entfernen).
+5. Sobald der Haken verfügbar ist: **Enforce HTTPS** aktivieren.
 
 ## Lokal ansehen
 

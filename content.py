@@ -6,6 +6,7 @@ und beim Thema "tool": "<name>" eintragen. Themen ohne "tool" erscheinen als „
 
 SITE = {
     'name': 'AECP',
+    'domain': 'nwt.joergzambo.com',
     'claim': 'Analyze · Explain · Configure · Practice',
     'description': 'AECP – Netzwerktechnik lernen mit Animationen, Erklärungen und Übungen: Switching, Routing, IP-Services und Netzwerksicherheit.',
     'intro': '<strong>Analyze</strong> – Topologien durchschauen. <strong>Explain</strong> – verstehen, warum das Netz so entscheidet. '

@@ -149,6 +149,8 @@ def build():
 
     write('404.html', page('Seite nicht gefunden', 0, 'Seite nicht gefunden', '''<section class="aecp-wrap aecp-narrow aecp-center">
  <h1>Seite nicht gefunden</h1><p>Diese Seite gibt es (noch) nicht. <a href="/">Zur Startseite</a></p></section>'''))
+    # Eigene Domain für GitHub Pages
+    write('CNAME', SITE.get('domain', 'nwt.joergzambo.com') + '\n')
     # Schutz: keine Verzeichnisauflistung, 404-Seite, Caching für Schriften/Bilder
     write('.htaccess', '''Options -Indexes
 ErrorDocument 404 /404.html
