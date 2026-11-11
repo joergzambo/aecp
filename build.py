@@ -94,6 +94,10 @@ def page(title, depth, desc, body, active=''):
     return head(title, depth, desc) + '<body class="aecp">\n' + header(depth, active) + '<main class="aecp-main">\n' + body + '\n</main>\n' + footer(depth) + '</body>\n</html>\n'
 
 
+# Seiten mit Netzplänen bekommen die Zoom-Leiste (static/zoom.js)
+ZOOM_TOOLS = {'spanning-tree', 'vlan', 'inter-vlan-routing', 'collision-broadcast-domains', 'statisches-routing', 'rip', 'ethernet-switching'}
+
+
 def build_tool(area, topic, depth):
     """Die fertige Tool-Seite bekommt Header, Footer, Schriften und Brotkrumen der Plattform."""
     src = open(os.path.join(ROOT, 'tools', topic['tool'] + '.html'), encoding='utf-8').read()
@@ -113,6 +117,8 @@ main button,.jump,.atabs button,.pager>button{{font-family:"Bitter",Georgia,seri
     crumbs = (f'<nav class="aecp-crumbs aecp-wrap" aria-label="Brotkrumen"><a href="{r}">Start</a> › '
               f'<a href="{r}{area["slug"]}/">{esc(area["title"])}</a> › <span>{esc(topic["title"])}</span></nav>')
     src = re.sub(r'<body([^>]*)>', lambda m: f'<body{m.group(1)}>\n' + header(depth, area['slug']) + crumbs, src, count=1)
+    if topic['tool'] in ZOOM_TOOLS:
+        src = src.replace('</body>', f'<script src="{r}assets/zoom.js"></script>\n</body>', 1)
     src = src.replace('</body>', footer(depth) + '</body>', 1)
     return src
 
