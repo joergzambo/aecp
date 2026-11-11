@@ -87,6 +87,14 @@ button{font:600 15px var(--ui);letter-spacing:.3px}
 .enc .d{background:var(--l7)} .enc .t{background:var(--l4)} .enc .n{background:var(--l3)} .enc .l{background:var(--l2)}
 .enc b{font:600 13px var(--ui);min-width:120px;align-self:center;margin-right:10px}
 .sr{position:absolute;left:-9999px}
+.genbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
+.genbar select,.genbar input{padding:8px;border:1.5px solid #90a4ae;border-radius:4px;font:500 15px var(--body)}
+.zone.cell{background:rgba(255,255,255,.85);border:2px solid transparent;cursor:default;font-size:14.5px;padding:7px 10px}
+.zone.cell.name{font:400 17px var(--head)}
+.zone.cell.name small{display:block;font:400 12.5px var(--body);color:var(--mute)}
+.zone.cell.empty{color:var(--mute)}
+.zone.gap{background:#fff;border:2px dashed #90a4ae}
+.zone.gap:empty::before{content:"?";color:#90a4ae;font:600 18px var(--ui);padding:0 8px}
 @media(prefers-reduced-motion:reduce){.chip,.dragghost{transition:none}}
 </style>
 </head>
@@ -101,6 +109,17 @@ button{font:600 15px var(--ui);letter-spacing:.3px}
 <div class="stack" id="stack"></div>
 <div class="acts"><button class="btn" id="check" type="button">Prüfen</button><button class="btn ghost" id="solve" type="button">Lösung zeigen</button><button class="btn ghost" id="reset" type="button">Neu mischen</button><button class="btn" id="next" type="button" hidden>Weiter zur nächsten Runde ›</button><span class="fb" id="fb" aria-live="polite"></span></div>
 <div class="notes" id="notes"></div>
+
+<h2 class="part" id="lueckentext">🎲 Lückentext-Generator</h2>
+<p class="sub">Eine ausgefüllte OSI-Tabelle mit Lücken. Zieh die fehlenden Kärtchen hinein. Jede Aufgabe hat eine Nummer – gleiche Nummer, gleiche Aufgabe für die ganze Klasse.</p>
+<div id="lt">
+ <div class="genbar"><label for="ltlvl">Stufe</label><select id="ltlvl"><option value="L">Leicht (5 Lücken)</option><option value="M" selected>Mittel (9 Lücken)</option><option value="S">Schwer (14 Lücken + Ablenker)</option></select>
+  <button class="btn" id="ltnew" type="button">Neue Aufgabe</button><label for="ltcode">Nummer</label><input id="ltcode" size="8" placeholder="M-123" autocomplete="off"><button class="btn ghost" id="ltload" type="button">Laden</button><span id="ltmsg" class="fb bad"></span></div>
+ <p class="task" id="lttask"></p>
+ <div class="pool" id="ltpool" aria-label="Kärtchen für die Lücken"></div>
+ <div class="stack c4" id="ltstack"></div>
+ <div class="acts"><button class="btn" id="ltcheck" type="button">Prüfen</button><button class="btn ghost" id="ltsolve" type="button">Lösung zeigen</button><span class="fb" id="ltfb" aria-live="polite"></span></div>
+</div>
 
 <h2 class="part">Zum Merken</h2>
 <div class="mnemo">
@@ -238,6 +257,7 @@ document.addEventListener('click',function(e){
 document.addEventListener('keydown',function(e){
   if(e.key!=='Enter'&&e.key!==' ')return;
   var c=e.target.closest&&e.target.closest('.chip');
+  if(c&&c.closest('#lt'))return;
   if(c){e.preventDefault();sel=sel===c.dataset.chip?null:c.dataset.chip;render();var n=document.querySelector('[data-chip="'+c.dataset.chip+'"]');if(n)n.focus();return;}
   var z=e.target.closest&&e.target.closest('[data-zone]');if(z){e.preventDefault();zoneAct(z);}
 });
@@ -263,6 +283,113 @@ function reset(){var R=ROUNDS[round];R.items.forEach(function(it){delete place[i
 $('check').onclick=check;$('solve').onclick=solve;$('reset').onclick=reset;
 $('next').onclick=function(){round++;sel=null;$('fb').textContent='';$('notes').className='notes';render();window.scrollTo({top:$('rounds').getBoundingClientRect().top+window.pageYOffset-10,behavior:'smooth'});};
 render();
+})();
+</script>
+
+<script>
+(function(){
+'use strict';
+var $=function(id){return document.getElementById(id);};
+var L={
+ 7:{n:'Anwendung',en:'Application',pdu:'Daten',dev:['Proxy','Web-Application-Firewall'],fun:['HTTP','DNS','SMTP','FTP','Schnittstelle zur Anwendung']},
+ 6:{n:'Darstellung',en:'Presentation',pdu:'Daten',dev:[],fun:['Verschlüsselung','Zeichensatz umwandeln','Komprimierung','Datenformate (JPEG, MP3)']},
+ 5:{n:'Sitzung',en:'Session',pdu:'Daten',dev:[],fun:['Sitzungen auf- und abbauen','Dialogsteuerung','Wiederaufnahme nach Abbruch']},
+ 4:{n:'Transport',en:'Transport',pdu:'Segment',dev:[],fun:['TCP','UDP','Portnummern','Flusskontrolle','Segmentierung']},
+ 3:{n:'Vermittlung',en:'Network',pdu:'Paket',dev:['Router'],fun:['IP-Adressen','Routing','ICMP (ping)']},
+ 2:{n:'Sicherung',en:'Data Link',pdu:'Frame',dev:['Switch','Bridge'],fun:['MAC-Adressen','Fehlererkennung (FCS)','VLAN-Tag 802.1Q']},
+ 1:{n:'Bitübertragung',en:'Physical',pdu:'Bits',dev:['Hub','Repeater','Kupferkabel','Glasfaser','RJ45-Stecker'],fun:['Elektrische/optische Signale','Leitungscodierung']}
+};
+var COLS=['name','pdu','dev','fun'], CN={name:'Schicht',pdu:'PDU',dev:'Gerät / Medium',fun:'Funktion / Protokoll'};
+var GAPS={L:5,M:9,S:14}, DIST={L:0,M:0,S:3}, LCODE={L:1,M:2,S:3};
+function rng(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function pick(r,a){return a[Math.floor(r()*a.length)];}
+function shuffle(r,a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(r()*(i+1)),t=a[i];a[i]=a[j];a[j]=t;}return a;}
+/* passt ein Kärtchen (Spalte, Text) auf Schicht n? */
+function fits(col,text,n){var x=L[n];if(col==='name')return x.n===text;if(col==='pdu')return x.pdu===text;return x[col].indexOf(text)>=0;}
+
+function make(seed,lvl){
+  var r=rng((seed*7919+LCODE[lvl]*1000003)>>>0), cells=[], rows={};
+  [7,6,5,4,3,2,1].forEach(function(n){var x=L[n];rows[n]={name:x.n,pdu:x.pdu,dev:x.dev.length?pick(r,x.dev):null,fun:pick(r,x.fun)};
+    COLS.forEach(function(c){if(rows[n][c]!==null)cells.push({n:n,c:c});});});
+  var pool=cells.filter(function(x){return lvl!=='L'||x.c==='name'||x.c==='pdu'||r()<0.3;});
+  var gaps=shuffle(r,pool).slice(0,GAPS[lvl]);
+  var chips=gaps.map(function(g,i){return{id:'g'+i,c:g.c,t:rows[g.n][g.c],sol:g.n+'-'+g.c};});
+  /* Ablenker: passen in keine Lücke ihrer Spalte */
+  var cand=[];
+  ['dev','fun'].forEach(function(c){[7,6,5,4,3,2,1].forEach(function(n){L[n][c].forEach(function(t){
+    var fitsGap=gaps.some(function(g){return g.c===c&&fits(c,t,g.n);});
+    var shown=[7,6,5,4,3,2,1].some(function(m){return rows[m].dev===t||rows[m].fun===t;});
+    if(!fitsGap&&!shown)cand.push({c:c,t:t});});});});
+  shuffle(r,cand).slice(0,DIST[lvl]).forEach(function(x,i){chips.push({id:'x'+i,c:x.c,t:x.t,sol:null});});
+  return{code:lvl+'-'+seed,lvl:lvl,rows:rows,gaps:gaps.map(function(g){return g.n+'-'+g.c;}),chips:shuffle(r,chips)};
+}
+
+var T=null, place={}, mark={}, sel=null;
+function chip(c){return'<button type="button" class="chip'+(sel===c.id?' sel':'')+(mark[c.id]===true?' ok':mark[c.id]===false?' bad':'')+'" data-lt="'+c.id+'">'+c.t+'</button>';}
+function render(){
+  var inGap={};Object.keys(place).forEach(function(id){inGap[place[id]]=id;});
+  $('ltpool').innerHTML=T.chips.filter(function(c){return!place[c.id];}).map(chip).join('');
+  var h='<div class="row hdr"><span></span><span>Schicht</span><span>PDU</span><span>Gerät / Medium</span><span>Funktion / Protokoll</span></div>';
+  [7,6,5,4,3,2,1].forEach(function(n){
+    h+='<div class="row r'+n+'"><div class="num">'+n+'</div>';
+    COLS.forEach(function(c){
+      var key=n+'-'+c, v=T.rows[n][c];
+      if(T.gaps.indexOf(key)>=0){var id=inGap[key];h+='<div class="zone gap" data-gap="'+key+'" role="button" tabindex="0" aria-label="Lücke: Schicht '+n+', '+CN[c]+'">'+(id?chip(T.chips.filter(function(x){return x.id===id;})[0]):'')+'</div>';}
+      else if(v===null)h+='<div class="zone cell empty">—</div>';
+      else h+='<div class="zone cell'+(c==='name'?' name':'')+'">'+v+(c==='name'?'<small>'+L[n].en+'</small>':'')+'</div>';
+    });
+    h+='</div>';
+  });
+  $('ltstack').innerHTML=h;
+  $('lttask').textContent='Aufgabe '+T.code+': '+T.gaps.length+' Lücken'+(T.chips.length>T.gaps.length?', dazu '+(T.chips.length-T.gaps.length)+' Kärtchen, die nirgends hinpassen':'')+'.';
+}
+function put(id,gap){
+  if(gap)Object.keys(place).forEach(function(o){if(place[o]===gap){delete place[o];delete mark[o];}});
+  if(gap)place[id]=gap;else delete place[id];
+  delete mark[id];sel=null;$('ltfb').textContent='';render();
+}
+function load(lvl,seed){T=make(seed,lvl);place={};mark={};sel=null;$('ltcode').value=T.code;$('ltlvl').value=lvl;$('ltmsg').textContent='';$('ltfb').textContent='';render();}
+
+/* Ziehen / Antippen – nur innerhalb von #lt */
+var drag=null;
+document.addEventListener('pointerdown',function(e){var c=e.target.closest&&e.target.closest('#lt .chip');if(!c)return;drag={id:c.dataset.lt,el:c,x:e.clientX,y:e.clientY,moved:false};});
+document.addEventListener('pointermove',function(e){
+  if(!drag)return;if(!drag.moved&&Math.hypot(e.clientX-drag.x,e.clientY-drag.y)<6)return;
+  if(!drag.moved){drag.moved=true;drag.g=drag.el.cloneNode(true);drag.g.classList.add('dragghost');drag.g.classList.remove('sel');document.body.appendChild(drag.g);drag.el.classList.add('dragging');}
+  e.preventDefault();drag.g.style.left=e.clientX+'px';drag.g.style.top=e.clientY+'px';
+  if(e.clientY<70)window.scrollBy(0,-14);else if(e.clientY>window.innerHeight-70)window.scrollBy(0,14);
+  document.querySelectorAll('#lt .over').forEach(function(z){z.classList.remove('over');});
+  var t=document.elementFromPoint(e.clientX,e.clientY),z=t&&t.closest&&(t.closest('[data-gap]')||t.closest('#ltpool'));if(z)z.classList.add('over');
+},{passive:false});
+document.addEventListener('pointerup',function(e){
+  if(!drag)return;var d=drag;drag=null;document.querySelectorAll('#lt .over').forEach(function(z){z.classList.remove('over');});
+  if(!d.moved){sel=sel===d.id?null:d.id;render();return;}
+  d.g.remove();d.el.classList.remove('dragging');
+  var t=document.elementFromPoint(e.clientX,e.clientY),z=t&&t.closest&&t.closest('[data-gap]');
+  if(z)put(d.id,z.dataset.gap);else if(t&&t.closest&&t.closest('#ltpool'))put(d.id,null);else render();
+});
+document.addEventListener('pointercancel',function(){if(drag){if(drag.g)drag.g.remove();drag.el.classList.remove('dragging');drag=null;}});
+$('lt').addEventListener('click',function(e){
+  var z=e.target.closest('[data-gap]');if(z&&sel&&!e.target.closest('.chip'))put(sel,z.dataset.gap);
+  if(e.target.closest('#ltpool')&&sel&&place[sel]&&!e.target.closest('.chip'))put(sel,null);
+});
+$('lt').addEventListener('keydown',function(e){
+  if(e.key!=='Enter'&&e.key!==' ')return;
+  var c=e.target.closest('.chip');if(c){e.preventDefault();var id=c.dataset.lt;sel=sel===id?null:id;render();var n=document.querySelector('#lt [data-lt="'+id+'"]');if(n)n.focus();return;}
+  var z=e.target.closest('[data-gap]');if(z&&sel){e.preventDefault();put(sel,z.dataset.gap);}
+});
+
+$('ltcheck').onclick=function(){
+  var ok=0;T.chips.forEach(function(c){var g=place[c.id];if(!g){delete mark[c.id];return;}var p=g.split('-');mark[c.id]=c.c===p[1]&&fits(c.c,c.t,+p[0]);if(mark[c.id])ok++;});
+  render();var n=T.gaps.length,all=ok===n,fb=$('ltfb');fb.className='fb '+(all?'good':'bad');
+  fb.textContent=all?'Perfekt, alle '+n+' Lücken richtig! ✓':ok+' von '+n+' Lücken richtig gefüllt. Rote Kärtchen nochmal verschieben.';
+};
+$('ltsolve').onclick=function(){place={};mark={};T.chips.forEach(function(c){if(c.sol)place[c.id]=c.sol;});$('ltcheck').onclick();};
+$('ltnew').onclick=function(){load($('ltlvl').value,1+Math.floor(Math.random()*99999));};
+function byCode(){var m=/^\s*([LMS])\s*-?\s*(\d{1,6})\s*$/i.exec($('ltcode').value);if(!m){$('ltmsg').textContent='Bitte eine Nummer wie L-12 oder S-4711 eingeben.';return;}load(m[1].toUpperCase(),+m[2]);}
+$('ltload').onclick=byCode;$('ltcode').addEventListener('keydown',function(e){if(e.key==='Enter')byCode();});
+load('M',1+Math.floor(Math.random()*99999));
+window.__OSI_LT={make:make,fits:fits};
 })();
 </script>
 </body>
