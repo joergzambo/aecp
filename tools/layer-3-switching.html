@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Layer-3-Switching</title>
+<style>
+
+:root{
+  /* AECP-Stil: weiß, schwarz, Belgrano/Bitter/Open Sans; VLAN-Farben tragen Bedeutung */
+  --ink:#1c2b33; --mute:#546e7a; --line:#e3e1e8; --soft:#f3f5f7; --ok:#2e7d32; --bad:#c62828; --warn:#e65100; --accent:#61a229;
+  --head:"Belgrano",Georgia,serif; --ui:"Bitter",Georgia,serif; --body:"Open Sans","Helvetica Neue",Arial,sans-serif; --mono:ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#fff;color:var(--ink);font:16px/1.65 var(--body)}
+.vmain{max-width:980px;margin:0 auto;padding:24px 20px 60px}
+.vmain h1{font:400 clamp(30px,4.5vw,42px)/1.15 var(--head);letter-spacing:.5px;margin:.3em 0 .2em;text-wrap:balance}
+.vmain h2{font:400 26px/1.2 var(--head);letter-spacing:.5px;margin:0 0 .4em;text-wrap:balance}
+.sub{color:var(--mute);max-width:72ch;margin:0 0 14px}
+.jumps{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 6px}
+.jumps a{font:600 15px var(--ui);letter-spacing:.4px;color:#fff;background:var(--ink);padding:8px 14px;border-radius:4px;text-decoration:none}
+.jumps a:hover{background:#000}
+.part{border-top:3px solid var(--ink);margin-top:40px;padding-top:12px}
+.card{border:1px solid var(--line);border-radius:4px;background:#fff;padding:18px 20px;margin:14px 0}
+svg{width:100%;height:auto;display:block;background:#fbfcfd;border:1px solid var(--line);border-radius:4px}
+button,select,input{font:600 15px var(--ui);letter-spacing:.3px}
+.btn{padding:9px 16px;border-radius:4px;border:1.5px solid var(--ink);background:var(--ink);color:#fff;cursor:pointer}
+.btn:hover{background:#000}
+.btn.ghost{background:#fff;color:var(--ink)}
+.btn.ghost:hover{background:var(--soft)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Schritt-Animation */
+.sbgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+@media(max-width:760px){.sbgrid{grid-template-columns:1fr}}
+.cfg{background:var(--soft);border-radius:4px;padding:10px 14px;font-size:14px}
+.cfg h3{font:600 15px var(--ui);margin:0 0 6px}
+.cfg label{margin-right:12px;white-space:nowrap}
+.cfg select{font:500 14px var(--body);padding:2px 4px}
+.hint{font-size:14px;color:var(--mute);margin:8px 0 0}
+.result{margin-top:10px;font-size:15px;min-height:1.6em}
+.frames{margin-top:12px;font:13px var(--mono)}
+.frame{display:flex;flex-wrap:wrap;margin:6px 0;align-items:stretch}
+.frame span{border:1.5px solid var(--ink);border-right:0;padding:5px 8px;background:#fff;white-space:nowrap}
+.frame span:last-child{border-right:1.5px solid var(--ink)}
+.frame .ftag{background:#fff8e1;font-weight:700}
+.frame .ftag.none{background:var(--soft);color:var(--mute);border-style:dashed;font-weight:400}
+.frame b{font-family:var(--body)}
+.flab{font:600 14px var(--ui);margin-top:8px}
+
+/* Regelwerk */
+.rules{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:760px){.rules{grid-template-columns:1fr}}
+.rules .card{margin:0}
+.rules h3{font:400 19px var(--head);margin:0 0 6px}
+.rules ul{margin:0;padding-left:20px}
+.rules li{margin:3px 0}
+code,pre{font-family:var(--mono);font-size:13.5px}
+pre.cli{background:#1c2b33;color:#e6edf2;border-radius:4px;padding:10px 12px;margin:8px 0 0;overflow-x:auto;line-height:1.5}
+.check{background:#fff8e1;border:1px solid #ffe082}
+
+/* Übungen */
+.pager{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:4px;padding:12px 14px;margin:14px 0}
+.pinfo{text-align:center;line-height:1.3}
+.pinfo span{display:block;font-size:13px;color:var(--mute)}
+.toc{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:5px}
+.toc button{min-width:36px;padding:4px 0;border:1px solid #cfd8dc;background:#fff;color:var(--ink);border-radius:4px;cursor:pointer;font-size:13px}
+.toc button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.toc button.ok{background:#e3f4e6;border-color:#a5d6a7}
+.toc button.on.ok{background:var(--ok);border-color:var(--ok)}
+.task h3{font:400 22px var(--head);margin:0 0 4px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.tag{font:400 12px var(--head);text-transform:uppercase;letter-spacing:1.5px;color:#3d6e14;background:#eef6e6;padding:2px 8px;border-radius:2px}
+.trunks{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px;margin-top:10px}
+.trunks pre{margin:0}
+.q{margin-top:16px;padding-top:12px;border-top:1px dashed #cfd8dc}
+.q p{margin:0 0 6px;font-weight:600}
+.opts{display:flex;flex-wrap:wrap;gap:6px 10px}
+.opts label{display:inline-flex;align-items:center;gap:6px;border:1.5px solid #cfd8dc;border-radius:4px;padding:5px 10px;cursor:pointer;font-size:15px;background:#fff}
+.opts label.right{border-color:var(--ok);background:#e3f4e6}
+.opts label.wrong{border-color:var(--bad);background:#fde3e3}
+.opts label.missed{border-color:var(--ok);border-style:dashed}
+.dot{width:11px;height:11px;border-radius:50%;display:inline-block}
+.acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;align-items:center}
+.fb{font-weight:600}
+.fb.good{color:var(--ok)} .fb.bad{color:var(--bad)}
+.sol{display:none;margin-top:14px;border-top:2px solid var(--ink);padding-top:12px}
+.sol.open{display:block}
+.sol ul{list-style:none;padding:0;margin:10px 0}
+.sol li{margin:4px 0;padding-left:4px}
+.ans{background:var(--soft);border-left:4px solid var(--accent);padding:8px 12px;margin:8px 0}
+.navrow{display:flex;justify-content:space-between;margin-top:14px;gap:8px}
+.genbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
+.genbar select,.genbar input{padding:8px;border:1.5px solid #90a4ae;border-radius:4px;font-family:var(--body);font-weight:500}
+.err{color:var(--bad)}
+@media print{.jumps,.pager,.acts,.navrow,.genbar,#sandbox,#generator{display:none!important}.task{display:block!important;break-inside:avoid}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 12px}
+.tabs button{padding:9px 14px;border-radius:4px;border:1.5px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer;text-align:left;line-height:1.25}
+.tabs button small{display:block;font:400 12px var(--body);opacity:.8}
+.tabs button[aria-selected="true"]{background:var(--ink);color:#fff}
+.stepbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.stepno{font:600 15px var(--ui);margin-left:auto;color:var(--mute)}
+.explain{background:var(--soft);border-radius:4px;padding:12px 16px;margin-top:10px;font-size:16px;min-height:5.5em}
+.explain h3{font:400 21px var(--head);margin:0 0 4px}
+.explain p{margin:0 0 6px}
+.tbl{display:inline-block;font:700 12px var(--ui);color:#fff;padding:2px 8px;border-radius:3px;margin-right:6px;letter-spacing:.4px}
+.tbl.l2{background:#1565c0}.tbl.l3{background:#e65100}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-top:10px}
+.rules{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+@media(max-width:760px){.two,.rules{grid-template-columns:minmax(0,1fr)}}
+.two pre{margin:0}
+.ph{font:600 14px var(--ui);margin:0 0 4px}
+.cmp{width:100%;border-collapse:collapse;font-size:15px;margin-top:6px}
+.cmp th,.cmp td{border:1px solid #cfd8dc;padding:7px 10px;text-align:left;vertical-align:top}
+.cmp th{background:var(--soft);font:600 14px var(--ui)}
+.sw{display:flex;flex-wrap:wrap;gap:6px 14px;margin:6px 0 4px}
+.sw label{display:inline-flex;gap:7px;align-items:center;font:500 14.5px var(--mono);background:var(--soft);padding:5px 10px;border-radius:4px;cursor:pointer}
+.sw input{accent-color:#61a229;width:17px;height:17px}
+.pm{border-collapse:collapse;margin-top:6px;font-size:15px}
+.pm th,.pm td{border:1px solid #cfd8dc;padding:4px 6px;text-align:center}
+.pm th{background:var(--soft);font:600 13.5px var(--ui)}
+.pm button{min-width:42px;padding:3px 6px;border-radius:4px;border:1.5px solid;cursor:pointer;font:700 15px var(--ui);background:#fff}
+.pm button.y{color:var(--ok);border-color:#a5d6a7;background:#e8f5e9}.pm button.n{color:var(--bad);border-color:#ef9a9a;background:#fdecea}
+.pm button.sel{outline:3px solid #f9a825}
+.why{margin-top:8px;font-size:15px;background:#fffde7;border-left:4px solid #f9a825;padding:6px 10px;min-height:2.2em}
+.qh{font:600 16px var(--ui);margin:16px 0 4px}
+.at{border-collapse:collapse;margin-top:6px;font-size:15px}
+.at th,.at td{border:1px solid #cfd8dc;padding:5px 9px;text-align:left}
+.at th{background:var(--soft);font:600 14px var(--ui)}
+.at select{padding:5px;border:1.5px solid #90a4ae;border-radius:4px;font:500 14px var(--body)}
+.at .right{border-color:var(--ok);background:#e3f4e6}.at .wrong{border-color:var(--bad);background:#fde3e3}
+.opts.col{flex-direction:column;align-items:flex-start}
+.opts .mono{font-family:var(--mono);font-size:14px}
+.slist{list-style:none;padding:0;margin:6px 0}
+.slist li{margin:5px 0;padding:6px 10px;background:var(--soft);border-radius:4px;font-size:15px}
+.ok{color:var(--ok);font-weight:700}.no{color:var(--bad);font-weight:700}
+.quiz .q .ex{display:none;margin-top:6px;font-size:15px;background:var(--soft);border-left:4px solid var(--accent);padding:6px 10px}
+.quiz .q .ex.open{display:block}
+</style>
+</head>
+<body>
+<main class="vmain">
+<h1>Layer-3-Switching</h1>
+<p class="sub">Ein Layer-3-Switch ist Switch und Router in einem Gerät. Innerhalb eines VLANs <b>switcht</b> er wie jeder Switch anhand der MAC-Tabelle. Zwischen VLANs <b>routet</b> er anhand seiner Routing-Tabelle – in Hardware, ohne externen Router und ohne Trunk-Engpass.</p>
+<nav class="jumps" aria-label="Abschnitte"><a href="#weg">Paketweg</a><a href="#sandbox">Probier's aus</a><a href="#regeln">Regeln und Befehle</a><a href="#quiz">Teste dich</a><a href="#uebungen">Übungen</a><a href="#generator">🎲 Zufallsgenerator</a></nav>
+
+<h2 class="part" id="weg">Paketweg Schritt für Schritt</h2>
+<p class="sub">Drei Pings von PC1 aus. Achte darauf, welche Tabelle der Switch benutzt und wann sich MAC-Adressen und TTL ändern.</p>
+<div class="tabs" role="tablist" id="tabs"></div>
+<div class="card">
+ <div id="wsvg"></div>
+ <div class="stepbar"><button class="btn ghost" id="prev" type="button">‹ Zurück</button><button class="btn" id="next" type="button">Weiter ›</button><span class="stepno" id="no"></span></div>
+ <div class="explain" aria-live="polite"><h3 id="ttl"></h3><div id="txt"></div><div id="frm"></div></div>
+</div>
+
+<h2 class="part" id="sandbox">Probier's aus</h2>
+<p class="sub">Schalte Teile der Konfiguration ein und aus. Die Ausgaben von <code>show ip interface brief</code> und <code>show ip route</code> und alle Pings rechnen sich sofort neu. Klick auf ein ✓ oder ✗, um zu sehen, warum.</p>
+<div class="card">
+ <div class="sw" id="tog"></div>
+ <div id="ssvg" style="margin-top:8px"></div>
+ <div class="two"><div><p class="ph">show ip interface brief</p><pre class="cli" id="sib"></pre></div><div><p class="ph">show ip route</p><pre class="cli" id="srt"></pre></div></div>
+ <p class="qh">Pings</p>
+ <div style="overflow-x:auto"><table class="pm" id="pm"></table></div>
+ <div class="why" id="why" aria-live="polite">Klick auf ein Ergebnis.</div>
+</div>
+
+<h2 class="part" id="regeln">Regeln und Befehle</h2>
+<div class="rules">
+ <div class="card"><h3>SVI – das Gateway eines VLANs</h3><ul>
+  <li><code>interface Vlan10</code> ist ein <b>virtuelles</b> Layer-3-Interface für das ganze VLAN 10.</li>
+  <li>Ihre IP-Adresse ist das <b>Standardgateway</b> der PCs in diesem VLAN.</li>
+  <li>Damit zwischen den SVIs geroutet wird, braucht es <code>ip routing</code>.</li></ul>
+  <pre class="cli">DSW1(config)# ip routing
+DSW1(config)# interface vlan 10
+DSW1(config-if)# ip address 192.168.10.1 255.255.255.0
+DSW1(config-if)# no shutdown</pre></div>
+ <div class="card"><h3>Routed Port – der Uplink zum Router</h3><ul>
+  <li><code>no switchport</code> macht aus einem physischen Port ein Router-Interface.</li>
+  <li>Er gehört zu <b>keinem VLAN</b>, bekommt direkt eine IP (meist ein /30) und schickt Frames ohne Tag.</li>
+  <li>Ohne <code>no switchport</code> lehnt der Switch <code>ip address</code> ab.</li></ul>
+  <pre class="cli">DSW1(config)# interface g1/0/24
+DSW1(config-if)# no switchport
+DSW1(config-if)# ip address 10.0.0.2 255.255.255.252</pre></div>
+ <div class="card check"><h3>Wann ist eine SVI up / up?</h3><ul>
+  <li>Das VLAN existiert in der VLAN-Datenbank (<code>vlan 10</code>).</li>
+  <li>Mindestens <b>ein Port</b> im VLAN ist aktiv (Access-Port mit Gerät oder ein Trunk, der das VLAN führt).</li>
+  <li>Die SVI ist nicht mit <code>shutdown</code> abgeschaltet.</li></ul>
+  <p class="hint">Abgeschaltet → <b>administratively down / down</b>. VLAN fehlt oder kein aktiver Port → <b>up / down</b>. Nur Netze von SVIs mit up / up stehen als <b>C</b> in der Routing-Tabelle. Achtung: In <code>show running-config</code> steht nur <code>shutdown</code>, wenn ein Interface abgeschaltet ist – <code>no shutdown</code> ist der Normalfall und wird nicht angezeigt.</p></div>
+ <div class="card"><h3>Raus ins Internet – und wieder zurück</h3><ul>
+  <li>Der Switch kennt nur seine direkt verbundenen Netze. Für alles andere: <b>Default-Route</b> zum Router.</li>
+  <li>Der Next Hop muss in einem direkt verbundenen Netz liegen, sonst landet die Route nicht in der Tabelle.</li>
+  <li>Der <b>Router</b> braucht den Rückweg zu den VLAN-Netzen – einzeln oder zusammengefasst.</li></ul>
+  <pre class="cli">DSW1(config)# ip route 0.0.0.0 0.0.0.0 10.0.0.1
+R1(config)# ip route 192.168.0.0 255.255.0.0 10.0.0.2</pre></div>
+</div>
+<div class="card"><h3 style="font:400 19px var(--head);margin:0 0 6px">Uplink als Trunk – VLANs zum Router durchreichen</h3>
+<p style="margin:0 0 8px">Statt eines Routed Ports wird der Uplink oft ein <b>Trunk</b>. Das hat zwei Gründe:</p>
+<div class="two" style="margin-top:0"><div><p class="ph">1. Transit-VLAN statt Routed Port</p><ul style="margin:0;padding-left:20px">
+<li>Eigenes VLAN (z. B. 99) nur für die Strecke Switch ↔ Router, mit /30-Netz.</li>
+<li>Switch: SVI <code>Vlan99</code>, Router: Subinterface <code>Gi0/0.99</code> mit <code>encapsulation dot1Q 99</code>.</li>
+<li>Stolpersteine: VLAN 99 anlegen, auf dem Trunk erlauben, gleiche dot1Q-Nummer auf beiden Seiten.</li></ul></div>
+<div><p class="ph">2. VLANs am Switch vorbei zum Router</p><ul style="margin:0;padding-left:20px">
+<li>Für manche VLANs (Gäste, DMZ, Server hinter der Firewall) gibt es <b>keine SVI</b> am Switch.</li>
+<li>Das VLAN läuft über den Trunk zum Router oder zur Firewall – dort ist das Gateway (Router-on-a-Stick nur für diese VLANs).</li>
+<li>So geht dieser Verkehr immer über die ACLs bzw. Firewall-Regeln.</li></ul></div></div>
+<pre class="cli">DSW1(config)# vlan 99
+DSW1(config-vlan)# name Transit
+DSW1(config)# interface g1/0/24
+DSW1(config-if)# switchport mode trunk
+DSW1(config-if)# switchport trunk allowed vlan 30,99
+DSW1(config)# interface vlan 99
+DSW1(config-if)# ip address 10.0.0.2 255.255.255.252
+DSW1(config)# ip route 0.0.0.0 0.0.0.0 10.0.0.1
+
+R1(config)# interface g0/0.99
+R1(config-subif)# encapsulation dot1Q 99
+R1(config-subif)# ip address 10.0.0.1 255.255.255.252
+R1(config)# interface g0/0.30
+R1(config-subif)# encapsulation dot1Q 30
+R1(config-subif)# ip address 192.168.30.1 255.255.255.0</pre>
+<p class="hint">Wichtig: Jedes VLAN hat genau <b>ein</b> Gateway – SVI am Switch <b>oder</b> Subinterface am Router. Und: Ein Trunk, der ein VLAN führt, zählt als aktiver Port dieses VLANs. Bei <code>switchport trunk allowed vlan all</code> bleiben deshalb alle SVIs up / up, auch wenn kein PC im VLAN eingesteckt ist. Mit einer Liste erlaubter VLANs ist das sauberer.</p>
+</div>
+<div class="card">
+<table class="cmp"><thead><tr><th></th><th>Router-on-a-Stick</th><th>Layer-3-Switch</th></tr></thead><tbody>
+<tr><td><b>Gateway der VLANs</b></td><td>Subinterfaces am Router (<code>encapsulation dot1Q 10</code>)</td><td>SVIs am Switch (<code>interface Vlan10</code>)</td></tr>
+<tr><td><b>Weg zwischen VLANs</b></td><td>über den Trunk zum Router und zurück</td><td>bleibt im Switch</td></tr>
+<tr><td><b>Leistung</b></td><td>ein Link für alles – Engpass, Routing in Software</td><td>Routing in Hardware, mit voller Port-Geschwindigkeit</td></tr>
+<tr><td><b>Einsatz</b></td><td>kleine Netze, wenig Verkehr zwischen VLANs</td><td>Distribution/Core in Firmen- und Schulnetzen</td></tr>
+<tr><td><b>Wichtigster Befehl, der gern fehlt</b></td><td><code>no shutdown</code> am physischen Interface</td><td><code>ip routing</code></td></tr>
+</tbody></table>
+</div>
+
+<h2 class="part" id="quiz">Teste dich</h2>
+<div class="card quiz" id="qz"></div>
+
+<h2 class="part" id="uebungen">Übungen</h2>
+<p class="sub">Lies die Konfiguration und beantworte: Welchen Status haben die SVIs? Was steht in der Routing-Tabelle? Welche Pings klappen? In der Lösung steht auch, wie man die eingebauten Fehler behebt.</p>
+<div class="pager"><button class="btn ghost" id="pprev" type="button">‹ Zurück</button><div class="pinfo"><b id="pnum"></b><span id="ppart"></span></div><button class="btn" id="pnext" type="button">Weiter ›</button><div class="toc" id="ptoc"></div></div>
+<div id="tasks"></div>
+
+<h2 class="part" id="generator">🎲 Zufallsgenerator</h2>
+<p class="sub">Jede Aufgabe hat eine Nummer. Mit der Nummer bekommt jede Schülerin und jeder Schüler genau dieselbe Aufgabe.</p>
+<div class="genbar"><label for="glvl">Stufe</label><select id="glvl"><option value="L">Leicht (2 VLANs, höchstens ein Fehler)</option><option value="M" selected>Mittel (3 VLANs, ein Fehler)</option><option value="S">Schwer (bis 4 VLANs, zwei Fehler)</option></select>
+<button class="btn" id="gnew" type="button">Neue Aufgabe</button><label for="gcode">Nummer</label><input id="gcode" size="8" placeholder="M-123" autocomplete="off"><button class="btn ghost" id="gload" type="button">Laden</button><span id="gmsg" class="err"></span></div>
+<div id="gout"></div>
+</main>
+<script>
+/* NWT · Layer-3-Switching: Modell (SVI-Status, Routing-Tabelle, Ping), Fehler-Generator, Texte, Zeichnen.
+   Browser: window.L3 · Node: globalThis.L3 */
+(function (G) {
+'use strict';
+var LVNAME = {L: 'Leicht', M: 'Mittel', S: 'Schwer'};
+var LVCODE = {L: 3, M: 4, S: 5};
+var VCOL = ['#1565c0', '#2e7d32', '#e65100', '#6a1b9a'];
+var VNAMES = ['Verwaltung', 'Technik', 'Lehrer', 'Schueler', 'Gaeste', 'Drucker', 'Labor', 'Server'];
+var INET = '8.8.8.8';
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function ri(r, a, b) { return a + Math.floor(r() * (b - a + 1)); }
+function pick(r, a) { return a[Math.floor(r() * a.length)]; }
+function shuffle(r, a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(r() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+function clone(o) { return JSON.parse(JSON.stringify(o)); }
+
+/* ---------- IP ---------- */
+function n(ip) { return ip.split('.').reduce(function (a, b) { return a * 256 + (+b); }, 0); }
+function s(x) { return [x >>> 24 & 255, x >>> 16 & 255, x >>> 8 & 255, x & 255].join('.'); }
+function maskN(p) { return p === 0 ? 0 : (0xFFFFFFFF << (32 - p)) >>> 0; }
+function mask(p) { return s(maskN(p)); }
+function inNet(ip, net, p) { return ((n(ip) & maskN(p)) >>> 0) === ((n(net) & maskN(p)) >>> 0); }
+function host(net, h) { return s(n(net) + h); }
+
+/* ---------- Modell ---------- */
+function vlan(T, id) { return T.vlans.filter(function (v) { return v.id === id; })[0]; }
+function pc(T, name) { return T.pcs.filter(function (p) { return p.name === name; })[0]; }
+function portActive(T, p) { return !p.shut && vlan(T, p.vlan).db; }
+/* 'up' = up/up, 'down' = up/down, 'admin' = administratively down/down */
+function sviState(T, v) {
+  if (v.shut) return 'admin';
+  if (!v.db) return 'down';
+  if (trunkCarries(T, v.id)) return 'up';
+  return T.pcs.some(function (p) { return p.vlan === v.id && portActive(T, p); }) ? 'up' : 'down';
+}
+function isTrunk(T) { return T.up.mode === 'trunk'; }
+/* Ein Trunk, der ein VLAN führt, zählt als aktiver Port dieses VLANs */
+function trunkCarries(T, id) { return isTrunk(T) && (!T.up.allowed || T.up.allowed.indexOf(id) >= 0); }
+/* Transit-SVI bei Trunk-Uplink: 'up' | 'down' | 'admin' | null (kein Trunk) */
+function transitState(T) {
+  if (!isTrunk(T)) return null;
+  var u = T.up;
+  if (u.tvshut) return 'admin';
+  if (!u.tvdb) return 'down';
+  if (u.allowed && u.allowed.indexOf(u.tv) < 0) return 'down';
+  return 'up';
+}
+function upOk(T) { return isTrunk(T) ? transitState(T) === 'up' : T.up.routed; }
+function upIf(T) { return isTrunk(T) ? 'Vlan' + T.up.tv : T.up.port; }
+/* Routing-Tabelle des Switches: null = ip routing aus; sonst Liste */
+function routes(T) {
+  if (!T.routing) return null;
+  var r = [];
+  if (upOk(T)) r.push({k: 'C', key: 'up', net: T.up.net, p: 30, via: upIf(T), own: T.up.ip});
+  T.vlans.forEach(function (v) { if (sviState(T, v) === 'up') r.push({k: 'C', key: 'v' + v.id, net: v.net, p: 24, via: 'Vlan' + v.id, own: v.svi}); });
+  if (T.def && r.some(function (x) { return inNet(T.def, x.net, x.p); })) r.unshift({k: 'S*', key: 'def', net: '0.0.0.0', p: 0, nh: T.def});
+  return r;
+}
+function routeKeys(T) { var r = routes(T); return r === null ? ['none'] : r.map(function (x) { return x.key; }).sort(); }
+function r1Back(T, ip) { return T.r1.routes.some(function (x) { return inNet(ip, x.net, x.p); }); }
+
+/* Ping a → b (b = PC-Name oder 'INET'); liefert {ok, why} */
+function reach(T, a, b) {
+  var A = pc(T, a), va = vlan(T, A.vlan);
+  if (!portActive(T, A)) return {ok: false, why: A.shut ? a + ' hängt an ' + A.port + ', und der Port ist abgeschaltet (shutdown).' : 'VLAN ' + A.vlan + ' ist auf ' + T.sw + ' nicht angelegt – der Access-Port ' + A.port + ' von ' + a + ' ist dadurch inaktiv.'};
+  if (b !== 'INET') {
+    var B = pc(T, b);
+    if (B.vlan === A.vlan) {
+      if (!portActive(T, B)) return {ok: false, why: B.shut ? b + ' hängt an ' + B.port + ', und der Port ist abgeschaltet.' : 'Der Port von ' + b + ' ist inaktiv.'};
+      return {ok: true, why: 'Beide sind im selben VLAN und Netz – der Switch leitet den Frame auf Layer 2 anhand der MAC-Tabelle weiter. Routing, Gateway und SVI spielen keine Rolle.'};
+    }
+  }
+  if (A.gw !== va.svi) return {ok: false, why: a + ' hat das Gateway ' + A.gw + ', die SVI Vlan' + va.id + ' hat aber ' + va.svi + '. Das Paket kommt nie beim Switch-Router an.'};
+  var st = sviState(T, va);
+  if (st !== 'up') return {ok: false, why: 'Das Gateway von ' + a + ' ist die SVI Vlan' + va.id + ' – und die ist ' + (st === 'admin' ? 'administratively down (shutdown).' : 'down.')};
+  if (!T.routing) return {ok: false, why: 'Auf ' + T.sw + ' fehlt ip routing. Der Switch nimmt das Paket an der SVI an, routet es aber nicht weiter.'};
+  if (b === 'INET') {
+    if (isTrunk(T) && !upOk(T)) { var tu = T.up; return {ok: false, why: 'Die Transit-SVI Vlan' + tu.tv + ' ist down: ' + (!tu.tvdb ? 'VLAN ' + tu.tv + ' ist nicht angelegt.' : 'der Trunk ' + tu.port + ' lässt VLAN ' + tu.tv + ' nicht durch (switchport trunk allowed vlan).') + ' Damit fehlt das Netz ' + tu.net + '/30, und die Default-Route hat keinen erreichbaren Next Hop.'}; }
+    if (!upOk(T)) return {ok: false, why: 'Auf ' + T.up.port + ' fehlt no switchport. Der Port ist ein Layer-2-Port ohne IP-Adresse, deshalb gibt es kein Netz ' + T.up.net + '/30 und die Default-Route hat keinen erreichbaren Next Hop.'};
+    if (!T.def) return {ok: false, why: T.sw + ' kennt nur seine direkt verbundenen Netze. Für ' + INET + ' fehlt eine Default-Route (ip route 0.0.0.0 0.0.0.0 ' + T.up.rip + ').'};
+    if (!inNet(T.def, T.up.net, 30)) return {ok: false, why: 'Die Default-Route zeigt auf ' + T.def + ' – diese Adresse liegt in keinem direkt verbundenen Netz. Die Route wird nicht in die Routing-Tabelle übernommen.'};
+    if (isTrunk(T) && T.r1.dot1q !== T.up.tv) return {ok: false, why: T.sw + ' schickt Richtung ' + T.def + ' Frames mit Tag VLAN ' + T.up.tv + '. Das Subinterface Gi0/0.' + T.up.tv + ' auf R1 erwartet aber Tag ' + T.r1.dot1q + ' (encapsulation dot1Q). Schon die ARP-Anfrage kommt nicht an. Die Default-Route steht trotzdem in der Tabelle – das Netz ist ja verbunden.'};
+    if (!r1Back(T, A.ip)) return {ok: false, why: 'Hinweg klappt: ' + T.sw + ' → R1 → Internet. Aber R1 hat keine Route zurück ins Netz ' + va.net + '/24 und schickt die Antwort Richtung Internet statt zu ' + T.sw + '.'};
+    return {ok: true, why: a + ' → Gateway ' + va.svi + ' (SVI Vlan' + va.id + ') → Default-Route über ' + T.up.port + ' zu R1 (' + T.def + ') → Internet. R1 kennt den Rückweg ins Netz ' + va.net + '/24.'};
+  }
+  var B2 = pc(T, b), vb = vlan(T, B2.vlan);
+  var stb = sviState(T, vb);
+  if (stb !== 'up') return {ok: false, why: 'Das Zielnetz ' + vb.net + '/24 gehört zu Vlan' + vb.id + ', und diese SVI ist ' + (stb === 'admin' ? 'administratively down' : 'down') + ' – das Netz steht nicht in der Routing-Tabelle.'};
+  if (!portActive(T, B2)) return {ok: false, why: 'Der Switch routet ins VLAN ' + vb.id + ', aber der Port ' + B2.port + ' von ' + b + ' ist abgeschaltet.'};
+  if (B2.gw !== vb.svi) return {ok: false, why: 'Der Hinweg klappt, aber ' + b + ' schickt die Antwort an sein falsches Gateway ' + B2.gw + ' (richtig: ' + vb.svi + ').'};
+  return {ok: true, why: a + ' → Gateway ' + va.svi + ' (Vlan' + va.id + ') → ' + T.sw + ' routet intern → Vlan' + vb.id + ' → ' + b + '. Rückweg genauso über ' + vb.svi + '.'};
+}
+
+function answers(T) {
+  return {svi: T.vlans.map(function (v) { return sviState(T, v); }), tr: transitState(T), rt: routeKeys(T), ping: T.pings.map(function (q) { return reach(T, q[0], q[1]).ok; })};
+}
+
+/* ---------- Fehler ---------- */
+/* [Typ, Stufen, wählen(T,r) → Parameter|null, anwenden(T,p), Lösungstext(T,p), Fokus(T,p) → PC-Namen] */
+function pcsIn(T, id) { return T.pcs.filter(function (p) { return p.vlan === id; }).map(function (p) { return p.name; }); }
+var FAULTS = [
+  ['norouting', 'LMS', function () { return {}; }, function (T) { T.routing = false; },
+    function (T) { return T.sw + '(config)# ip routing – ohne diesen Befehl routet ein Layer-3-Switch nicht.'; }, function () { return []; }],
+  ['svishut', 'LMS', function (T, r) { return {v: pick(r, T.vlans).id}; }, function (T, p) { vlan(T, p.v).shut = true; },
+    function (T, p) { return T.sw + ': interface Vlan' + p.v + ' → no shutdown.'; }, function (T, p) { return pcsIn(T, p.v); }],
+  ['nodefault', 'LMS', function () { return {}; }, function (T) { T.def = null; },
+    function (T) { return T.sw + '(config)# ip route 0.0.0.0 0.0.0.0 ' + T.up.rip; }, function () { return []; }],
+  ['novlan', 'MS', function (T, r) { return {v: pick(r, T.vlans).id}; }, function (T, p) { vlan(T, p.v).db = false; },
+    function (T, p) { return T.sw + '(config)# vlan ' + p.v + ' – das VLAN muss in der VLAN-Datenbank existieren, sonst sind seine Access-Ports inaktiv und die SVI bleibt down.'; }, function (T, p) { return pcsIn(T, p.v); }],
+  ['portshut', 'MS', function (T, r) { return {pc: pick(r, T.pcs).name}; }, function (T, p) { pc(T, p.pc).shut = true; },
+    function (T, p) { return T.sw + ': interface ' + pc(T, p.pc).port + ' → no shutdown.'; }, function (T, p) { return [p.pc]; }],
+  ['pcgw', 'MS', function (T, r) { return {pc: pick(r, T.pcs).name}; }, function (T, p) { var P = pc(T, p.pc), v = vlan(T, P.vlan); P.gw = host(v.net, T.svih === 1 ? 254 : 1); },
+    function (T, p) { var P = pc(T, p.pc); return p.pc + ': Standardgateway auf ' + vlan(T, P.vlan).svi + ' ändern (eingetragen ist ' + P.gw + ').'; }, function (T, p) { return [p.pc]; }],
+  ['sviip', 'S', function (T, r) { return {v: pick(r, T.vlans).id}; }, function (T, p) { var v = vlan(T, p.v); v.svi = host(v.net, T.svih === 1 ? 254 : 1); },
+    function (T, p) { var v = vlan(T, p.v); return T.sw + ': interface Vlan' + p.v + ' → ip address ' + host(v.net, T.svih) + ' 255.255.255.0 – so steht es als Gateway auf den PCs (eingetragen ist ' + v.svi + ').'; }, function (T, p) { return pcsIn(T, p.v); }],
+  ['noswitch', 'S', function (T) { return isTrunk(T) ? null : {}; }, function (T) { T.up.routed = false; },
+    function (T) { return T.sw + ': interface ' + T.up.port + ' → no switchport, dann ip address ' + T.up.ip + ' 255.255.255.252.'; }, function () { return []; }],
+  ['tvallowed', 'MS', function (T) { return isTrunk(T) ? {} : null; }, function (T) { T.up.allowed = T.vlans.map(function (v) { return v.id; }); },
+    function (T) { return T.sw + ': interface ' + T.up.port + ' → switchport trunk allowed vlan add ' + T.up.tv + ' – das Transit-VLAN muss über den Trunk.'; }, function () { return []; }],
+  ['tvnovlan', 'MS', function (T) { return isTrunk(T) ? {} : null; }, function (T) { T.up.tvdb = false; },
+    function (T) { return T.sw + '(config)# vlan ' + T.up.tv + ' – ohne das Transit-VLAN bleibt die SVI Vlan' + T.up.tv + ' down.'; }, function () { return []; }],
+  ['dot1q', 'S', function (T, r) { return isTrunk(T) ? {q: pick(r, [1, T.up.tv + 1, T.up.tv - 1, T.vlans[0].id])} : null; }, function (T, p) { T.r1.dot1q = p.q; },
+    function (T) { return 'R1: interface Gi0/0.' + T.up.tv + ' → encapsulation dot1Q ' + T.up.tv + ' (eingetragen ist ' + T.r1.dot1q + ').'; }, function () { return []; }],
+  ['noreturn', 'S', function (T, r) { return T.r1.summary ? null : {v: pick(r, T.vlans).id}; }, function (T, p) { var v = vlan(T, p.v); T.r1.routes = T.r1.routes.filter(function (x) { return x.net !== v.net; }); },
+    function (T, p) { var v = vlan(T, p.v); return 'R1(config)# ip route ' + v.net + ' 255.255.255.0 ' + T.up.ip + ' – sonst kennt R1 den Rückweg nicht.'; }, function (T, p) { return pcsIn(T, p.v); }],
+  ['wrongnh', 'S', function (T, r) { return {nh: host(T.up.net, pick(r, [5, 6, 9, -2]))}; }, function (T, p) { T.def = p.nh; },
+    function (T, p) { return T.sw + ': ip route 0.0.0.0 0.0.0.0 ' + T.up.rip + ' – der Next Hop ' + p.nh + ' liegt nicht im Uplink-Netz ' + T.up.net + '/30.'; }, function () { return []; }]
+];
+function fdef(t) { return FAULTS.filter(function (f) { return f[0] === t; })[0]; }
+function applyAll(base, fs, skip) { var T = clone(base); fs.forEach(function (f, i) { if (i !== skip) fdef(f.type)[3](T, f.p); }); return T; }
+
+/* ---------- Aufgabe ---------- */
+function build(r, lvl) {
+  var nv = lvl === 'L' ? 2 : lvl === 'M' ? 3 : ri(r, 3, 4);
+  var pat = pick(r, ['a', 'a', 'b', 'c']), site = ri(r, 1, 9);
+  var ids = shuffle(r, [10, 20, 30, 40, 50, 60, 70, 80]).slice(0, nv).sort(function (a, b) { return a - b; });
+  var svih = pick(r, [1, 1, 254]);
+  var names = shuffle(r, VNAMES);
+  var vlans = ids.map(function (id, k) {
+    var net = pat === 'a' ? '192.168.' + id + '.0' : pat === 'b' ? '10.' + site + '.' + id + '.0' : '172.16.' + id + '.0';
+    return {id: id, name: names[k], net: net, svi: host(net, svih), shut: false, db: true, col: k};
+  });
+  var cnt = vlans.map(function () { return ri(r, 1, 2); });
+  if (cnt.indexOf(2) < 0) cnt[ri(r, 0, nv - 1)] = 2;
+  var pcs = [], port = ri(r, 1, 3), k = 1;
+  vlans.forEach(function (v, i) { for (var j = 0; j < cnt[i]; j++) { pcs.push({name: 'PC' + k, ip: host(v.net, 10 + j * ri(r, 1, 5) + ri(r, 0, 3) * 10), gw: v.svi, vlan: v.id, port: 'Gi1/0/' + port, shut: false}); k++; port += ri(r, 1, 2); } });
+  var ub = pick(r, ['10.0.0.', '10.255.255.', '172.31.0.']), uo = 4 * ri(r, 0, 10), unet = ub + uo;
+  var swip = pick(r, [[2, 1], [1, 2]]);
+  var up = {port: 'Gi1/0/24', routed: true, net: unet, ip: host(unet, swip[0]), rip: host(unet, swip[1]), mode: 'routed'};
+  if (lvl !== 'L' && r() < 0.45) { up.mode = 'trunk'; up.routed = false; up.tv = pick(r, [99, 100, 900, 999]); up.tvdb = true; up.tvshut = false; up.allowed = r() < 0.4 ? null : [up.tv]; }
+  var summary = lvl === 'S' && r() < 0.35;
+  var sumNet = pat === 'a' ? '192.168.0.0' : pat === 'b' ? '10.' + site + '.0.0' : '172.16.0.0';
+  var r1 = {dot1q: up.tv || null, summary: summary, routes: summary ? [{net: sumNet, p: 16}] : vlans.map(function (v) { return {net: v.net, p: 24}; })};
+  return {sw: pick(r, ['DSW1', 'MLS1', 'CORE1']), routing: true, svih: svih, vlans: vlans, pcs: pcs, up: up, def: up.rip, r1: r1};
+}
+function choosePings(T, r, focus) {
+  var fp = focus.filter(function (x) { return pc(T, x); });
+  var two = T.vlans.filter(function (v) { return pcsIn(T, v.id).length === 2; });
+  var fv = two.filter(function (v) { return pcsIn(T, v.id).some(function (x) { return fp.indexOf(x) >= 0; }); });
+  var sv = (fv.length && r() < 0.6) ? pick(r, fv) : pick(r, two), same = shuffle(r, pcsIn(T, sv.id));
+  var a = fp.length && r() < 0.7 ? pick(r, fp) : pick(r, T.pcs).name;
+  var others = T.pcs.filter(function (p) { return p.vlan !== pc(T, a).vlan; }).map(function (p) { return p.name; });
+  var b = pick(r, others), cross = r() < 0.5 ? [a, b] : [b, a];
+  var c = fp.length && r() < 0.7 ? pick(r, fp) : pick(r, T.pcs).name;
+  return shuffle(r, [same, cross]).concat([[c, 'INET']]);
+}
+function makeTask(seed, lvl) {
+  if (!LVCODE[lvl] || !(seed >= 1)) return null;
+  for (var att = 0; att < 400; att++) {
+    var r = mulberry32((seed * 7919 + att * 104729 + LVCODE[lvl] * 1000003 + 31337) >>> 0);
+    var base = build(r, lvl);
+    var nf = lvl === 'L' ? (r() < 0.25 ? 0 : 1) : lvl === 'M' ? 1 : 2;
+    var pool = shuffle(r, FAULTS.filter(function (f) { return f[1].indexOf(lvl) >= 0; })), fs = [], focus = [];
+    for (var i = 0; i < pool.length && fs.length < nf; i++) {
+      var p = pool[i][2](base, r); if (!p) continue;
+      fs.push({type: pool[i][0], p: p});
+    }
+    if (fs.length < nf) continue;
+    var ty = fs.map(function (f) { return f.type; });
+    if (ty.indexOf('pcgw') >= 0 && ty.indexOf('sviip') >= 0) continue;
+    var T = applyAll(base, fs, -1);
+    fs.forEach(function (f) { focus = focus.concat(fdef(f.type)[5](T, f.p)); });
+    T.pings = choosePings(T, r, focus);
+    /* jeder Fehler muss in den Antworten sichtbar sein */
+    var A = JSON.stringify(answers(T)), ok = true;
+    for (var j = 0; j < fs.length && ok; j++) { var U = applyAll(base, fs, j); U.pings = T.pings; if (JSON.stringify(answers(U)) === A) ok = false; }
+    if (!ok) continue;
+    T.faults = fs.map(function (f) { return {type: f.type, p: f.p, fix: fdef(f.type)[4](T, f.p)}; });
+    T.level = lvl; T.code = lvl + '-' + seed;
+    return T;
+  }
+  return null;
+}
+
+/* ---------- Texte ---------- */
+function stTxt(st) { return st === 'up' ? 'up / up' : st === 'down' ? 'up / down' : 'administratively down / down'; }
+function transitWhy(T) {
+  var st = transitState(T), u = T.up;
+  if (st === 'admin') return 'interface Vlan' + u.tv + ' ist abgeschaltet.';
+  if (!u.tvdb) return 'Das Transit-VLAN ' + u.tv + ' ist nicht angelegt.';
+  if (st === 'down') return 'Der Trunk ' + u.port + ' lässt nur VLAN ' + u.allowed.join(',') + ' durch – VLAN ' + u.tv + ' hat damit keinen aktiven Port.';
+  return 'VLAN ' + u.tv + ' existiert und läuft über den Trunk ' + u.port + ' – der Trunk ist der aktive Port dieses VLANs.';
+}
+function sviWhy(T, v) {
+  var st = sviState(T, v);
+  if (st === 'admin') return 'interface Vlan' + v.id + ' ist mit shutdown abgeschaltet.';
+  if (!v.db) return 'Das VLAN ' + v.id + ' ist nicht angelegt (kein „vlan ' + v.id + '“). Ohne VLAN in der Datenbank bleibt die SVI down.';
+  if (st === 'down') return 'Kein aktiver Port im VLAN ' + v.id + ' – alle Access-Ports dieses VLANs sind abgeschaltet.';
+  if (trunkCarries(T, v.id)) return 'VLAN existiert, kein shutdown – und der Trunk ' + T.up.port + ' führt VLAN ' + v.id + (T.up.allowed ? '' : ' (alle VLANs erlaubt)') + '. Ein Trunk zählt als aktiver Port, auch wenn kein Access-Port im VLAN aktiv ist.';
+  var act = T.pcs.filter(function (p) { return p.vlan === v.id && portActive(T, p); }).map(function (p) { return p.port; });
+  return 'VLAN existiert, mindestens ein Port ist aktiv (' + act.join(', ') + '), kein shutdown.';
+}
+function cfgSW(T) {
+  var o = 'hostname ' + T.sw + '\n!\n' + (T.routing ? 'ip routing\n!\n' : '!\n');
+  T.vlans.forEach(function (v) { if (v.db) o += 'vlan ' + v.id + '\n name ' + v.name + '\n'; });
+  if (isTrunk(T) && T.up.tvdb) o += 'vlan ' + T.up.tv + '\n name Transit\n';
+  o += '!\n';
+  T.pcs.forEach(function (p) { o += 'interface GigabitEthernet' + p.port.slice(2) + '\n switchport mode access\n switchport access vlan ' + p.vlan + '\n' + (p.shut ? ' shutdown\n' : '') + '!\n'; });
+  if (isTrunk(T)) o += 'interface GigabitEthernet' + T.up.port.slice(2) + '\n description Trunk zu R1\n switchport mode trunk\n' + (T.up.allowed ? ' switchport trunk allowed vlan ' + T.up.allowed.join(',') + '\n' : '') + '!\n';
+  else o += 'interface GigabitEthernet' + T.up.port.slice(2) + '\n description Uplink zu R1\n' + (T.up.routed ? ' no switchport\n ip address ' + T.up.ip + ' 255.255.255.252\n' : '') + '!\n';
+  T.vlans.forEach(function (v) { o += 'interface Vlan' + v.id + '\n ip address ' + v.svi + ' 255.255.255.0\n' + (v.shut ? ' shutdown\n' : '') + '!\n'; });
+  if (isTrunk(T)) o += 'interface Vlan' + T.up.tv + '\n description Transit zu R1\n ip address ' + T.up.ip + ' 255.255.255.252\n' + (T.up.tvshut ? ' shutdown\n' : '') + '!\n';
+  if (T.def) o += 'ip route 0.0.0.0 0.0.0.0 ' + T.def + '\n';
+  return o.replace(/\n$/, '');
+}
+function cfgR1(T) {
+  var o = isTrunk(T) ? 'interface GigabitEthernet0/0\n description Trunk zu ' + T.sw + '\n no ip address\n!\ninterface GigabitEthernet0/0.' + T.up.tv + '\n encapsulation dot1Q ' + T.r1.dot1q + '\n ip address ' + T.up.rip + ' 255.255.255.252\n!\n'
+    : 'interface GigabitEthernet0/0\n description zu ' + T.sw + '\n ip address ' + T.up.rip + ' 255.255.255.252\n!\n';
+  o += 'ip route 0.0.0.0 0.0.0.0 203.0.113.1\n';
+  T.r1.routes.forEach(function (x) { o += 'ip route ' + x.net + ' ' + mask(x.p) + ' ' + T.up.ip + '\n'; });
+  return o.replace(/\n$/, '');
+}
+function pad(t, w) { t = String(t); while (t.length < w) t += ' '; return t; }
+function ipBrief(T) {
+  var o = pad('Interface', 23) + pad('IP-Address', 16) + pad('Status', 22) + 'Protocol\n';
+  o += pad('GigabitEthernet' + T.up.port.slice(2), 23) + pad(!isTrunk(T) && T.up.routed ? T.up.ip : 'unassigned', 16) + pad('up', 22) + 'up\n';
+  T.vlans.forEach(function (v) { var st = sviState(T, v); o += pad('Vlan' + v.id, 23) + pad(v.svi, 16) + pad(st === 'admin' ? 'administratively down' : 'up', 22) + (st === 'up' ? 'up' : 'down') + '\n'; });
+  if (isTrunk(T)) { var ts = transitState(T); o += pad('Vlan' + T.up.tv, 23) + pad(T.up.ip, 16) + pad(ts === 'admin' ? 'administratively down' : 'up', 22) + (ts === 'up' ? 'up' : 'down') + '\n'; }
+  return o.replace(/\n$/, '');
+}
+function showRoute(T) {
+  var r = routes(T);
+  if (r === null) return T.sw + '# show ip route\nDefault gateway is not set\n\n(ip routing ist aus – der Switch arbeitet nur auf Layer 2)';
+  var d = r.filter(function (x) { return x.k === 'S*'; })[0], o = T.sw + '# show ip route\n';
+  o += d ? 'Gateway of last resort is ' + d.nh + ' to network 0.0.0.0\n\n' : 'Gateway of last resort is not set\n\n';
+  if (d) o += 'S*    0.0.0.0/0 [1/0] via ' + d.nh + '\n';
+  r.filter(function (x) { return x.k === 'C'; }).sort(function (a, b) { return n(a.net) - n(b.net); }).forEach(function (x) {
+    var ifn = x.via.indexOf('Gi') === 0 ? 'GigabitEthernet' + x.via.slice(2) : x.via;
+    o += 'C        ' + x.net + '/' + x.p + ' is directly connected, ' + ifn + '\nL        ' + x.own + '/32 is directly connected, ' + ifn + '\n';
+  });
+  return o.replace(/\n$/, '');
+}
+function rtOptions(T) {
+  var o = T.vlans.map(function (v) { return ['v' + v.id, 'C  ' + v.net + '/24 – Vlan' + v.id]; });
+  o.push(['up', 'C  ' + T.up.net + '/30 – ' + upIf(T)]);
+  o.push(['def', 'S* 0.0.0.0/0 via ' + (T.def || T.up.rip)]);
+  o.push(['none', 'gar keine Routen – ip routing fehlt']);
+  return o;
+}
+function pingTxt(q) { return q[1] === 'INET' ? q[0] + ' → Internet (' + INET + ')' : q[0] + ' → ' + q[1]; }
+
+/* ---------- Zeichnen ---------- */
+function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]; }); }
+function tx(x, y, t, o) { o = o || {}; return '<text x="' + x + '" y="' + y + '" text-anchor="' + (o.a || 'middle') + '" font-size="' + (o.fs || 13) + '" font-weight="' + (o.fw || 400) + '" fill="' + (o.c || '#1c2b33') + '" font-family="' + (o.mono ? 'ui-monospace,Menlo,Consolas,monospace' : 'Open Sans,Arial,sans-serif') + '"' + (o.halo ? ' stroke="#fbfcfd" stroke-width="5" stroke-linejoin="round" paint-order="stroke"' : '') + '>' + esc(t) + '</text>'; }
+function layout(T) {
+  var np = T.pcs.length, gap = 136, W = Math.max(760, np * gap + 60), pos = {INET: [W / 2 - 230, 52], R1: [W / 2, 72], SW: [W / 2, 250]};
+  T.pcs.forEach(function (p, i) { pos[p.name] = [W / 2 + (i - (np - 1) / 2) * gap, 450]; });
+  return {W: W, H: 545, pos: pos};
+}
+/* opt: {path:[...Knoten], svis:[VLAN-IDs], hideState} */
+function draw(T, opt) {
+  opt = opt || {};
+  var L = layout(T), P = L.pos, o = ['<svg viewBox="0 0 ' + L.W + ' ' + L.H + '" role="img" aria-label="Topologie mit Layer-3-Switch ' + T.sw + '">'];
+  var path = opt.path || [], hot = function (a, b) { for (var i = 0; i + 1 < path.length; i++) if ((path[i] === a && path[i + 1] === b) || (path[i] === b && path[i + 1] === a)) return true; return false; };
+  function line(a, b, col, w, dash) { o.push('<line x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '" stroke="' + col + '" stroke-width="' + w + '"' + (dash ? ' stroke-dasharray="7 5"' : '') + ' stroke-linecap="round"/>'); }
+  function xmark(x, y) { o.push('<g transform="translate(' + x + ' ' + y + ')"><circle r="11" fill="#c62828"/><path d="M-4.5 -4.5l9 9M4.5 -4.5l-9 9" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/></g>'); }
+  var HOT = '#f9a825';
+  /* Internet */
+  if (hot('INET', 'R1')) line(P.INET, P.R1, HOT, 9);
+  line(P.INET, P.R1, '#1c2b33', 2.5, true);
+  o.push('<g transform="translate(' + P.INET[0] + ' ' + P.INET[1] + ')"><path d="M-48 14a20 20 0 0 1 6-36a26 26 0 0 1 46-8a20 20 0 0 1 36 12a17 17 0 0 1 -4 32z" fill="#eef3f7" stroke="#78909c" stroke-width="1.5"/></g>' + tx(P.INET[0] + 2, P.INET[1] + 4, 'Internet', {fs: 14, fw: 700, c: '#455a64'}));
+  /* Uplink */
+  var upc = '#1c2b33';
+  if (hot('R1', 'SW')) line(P.R1, P.SW, HOT, 9);
+  line(P.R1, P.SW, upc, isTrunk(T) ? 5 : 3);
+  if (isTrunk(T)) {
+    o.push('<line x1="' + P.R1[0] + '" y1="' + (P.R1[1] + 20) + '" x2="' + P.SW[0] + '" y2="' + (P.SW[1] - 34) + '" stroke="#fbfcfd" stroke-width="1.6"/>');
+    var subs = ['Gi0/0.' + T.up.tv + ' · ' + T.up.rip].concat(T.vlans.filter(function (v) { return v.nosvi; }).map(function (v) { return 'Gi0/0.' + v.id + ' · ' + v.svi; }));
+    subs.forEach(function (t, i) { o.push(tx(P.R1[0] + 14, P.R1[1] + 50 + i * 17, t, {a: 'start', fs: 12.5, mono: 1})); });
+    o.push(tx(P.SW[0] + 14, P.SW[1] - 52, T.up.port + ' · Trunk' + (T.up.allowed && !opt.hideState ? ' (' + T.up.allowed.join(',') + ')' : ''), {a: 'start', fs: 12.5, mono: 1, fw: 700}));
+    o.push(tx(P.R1[0] - 14, (P.R1[1] + P.SW[1]) / 2 + 4, T.up.net + '/30 in VLAN ' + T.up.tv, {a: 'end', fs: 12.5, c: '#546e7a'}));
+  } else {
+  o.push(tx(P.R1[0] + 14, P.R1[1] + 66, 'Gi0/0 · ' + T.up.rip, {a: 'start', fs: 12.5, mono: 1}));
+  o.push(tx(P.SW[0] + 14, P.SW[1] - 52, T.up.port + ' · ' + (opt.hideState ? T.up.ip : T.up.routed ? T.up.ip : 'Layer-2-Port!'), {a: 'start', fs: 12.5, mono: 1, c: T.up.routed || opt.hideState ? '#1c2b33' : '#c62828', fw: T.up.routed || opt.hideState ? 400 : 700}));
+  o.push(tx(P.R1[0] - 14, (P.R1[1] + P.SW[1]) / 2 + 4, T.up.net + '/30', {a: 'end', fs: 12.5, c: '#546e7a'}));
+  }
+  /* PCs */
+  T.pcs.forEach(function (p) {
+    var q = P[p.name], v = vlan(T, p.vlan), col = VCOL[v.col], sx = P.SW[0] + (q[0] - P.SW[0]) * 0.42, a = [sx, P.SW[1] + 34];
+    if (hot('SW', p.name)) line(a, [q[0], q[1] - 30], HOT, 9);
+    var sh = p.shut && !opt.hideState;
+    line(a, [q[0], q[1] - 30], col, 2.5, sh);
+    if (sh) xmark((a[0] + q[0]) / 2, (a[1] + q[1] - 30) / 2);
+    o.push(tx(q[0], q[1] - 40, p.port, {fs: 12, mono: 1, c: '#455a64', halo: 1}));
+    o.push('<g transform="translate(' + q[0] + ' ' + q[1] + ')"><rect x="-24" y="-28" width="48" height="33" rx="3" fill="#fff" stroke="' + col + '" stroke-width="2.5"/><rect x="-18" y="-23" width="36" height="23" fill="' + col + '" opacity=".18"/><path d="M-10 9h20M0 5v4" stroke="' + col + '" stroke-width="2.5"/></g>');
+    o.push(tx(q[0], q[1] + 30, p.name, {fs: 15, fw: 700}));
+    o.push(tx(q[0], q[1] + 47, p.ip + '/24', {fs: 12, mono: 1}));
+    o.push(tx(q[0], q[1] + 63, 'GW ' + p.gw, {fs: 12, mono: 1, c: '#546e7a'}));
+    o.push('<rect x="' + (q[0] - 31) + '" y="' + (q[1] + 70) + '" width="62" height="18" rx="9" fill="' + col + '"/>' + tx(q[0], q[1] + 83, 'VLAN ' + p.vlan, {fs: 11.5, fw: 700, c: '#fff'}));
+  });
+  /* R1 */
+  o.push('<g transform="translate(' + P.R1[0] + ' ' + P.R1[1] + ')"><ellipse cx="0" cy="9" rx="34" ry="12" fill="#1f5872"/><rect x="-34" y="-9" width="68" height="18" fill="#2f7392"/><ellipse cx="0" cy="-9" rx="34" ry="12" fill="#5a9dbb" stroke="#1f5872"/><path d="M-17 -9h11M6 -9h11M-1 -17v6M-1 -7v6" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></g>' + tx(P.R1[0] + 46, P.R1[1] + 5, 'R1', {a: 'start', fs: 16, fw: 700}));
+  /* L3-Switch mit SVIs */
+  var pills = T.vlans.map(function (v) { return {id: v.id, col: VCOL[v.col], ip: v.svi, st: v.nosvi ? 'nosvi' : sviState(T, v), nosvi: v.nosvi}; });
+  if (isTrunk(T)) pills.push({id: T.up.tv, col: '#455a64', ip: T.up.ip, st: transitState(T)});
+  var nv = pills.length, bw = Math.max(250, nv * 96 + 40), sw = P.SW;
+  o.push('<rect x="' + (sw[0] - bw / 2) + '" y="' + (sw[1] - 34) + '" width="' + bw + '" height="76" rx="8" fill="#e8f0fe" stroke="#1c2b33" stroke-width="1.6"/>');
+  o.push(tx(sw[0] - bw / 2 + 12, sw[1] - 14, T.sw, {a: 'start', fs: 16, fw: 700}) + tx(sw[0] + bw / 2 - 12, sw[1] - 14, 'Layer-3-Switch' + (opt.hideState ? '' : T.routing ? ' · ip routing' : ' · ohne ip routing!'), {a: 'end', fs: 11.5, c: T.routing || opt.hideState ? '#546e7a' : '#c62828'}));
+  var svis = opt.svis || [];
+  pills.forEach(function (v, i) {
+    var x = sw[0] + (i - (nv - 1) / 2) * 96, col = v.col, on = svis.indexOf(v.id) >= 0;
+    if (v.nosvi) { o.push('<rect x="' + (x - 44) + '" y="' + (sw[1] - 2) + '" width="88" height="34" rx="6" fill="#f3f5f7" stroke="#b0bec5" stroke-dasharray="4 3"/>' + tx(x, sw[1] + 12, 'VLAN ' + v.id, {fs: 12, fw: 700, c: col}) + tx(x, sw[1] + 26, 'keine SVI', {fs: 11, c: '#78909c'})); return; }
+    var dim = !opt.hideState && v.st !== 'up';
+    o.push('<rect x="' + (x - 44) + '" y="' + (sw[1] - 2) + '" width="88" height="34" rx="6" fill="' + (on ? '#fff59d' : '#fff') + '" stroke="' + col + '" stroke-width="' + (on ? 3 : 2) + '"' + (dim ? ' stroke-dasharray="4 3" opacity=".75"' : '') + '/>');
+    o.push(tx(x, sw[1] + 12, 'Vlan' + v.id, {fs: 12, fw: 700, c: col}) + tx(x, sw[1] + 26, '.' + v.ip.split('.')[3], {fs: 11.5, mono: 1}));
+  });
+  o.push('</svg>');
+  return o.join('');
+}
+
+G.L3 = {isTrunk: isTrunk, transitState: transitState, transitWhy: transitWhy, LVNAME: LVNAME, VCOL: VCOL, INET: INET, makeTask: makeTask, answers: answers, reach: reach, sviState: sviState, routes: routes, routeKeys: routeKeys,
+  stTxt: stTxt, sviWhy: sviWhy, cfgSW: cfgSW, cfgR1: cfgR1, ipBrief: ipBrief, showRoute: showRoute, rtOptions: rtOptions, pingTxt: pingTxt, draw: draw, vlan: vlan, pc: pc, clone: clone, mask: mask};
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+(function(){
+'use strict';
+var $=function(i){return document.getElementById(i);},L=window.L3,reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+/* ---------- Beispielnetz ---------- */
+function demo(){return{sw:'DSW1',routing:true,svih:1,
+ vlans:[{id:10,name:'Verwaltung',net:'192.168.10.0',svi:'192.168.10.1',shut:false,db:true,col:0},{id:20,name:'Technik',net:'192.168.20.0',svi:'192.168.20.1',shut:false,db:true,col:1},{id:30,name:'Gaeste',net:'192.168.30.0',svi:'192.168.30.1',shut:false,db:true,col:2}],
+ pcs:[{name:'PC1',ip:'192.168.10.10',gw:'192.168.10.1',vlan:10,port:'Gi1/0/1',shut:false},{name:'PC2',ip:'192.168.10.11',gw:'192.168.10.1',vlan:10,port:'Gi1/0/2',shut:false},{name:'PC3',ip:'192.168.20.10',gw:'192.168.20.1',vlan:20,port:'Gi1/0/3',shut:false},{name:'PC4',ip:'192.168.30.10',gw:'192.168.30.1',vlan:30,port:'Gi1/0/4',shut:false}],
+ up:{port:'Gi1/0/24',routed:true,net:'10.0.0.0',ip:'10.0.0.2',rip:'10.0.0.1'},def:'10.0.0.1',r1:{summary:true,routes:[{net:'192.168.0.0',p:16}]},pings:[]};}
+
+/* ---------- Paketweg ---------- */
+var M={PC1:'0050.7966.6801',PC2:'0050.7966.6802',PC3:'0050.7966.6803',SVI:'a0b1.c2d3.e440',UP:'a0b1.c2d3.e458',R1:'00d0.ba11.0a01'};
+var L2='<span class="tbl l2">MAC-Tabelle</span>',L3T='<span class="tbl l3">Routing-Tabelle</span>';
+var W={
+ same:{name:'Gleiches VLAN',sub:'PC1 → PC2',steps:[
+  {t:'PC1 prüft das Ziel',x:'<p>192.168.10.11 liegt im eigenen Netz 192.168.10.0/24. Also wird <b>direkt</b> zugestellt – ohne Gateway. PC1 holt sich per ARP die MAC-Adresse von PC2.</p>',path:[]},
+  {t:'PC1 → DSW1',x:'<p>Der Frame geht an die MAC von PC2. Der Port Gi1/0/1 ist ein Access-Port in VLAN 10, der Frame hat kein Tag.</p>',path:['PC1','SW'],f:{d:M.PC2+' (PC2)',s:M.PC1+' (PC1)',si:'192.168.10.10',di:'192.168.10.11',ttl:64}},
+  {t:'DSW1 switcht auf Layer 2',x:'<p>'+L2+'Die Ziel-MAC gehört nicht dem Switch selbst – also ganz normales Switching: PC2 hängt laut MAC-Tabelle an Gi1/0/2. Die Routing-Tabelle wird gar nicht angeschaut, die TTL bleibt 64.</p>',path:['PC1','SW','PC2'],f:{d:M.PC2+' (PC2)',s:M.PC1+' (PC1)',si:'192.168.10.10',di:'192.168.10.11',ttl:64}}]},
+ other:{name:'Anderes VLAN',sub:'PC1 → PC3',steps:[
+  {t:'PC1 prüft das Ziel',x:'<p>192.168.20.10 liegt <b>nicht</b> im eigenen Netz. Also geht das Paket ans Gateway 192.168.10.1 – das ist die SVI <code>Vlan10</code> von DSW1. Per ARP fragt PC1 nach deren MAC.</p>',path:[],svis:[10]},
+  {t:'PC1 → DSW1 (an die SVI)',x:'<p>Ziel-MAC ist die MAC der SVI. Die IP-Adressen bleiben die von PC1 und PC3.</p>',path:['PC1','SW'],svis:[10],f:{d:M.SVI+' (Vlan10)',s:M.PC1+' (PC1)',si:'192.168.10.10',di:'192.168.20.10',ttl:64}},
+  {t:'DSW1 routet intern',x:'<p>'+L3T+'Der Frame ist an den Switch selbst adressiert → das Paket geht an den Router-Teil. Die Routing-Tabelle sagt: 192.168.20.0/24 ist <b>directly connected, Vlan20</b>. Die TTL sinkt um 1.</p>',path:['PC1','SW'],svis:[10,20]},
+  {t:'DSW1 → PC3',x:'<p>DSW1 baut einen <b>neuen Frame</b>: Quelle ist jetzt die SVI-MAC, Ziel die MAC von PC3 (per ARP im VLAN 20). Raus über Gi1/0/3 – ohne Trunk, ohne externen Router.</p>',path:['SW','PC3'],svis:[20],f:{d:M.PC3+' (PC3)',s:M.SVI+' (Vlan20)',si:'192.168.10.10',di:'192.168.20.10',ttl:63}}]},
+ inet:{name:'Ins Internet',sub:'PC1 → 8.8.8.8',steps:[
+  {t:'PC1 → DSW1 (an die SVI)',x:'<p>8.8.8.8 ist ein fremdes Netz, also geht das Paket wieder ans Gateway, die SVI Vlan10.</p>',path:['PC1','SW'],svis:[10],f:{d:M.SVI+' (Vlan10)',s:M.PC1+' (PC1)',si:'192.168.10.10',di:'8.8.8.8',ttl:64}},
+  {t:'DSW1 sucht in der Routing-Tabelle',x:'<p>'+L3T+'Kein direkt verbundenes Netz passt. Übrig bleibt die <b>Default-Route</b> <code>S* 0.0.0.0/0 via 10.0.0.1</code>. 10.0.0.1 liegt im Netz von Gi1/0/24 – also raus über den Routed Port.</p>',path:['PC1','SW'],svis:[10]},
+  {t:'DSW1 → R1 über den Routed Port',x:'<p>Gi1/0/24 ist mit <code>no switchport</code> ein Router-Interface: <b>kein VLAN, kein Tag</b>. Quell-MAC ist die des Ports, Ziel die von R1.</p>',path:['SW','R1'],f:{d:M.R1+' (R1)',s:M.UP+' (Gi1/0/24)',si:'192.168.10.10',di:'8.8.8.8',ttl:63}},
+  {t:'R1 → Internet',x:'<p>R1 übersetzt mit NAT die private Adresse und schickt das Paket ins Internet.</p>',path:['R1','INET']},
+  {t:'Die Antwort kommt zurück',x:'<p>Die Antwort an 192.168.10.10 landet bei R1. Damit R1 weiß, wohin damit, braucht er eine <b>Route zurück</b>: <code>ip route 192.168.0.0 255.255.0.0 10.0.0.2</code>. Fehlt sie, geht der Hinweg – aber die Antwort nie zurück.</p>',path:['INET','R1','SW','PC1'],svis:[10]}]}};
+M.PC4='0050.7966.6804';
+function demo2(){var T=demo();T.up={port:'Gi1/0/24',mode:'trunk',routed:false,net:'10.0.0.0',ip:'10.0.0.2',rip:'10.0.0.1',tv:99,tvdb:true,tvshut:false,allowed:[30,99]};T.r1.dot1q=99;T.vlans[2].nosvi=true;return T;}
+W.guest={name:'VLAN zum Router durchgereicht',sub:'PC4 (Gäste) → Internet',steps:[
+ {t:'Ausgangslage',x:'<p>Das Gäste-VLAN 30 hat auf DSW1 <b>keine SVI</b>. Sein Gateway ist das Subinterface <code>Gi0/0.30</code> auf R1 (192.168.30.1). Der Uplink ist ein <b>Trunk</b>: VLAN 30 läuft durch, dazu das Transit-VLAN 99 für den restlichen Verkehr (SVI Vlan99 ↔ Gi0/0.99).</p>',path:[]},
+ {t:'PC4 → DSW1',x:'<p>8.8.8.8 ist fremd → ans Gateway 192.168.30.1. Per ARP (Broadcast im VLAN 30, über den Trunk) lernt PC4 die MAC von R1.</p>',path:['PC4','SW'],f:{d:M.R1+' (R1)',s:M.PC4+' (PC4)',tag:'–',si:'192.168.30.10',di:'8.8.8.8',ttl:64}},
+ {t:'DSW1 switcht nur',x:'<p>'+L2+'Die Ziel-MAC ist nicht die eigene, und es gibt keine SVI für VLAN 30 – der Switch routet hier <b>nicht</b>. Laut MAC-Tabelle liegt R1 hinter dem Trunk Gi1/0/24, also geht der Frame mit <b>Tag VLAN 30</b> hinaus. Die TTL bleibt 64.</p>',path:['PC4','SW','R1'],f:{d:M.R1+' (R1)',s:M.PC4+' (PC4)',tag:'VLAN 30',si:'192.168.30.10',di:'8.8.8.8',ttl:64}},
+ {t:'R1 routet',x:'<p>Das Subinterface Gi0/0.30 (<code>encapsulation dot1Q 30</code>) nimmt den Frame an. R1 routet das Paket, übersetzt es mit NAT und schickt es ins Internet. Für VLAN 30 ist das Router-on-a-Stick.</p>',path:['R1','INET']},
+ {t:'Warum macht man das?',x:'<p>So landet der Gäste-Verkehr <b>immer zuerst beim Router oder der Firewall</b> und kann dort mit einer ACL vom internen Netz getrennt werden. Die internen VLANs routet weiter der Switch, schnell und in Hardware.</p><p>Wichtig: Ein VLAN hat genau <b>ein</b> Gateway – SVI am Switch <b>oder</b> Subinterface am Router, nie beides.</p>',path:['PC4','SW','R1','INET']}]};
+var WO=['same','other','inet','guest'],wc='same',wi=0,DT=demo(),DT2=demo2();
+function frame(f){return'<div class="frames"><div class="frame"><span><b>Ziel-MAC</b> '+f.d+'</span><span><b>Quell-MAC</b> '+f.s+'</span>'+(f.tag?'<span class="ftag'+(f.tag==='–'?' none':'')+'"><b>802.1Q</b> '+(f.tag==='–'?'kein Tag':f.tag)+'</span>':'')+'<span><b>Quell-IP</b> '+f.si+'</span><span><b>Ziel-IP</b> '+f.di+'</span><span class="ftag"><b>TTL</b> '+f.ttl+'</span></div></div>';}
+function wrender(){var st=W[wc].steps[wi];$('wsvg').innerHTML=L.draw(wc==='guest'?DT2:DT,{path:st.path,svis:st.svis||[]});$('ttl').textContent=st.t;$('txt').innerHTML=st.x;$('frm').innerHTML=st.f?frame(st.f):'';
+ $('no').textContent='Schritt '+(wi+1)+' von '+W[wc].steps.length;$('prev').disabled=wi===0;$('next').disabled=wi===W[wc].steps.length-1;}
+$('tabs').innerHTML=WO.map(function(k){return'<button type="button" role="tab" data-w="'+k+'" aria-selected="'+(k===wc)+'">'+W[k].name+'<small>'+W[k].sub+'</small></button>';}).join('');
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-w]');if(!b)return;wc=b.dataset.w;wi=0;document.querySelectorAll('[data-w]').forEach(function(x){x.setAttribute('aria-selected',x===b);});wrender();});
+$('prev').onclick=function(){if(wi>0){wi--;wrender();}};$('next').onclick=function(){if(wi<W[wc].steps.length-1){wi++;wrender();}};
+wrender();
+
+/* ---------- Sandbox ---------- */
+var SB=demo(),sel=null;SB.up.tv=99;SB.up.tvdb=true;SB.up.tvshut=false;SB.up.allowed=[99];SB.r1.dot1q=99;
+var TOG=[
+ ['ip routing',function(T){return T.routing;},function(T,v){T.routing=v;}],
+ ['vlan 30',function(T){return T.vlans[2].db;},function(T,v){T.vlans[2].db=v;}],
+ ['Vlan20: no shutdown',function(T){return!T.vlans[1].shut;},function(T,v){T.vlans[1].shut=!v;}],
+ ['Gi1/0/4: no shutdown',function(T){return!T.pcs[3].shut;},function(T,v){T.pcs[3].shut=!v;}],
+ ['Uplink als Trunk mit Transit-VLAN 99',function(T){return T.up.mode==='trunk';},function(T,v){T.up.mode=v?'trunk':'routed';},null,0],
+ ['Gi1/0/24: no switchport',function(T){return T.up.routed;},function(T,v){T.up.routed=v;},function(T){return T.up.mode!=='trunk';}],
+ ['Trunk: allowed vlan 99',function(T){return T.up.allowed.indexOf(99)>=0;},function(T,v){T.up.allowed=v?[99]:[];},function(T){return T.up.mode==='trunk';}],
+ ['R1: encapsulation dot1Q 99',function(T){return T.r1.dot1q===99;},function(T,v){T.r1.dot1q=v?99:98;},function(T){return T.up.mode==='trunk';}],
+ ['ip route 0.0.0.0 0.0.0.0 10.0.0.1',function(T){return!!T.def;},function(T,v){T.def=v?'10.0.0.1':null;}],
+ ['R1: Route zurück 192.168.0.0/16',function(T){return T.r1.routes.length>0;},function(T,v){T.r1.routes=v?[{net:'192.168.0.0',p:16}]:[];}],
+ ['PC3: Gateway 192.168.20.1',function(T){return T.pcs[2].gw==='192.168.20.1';},function(T,v){T.pcs[2].gw=v?'192.168.20.1':'192.168.20.254';}]];
+$('tog').innerHTML=TOG.map(function(t,k){return'<label><input type="checkbox" data-t="'+k+'"'+(t[4]===0?'':' checked')+'> '+esc(t[0])+'</label>';}).join('');
+$('tog').addEventListener('change',function(e){var k=e.target.dataset.t;if(k==null)return;TOG[+k][2](SB,e.target.checked);sel=null;srender();});
+function srender(){
+ [].forEach.call($('tog').querySelectorAll('input'),function(c){var t=TOG[+c.dataset.t],en=!t[3]||t[3](SB);c.disabled=!en;c.parentNode.style.opacity=en?1:.45;});
+ $('ssvg').innerHTML=L.draw(SB,{});$('sib').textContent=L.ipBrief(SB);$('srt').textContent=L.showRoute(SB);
+ var names=SB.pcs.map(function(p){return p.name;}),h='<tr><th>von ↓ / nach →</th>'+names.map(function(n){return'<th>'+n+'</th>';}).join('')+'<th>Internet</th></tr>';
+ names.forEach(function(a){h+='<tr><th>'+a+'</th>'+names.concat(['INET']).map(function(b){if(a===b)return'<td>–</td>';var r=L.reach(SB,a,b),k=a+'>'+b;return'<td><button type="button" data-p="'+k+'" class="'+(r.ok?'y':'n')+(sel===k?' sel':'')+'" aria-label="'+L.pingTxt([a,b])+'">'+(r.ok?'✓':'✗')+'</button></td>';}).join('')+'</tr>';});
+ $('pm').innerHTML=h;
+ if(sel){var q=sel.split('>'),r=L.reach(SB,q[0],q[1]);$('why').innerHTML='<b>'+esc(L.pingTxt(q))+': '+(r.ok?'<span class="ok">klappt</span>':'<span class="no">klappt nicht</span>')+'</b> – '+esc(r.why);}else $('why').textContent='Klick auf ein Ergebnis.';
+}
+$('pm').addEventListener('click',function(e){var b=e.target.closest('[data-p]');if(!b)return;sel=b.dataset.p;srender();});
+srender();
+
+/* ---------- Quiz ---------- */
+var Q=[
+ ['Ein Layer-3-Switch hat SVIs für VLAN 10 und 20, aber PCs aus den beiden VLANs erreichen sich nicht. Was fehlt am wahrscheinlichsten?',['ip routing','spanning-tree','ein Trunk zum Router','switchport mode access'],0,'Ohne ip routing arbeitet der Switch nur auf Layer 2. Die SVIs sind zwar da, aber zwischen ihnen wird nicht weitergeleitet.'],
+ ['Was ist eine SVI?',['ein physischer Port mit IP-Adresse','ein virtuelles Layer-3-Interface für ein ganzes VLAN','ein Trunk mit mehreren VLANs','eine statische Route'],1,'interface Vlan10 ist ein Switch Virtual Interface. Seine IP ist das Gateway aller Geräte im VLAN 10.'],
+ ['Mit welchem Befehl wird aus einem Switchport ein Routed Port?',['ip routing','switchport mode routed','no switchport','encapsulation dot1Q'],2,'no switchport macht den Port zu einem Router-Interface ohne VLAN. Danach kann man ihm mit ip address eine Adresse geben.'],
+ ['interface Vlan30 ist nicht abgeschaltet, aber kein einziger Port ist im VLAN 30. Was zeigt show ip interface brief?',['up / up','up / down','administratively down / down','down / down'],1,'Die SVI ist eingeschaltet (Status up), aber ohne aktiven Port im VLAN ist das Protokoll down. Ihr Netz steht nicht in der Routing-Tabelle.'],
+ ['Auf dem Switch fehlt ip routing. Klappt ein Ping von PC1 zu PC2, die beide in VLAN 10 sind?',['Ja – das ist reines Switching auf Layer 2','Nein – ohne Routing geht gar nichts','Nur wenn die SVI Vlan10 up ist','Nur mit einem Trunk'],0,'Innerhalb eines VLANs wird nur geswitcht. Gateway, SVI und Routing spielen dafür keine Rolle.'],
+ ['Der Switch hat eine korrekte Default-Route zu R1. Die PCs erreichen trotzdem das Internet nicht, R1 hat nur eine Default-Route Richtung Provider. Was fehlt?',['Eine Route auf R1 zurück zu den VLAN-Netzen','no shutdown auf den SVIs','Ein zweiter Uplink','ip routing auf R1'],0,'Der Hinweg klappt. Aber R1 kennt die VLAN-Netze nicht und schickt die Antworten zum Provider statt zum Switch.'],
+ ['Der Uplink ist ein Trunk mit Transit-VLAN 99. Auf R1 steht beim Subinterface Gi0/0.99 aber encapsulation dot1Q 98. Was passiert?',['Die SVI Vlan99 geht down','Die Default-Route steht in der Tabelle des Switches, aber ins Internet kommt trotzdem niemand','Der Trunk wird abgeschaltet','Nichts – die Nummer ist egal'],1,'Für den Switch ist alles in Ordnung: Vlan99 ist up, das Netz verbunden, die Default-Route aktiv. Aber R1 hört auf Tag 98, der Switch schickt Tag 99 – schon die ARP-Anfrage an 10.0.0.1 bleibt unbeantwortet.'],
+ ['Was ist der größte Vorteil eines Layer-3-Switches gegenüber Router-on-a-Stick?',['Er braucht keine IP-Adressen','Das Routing zwischen VLANs passiert im Switch in Hardware – kein Engpass am Trunk','Er braucht keine VLANs','Er ersetzt die Firewall'],1,'Bei Router-on-a-Stick muss jedes Paket zwischen VLANs zweimal über denselben Trunk. Der L3-Switch routet intern mit voller Geschwindigkeit.']];
+$('qz').innerHTML=Q.map(function(q,n){return'<div class="q" data-n="'+n+'"><p>'+(n+1)+'. '+q[0]+'</p><div class="opts col">'+q[1].map(function(o,j){return'<label><input type="radio" name="q'+n+'" value="'+j+'"> '+o+'</label>';}).join('')+'</div><div class="ex">'+q[3]+'</div></div>';}).join('')+
+ '<div class="acts"><button class="btn" type="button" id="qcheck">Prüfen</button><span class="fb" id="qfb" aria-live="polite"></span></div>';
+$('qcheck').onclick=function(){var ok=0;Q.forEach(function(q,n){var box=document.querySelector('.q[data-n="'+n+'"]'),c=box.querySelector('input:checked');box.querySelectorAll('label').forEach(function(l){var v=+l.querySelector('input').value;l.classList.remove('right','wrong','missed');if(c&&+c.value===v)l.classList.add(v===q[2]?'right':'wrong');else if(v===q[2]&&c)l.classList.add('missed');});if(c){box.querySelector('.ex').classList.add('open');if(+c.value===q[2])ok++;}});
+ var fb=$('qfb');fb.className='fb '+(ok===Q.length?'good':'bad');fb.textContent=ok+' von '+Q.length+' richtig'+(ok===Q.length?' ✓':'.');};
+
+/* ---------- Übungen ---------- */
+var cache={},ST=[['up','up / up'],['down','up / down'],['admin','administratively down / down']];
+function taskOf(card){var c=card.dataset.code;if(!cache[c]){var m=c.split('-');cache[c]=L.makeTask(+m[1],m[0]);}return cache[c];}
+function taskHTML(T,id,label){
+ var svi='<table class="at"><thead><tr><th>Interface</th><th>Status / Protocol</th></tr></thead><tbody>'+T.vlans.map(function(v,i){return[i,v.id,v.svi,''];}).concat(L.isTrunk(T)?[['tr',T.up.tv,T.up.ip,' Transit']]:[]).map(function(x){return'<tr data-i="'+x[0]+'"><td><b>Vlan'+x[1]+'</b>'+x[3]+' <span class="hint">('+x[2]+')</span></td><td><select aria-label="Status Vlan'+x[1]+'"><option value="">– wählen –</option>'+ST.map(function(s){return'<option value="'+s[0]+'">'+s[1]+'</option>';}).join('')+'</select></td></tr>';}).join('')+'</tbody></table>';
+ var rt='<div class="opts col rt">'+L.rtOptions(T).map(function(o){return'<label><input type="checkbox" value="'+o[0]+'"> <span class="mono">'+esc(o[1])+'</span></label>';}).join('')+'</div>';
+ var pg=T.pings.map(function(q,k){return'<div class="q" data-k="'+k+'" style="margin-top:8px;padding-top:8px"><p style="font-weight:600;margin:0 0 4px">'+esc(L.pingTxt(q))+'</p><div class="opts"><label><input type="radio" name="'+id+'-p'+k+'" value="1"> klappt</label><label><input type="radio" name="'+id+'-p'+k+'" value="0"> klappt nicht</label></div></div>';}).join('');
+ return'<div class="card task" id="'+id+'" data-code="'+T.code+'"><h3>'+label+' <span class="tag">'+L.LVNAME[T.level]+'</span><span class="tag">Nr. '+T.code+'</span></h3>'+L.draw(T,{hideState:true})+'<p class="hint">Der Plan zeigt, wie das Netz gedacht ist. Was wirklich eingestellt ist, steht in der Konfiguration.</p>'+
+  '<div class="two"><div><p class="ph">'+T.sw+'# show running-config (Auszug)</p><pre class="cli">'+esc(L.cfgSW(T))+'</pre></div><div><p class="ph">R1# show running-config (Auszug)</p><pre class="cli">'+esc(L.cfgR1(T))+'</pre><p class="hint">R1 macht NAT ins Internet; seine Verbindung zum Provider funktioniert. Alle PCs sind eingeschaltet und verkabelt.</p></div></div>'+
+  '<p class="qh">1. Welchen Status zeigt <code>show ip interface brief</code> für die SVIs?</p>'+svi+
+  '<p class="qh">2. Welche Einträge stehen in <code>show ip route</code> von '+T.sw+'?</p><p class="hint" style="margin:0 0 4px">Alle zutreffenden ankreuzen. Die L-Einträge (/32) sind weggelassen.</p>'+rt+
+  '<p class="qh">3. Welche Pings klappen?</p>'+pg+
+  '<div class="acts"><button class="btn" type="button" data-act="check">Prüfen</button><button class="btn ghost" type="button" data-act="sol">Lösung anzeigen</button><span class="fb" aria-live="polite"></span></div><div class="sol"></div></div>';
+}
+function check(card){
+ var T=taskOf(card),A=L.answers(T),ok=0,tot=0;
+ card.querySelectorAll('.at tbody tr').forEach(function(tr){var s=tr.querySelector('select'),w=tr.dataset.i==='tr'?A.tr:A.svi[+tr.dataset.i];tot++;s.classList.remove('right','wrong');if(s.value){var g=s.value===w;s.classList.add(g?'right':'wrong');if(g)ok++;}});
+ var rtok=true,any=false;card.querySelectorAll('.rt label').forEach(function(l){var c=l.querySelector('input'),w=A.rt.indexOf(c.value)>=0;if(c.checked)any=true;l.classList.remove('right','wrong','missed');if(c.checked)l.classList.add(w?'right':'wrong');else if(w)l.classList.add('missed');if(c.checked!==w)rtok=false;});
+ if(!any){card.querySelectorAll('.rt label').forEach(function(l){l.classList.remove('right','wrong','missed');});}
+ tot++;if(rtok&&any)ok++;
+ T.pings.forEach(function(q,k){var w=A.ping[k]?'1':'0',box=card.querySelector('.q[data-k="'+k+'"]'),c=box.querySelector('input:checked');tot++;box.querySelectorAll('label').forEach(function(l){l.classList.remove('right','wrong');if(l.querySelector('input').checked)l.classList.add(l.querySelector('input').value===w?'right':'wrong');});if(c&&c.value===w)ok++;});
+ var fb=card.querySelector('.fb'),all=ok===tot;fb.className='fb '+(all?'good':'bad');fb.textContent=all?'Alles richtig! ✓':ok+' von '+tot+' richtig.';if(all)card.dataset.solved='1';markToc();
+}
+function solHTML(T){
+ var h='<h3 style="font:400 20px var(--head);margin:0">Lösung</h3><p class="qh">1. SVIs</p><ul class="slist">'+T.vlans.map(function(v){var st=L.sviState(T,v);return'<li><b>Vlan'+v.id+': <span class="'+(st==='up'?'ok':'no')+'">'+L.stTxt(st)+'</span></b> – '+esc(L.sviWhy(T,v))+'</li>';}).join('')+(L.isTrunk(T)?(function(){var st=L.transitState(T);return'<li><b>Vlan'+T.up.tv+' (Transit): <span class="'+(st==='up'?'ok':'no')+'">'+L.stTxt(st)+'</span></b> – '+esc(L.transitWhy(T))+'</li>';})():'')+'</ul>';
+ h+='<p class="qh">2. Routing-Tabelle</p><pre class="cli">'+esc(L.showRoute(T))+'</pre>';
+ h+='<p class="qh">3. Pings</p><ul class="slist">'+T.pings.map(function(q){var r=L.reach(T,q[0],q[1]);return'<li><b>'+esc(L.pingTxt(q))+': <span class="'+(r.ok?'ok':'no')+'">'+(r.ok?'klappt':'klappt nicht')+'</span></b> – '+esc(r.why)+'</li>';}).join('')+'</ul>';
+ h+='<div class="ans"><b>'+(T.faults.length?'Eingebaute Fehler und Behebung':'Kein Fehler eingebaut – alles funktioniert.')+'</b>'+(T.faults.length?'<ul style="margin:6px 0 0;padding-left:20px;list-style:disc">'+T.faults.map(function(f){return'<li>'+esc(f.fix)+'</li>';}).join('')+'</ul>':'')+'</div>';
+ return h;
+}
+document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('[data-act]');if(!t)return;var card=t.closest('.task');if(!card)return;
+ if(t.dataset.act==='check')check(card);
+ if(t.dataset.act==='sol'){var so=card.querySelector('.sol');if(!so.innerHTML)so.innerHTML=solHTML(taskOf(card));var o=so.classList.toggle('open');t.textContent=o?'Lösung ausblenden':'Lösung anzeigen';}});
+var list=["L-1", "L-2", "L-3", "L-10", "M-7", "M-14", "M-37", "M-22", "S-3", "S-49", "S-12", "S-20"];
+var host=$('tasks'),cp=0;
+list.forEach(function(code,k){var m=code.split('-'),T=L.makeTask(+m[1],m[0]);cache[code]=T;var d=document.createElement('div');d.className='page';d.hidden=k!==0;
+ d.innerHTML=taskHTML(T,'t'+(k+1),'Aufgabe '+(k+1))+'<div class="navrow">'+(k>0?'<button class="btn ghost" type="button" data-go="'+(k-1)+'">‹ Aufgabe '+k+'</button>':'<span></span>')+(k<list.length-1?'<button class="btn" type="button" data-go="'+(k+1)+'">Aufgabe '+(k+2)+' ›</button>':'<a class="btn" href="#generator" style="text-decoration:none">🎲 Weiter mit dem Zufallsgenerator</a>')+'</div>';host.appendChild(d);});
+var pages=[].slice.call(host.children);
+list.forEach(function(c,k){var b=document.createElement('button');b.type='button';b.textContent=k+1;b.dataset.go=k;$('ptoc').appendChild(b);});
+function markToc(){[].forEach.call($('ptoc').children,function(b,k){b.classList.toggle('on',k===cp);b.classList.toggle('ok',pages[k].querySelector('.task').dataset.solved==='1');});}
+function show(k,scroll){k=Math.max(0,Math.min(pages.length-1,k));cp=k;pages.forEach(function(p,j){p.hidden=j!==k;});$('pnum').textContent='Aufgabe '+(k+1)+' von '+pages.length;$('ppart').textContent=L.LVNAME[list[k][0]];$('pprev').disabled=k===0;$('pnext').disabled=k===pages.length-1;markToc();if(scroll){var top=$('uebungen').getBoundingClientRect().top+window.pageYOffset;if(window.pageYOffset>top)window.scrollTo({top:top,behavior:reduce?'auto':'smooth'});}}
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-go]');if(b)show(+b.dataset.go,true);});
+$('pprev').onclick=function(){show(cp-1,true);};$('pnext').onclick=function(){show(cp+1,true);};show(0,false);
+function gen(lvl,seed){var T=L.makeTask(seed,lvl);if(!T){$('gmsg').textContent='Zu dieser Nummer gibt es keine Aufgabe.';return;}$('gmsg').textContent='';cache[T.code]=T;$('gout').innerHTML=taskHTML(T,'g'+T.code.replace('-','_'),'Aufgabe '+T.code);$('gcode').value=T.code;$('glvl').value=lvl;}
+$('gnew').onclick=function(){gen($('glvl').value,1+Math.floor(Math.random()*99999));};
+function load(){var m=/^\s*([LMS])\s*-?\s*(\d{1,6})\s*$/i.exec($('gcode').value);if(!m){$('gmsg').textContent='Bitte eine Nummer wie L-12, M-305 oder S-4711 eingeben.';return;}gen(m[1].toUpperCase(),+m[2]);}
+$('gload').onclick=load;$('gcode').addEventListener('keydown',function(e){if(e.key==='Enter')load();});
+gen('M',1+Math.floor(Math.random()*99999));
+})();
+</script>
+</body>
+</html>

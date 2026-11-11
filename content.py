@@ -11,7 +11,8 @@ SITE = {
     'description': 'NWT – Netzwerktechnik lernen mit Animationen, Erklärungen und Übungen: Switching, Routing, IP-Services und Netzwerksicherheit.',
     'intro': 'Topologien durchschauen, verstehen, warum das Netz so entscheidet, selbst konfigurieren – und üben, bis es sitzt. '
              'Vom OSI-Modell bis zu Angriffen im LAN, mit Animationen, Lösungen zum Aufklappen und Zufallsgenerator.',
-    'news': ['<strong>Neu:</strong> <a href="routing/routing-schleifen/">Routing-Schleifen</a> – Count to Infinity, Split Horizon und Route Poisoning als Animation, mit Übungen. '
+    'news': ['<strong>Neu:</strong> <a href="switching/layer-3-switching/">Layer-3-Switching</a> – SVIs, Routed Port und Trunk zum Router, mit Konfiguration zum Ausprobieren und Fehlersuche-Übungen. '
+             'Außerdem <a href="routing/routing-schleifen/">Routing-Schleifen</a> – Count to Infinity, Split Horizon und Route Poisoning als Animation, mit Übungen. '
              'Außerdem <a href="ip-services/dhcp/">DHCP und ip helper-address</a> – DORA-Ablauf als Animation und Übungen zum DHCP-Relay. '
              'Außerdem <a href="grundlagen/ethernet-switching/">Ethernet und Switching</a> – MAC-Learning zum Ausprobieren, mit ARP und Windows-Eingabeaufforderung. '
              'Außerdem <a href="grundlagen/subnetting/">Subnetting und VLSM</a> und <a href="grundlagen/supernetting/">Supernetting</a> – mit VLSM-Erklärung für eigene Beispiele. '
@@ -44,6 +45,8 @@ AREAS = [
           'text': 'Root Bridge, Root Port, Designated Port – mit Animation, 50 Übungen und Zufallsgenerator.'},
          {'slug': 'vlan', 'title': 'VLANs und Trunking', 'tool': 'vlan',
           'text': 'Access- und Trunk-Ports, 802.1Q-Tags und native VLAN – zum Ausprobieren, mit 30 Übungen und Zufallsgenerator.'},
+         {'slug': 'layer-3-switching', 'title': 'Layer-3-Switching', 'tool': 'layer-3-switching',
+          'text': 'SVIs, Routed Port und Trunk zum Router: Paketweg, Konfiguration zum Ausprobieren, Fehlersuche-Übungen und Zufallsgenerator.'},
      ]},
     {'slug': 'routing', 'title': 'Routing', 'text': 'Wie Pakete zwischen Netzen ihren Weg finden.',
      'topics': [
