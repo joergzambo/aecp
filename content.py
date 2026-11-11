@@ -11,7 +11,8 @@ SITE = {
     'description': 'NWT – Netzwerktechnik lernen mit Animationen, Erklärungen und Übungen: Switching, Routing, IP-Services und Netzwerksicherheit.',
     'intro': 'Topologien durchschauen, verstehen, warum das Netz so entscheidet, selbst konfigurieren – und üben, bis es sitzt. '
              'Vom OSI-Modell bis zu Angriffen im LAN, mit Animationen, Lösungen zum Aufklappen und Zufallsgenerator.',
-    'news': ['<strong>Neu:</strong> <a href="ip-services/dhcp/">DHCP und ip helper-address</a> – DORA-Ablauf als Animation und Übungen zum DHCP-Relay. '
+    'news': ['<strong>Neu:</strong> <a href="routing/routing-schleifen/">Routing-Schleifen</a> – Count to Infinity, Split Horizon und Route Poisoning als Animation, mit Übungen. '
+             'Außerdem <a href="ip-services/dhcp/">DHCP und ip helper-address</a> – DORA-Ablauf als Animation und Übungen zum DHCP-Relay. '
              'Außerdem <a href="grundlagen/ethernet-switching/">Ethernet und Switching</a> – MAC-Learning zum Ausprobieren, mit ARP und Windows-Eingabeaufforderung. '
              'Außerdem <a href="grundlagen/subnetting/">Subnetting und VLSM</a> und <a href="grundlagen/supernetting/">Supernetting</a> – mit VLSM-Erklärung für eigene Beispiele. '
              'Außerdem <a href="routing/statisches-routing/">Statisches Routing</a> – ip route-Befehle zusammenstecken, eintippen und prüfen lassen. '
@@ -52,6 +53,8 @@ AREAS = [
           'text': 'ip route: Welches Zielnetz, welche Maske, welcher Next Hop? Mit Erklärung am Plan, Zusammenstecken, Baukasten und Zufallsgenerator.'},
          {'slug': 'rip', 'title': 'RIP', 'tool': 'rip',
           'text': 'Welche Netze kommen in die network-Befehle? Schritt für Schritt erklärt, mit Übungen, Tipps und Zufallsgenerator.'},
+         {'slug': 'routing-schleifen', 'title': 'Routing-Schleifen: Count to Infinity, Split Horizon, Route Poisoning', 'tool': 'routing-schleifen',
+          'text': 'Animation von Count to Infinity, Split Horizon, Route Poisoning und Poison Reverse – mit Quiz, Übungen und Zufallsgenerator.'},
      ]},
     {'slug': 'ip-services', 'title': 'IP-Services', 'text': 'Dienste, die ein Netz erst benutzbar machen.',
      'topics': [

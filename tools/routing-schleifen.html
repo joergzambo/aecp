@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Routing-Schleifen</title>
+<style>
+
+:root{
+  /* AECP-Stil: weiß, schwarz, Belgrano/Bitter/Open Sans; VLAN-Farben tragen Bedeutung */
+  --ink:#1c2b33; --mute:#546e7a; --line:#e3e1e8; --soft:#f3f5f7; --ok:#2e7d32; --bad:#c62828; --warn:#e65100; --accent:#61a229;
+  --head:"Belgrano",Georgia,serif; --ui:"Bitter",Georgia,serif; --body:"Open Sans","Helvetica Neue",Arial,sans-serif; --mono:ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#fff;color:var(--ink);font:16px/1.65 var(--body)}
+.vmain{max-width:980px;margin:0 auto;padding:24px 20px 60px}
+.vmain h1{font:400 clamp(30px,4.5vw,42px)/1.15 var(--head);letter-spacing:.5px;margin:.3em 0 .2em;text-wrap:balance}
+.vmain h2{font:400 26px/1.2 var(--head);letter-spacing:.5px;margin:0 0 .4em;text-wrap:balance}
+.sub{color:var(--mute);max-width:72ch;margin:0 0 14px}
+.jumps{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 6px}
+.jumps a{font:600 15px var(--ui);letter-spacing:.4px;color:#fff;background:var(--ink);padding:8px 14px;border-radius:4px;text-decoration:none}
+.jumps a:hover{background:#000}
+.part{border-top:3px solid var(--ink);margin-top:40px;padding-top:12px}
+.card{border:1px solid var(--line);border-radius:4px;background:#fff;padding:18px 20px;margin:14px 0}
+svg{width:100%;height:auto;display:block;background:#fbfcfd;border:1px solid var(--line);border-radius:4px}
+button,select,input{font:600 15px var(--ui);letter-spacing:.3px}
+.btn{padding:9px 16px;border-radius:4px;border:1.5px solid var(--ink);background:var(--ink);color:#fff;cursor:pointer}
+.btn:hover{background:#000}
+.btn.ghost{background:#fff;color:var(--ink)}
+.btn.ghost:hover{background:var(--soft)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Schritt-Animation */
+.sbgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+@media(max-width:760px){.sbgrid{grid-template-columns:1fr}}
+.cfg{background:var(--soft);border-radius:4px;padding:10px 14px;font-size:14px}
+.cfg h3{font:600 15px var(--ui);margin:0 0 6px}
+.cfg label{margin-right:12px;white-space:nowrap}
+.cfg select{font:500 14px var(--body);padding:2px 4px}
+.hint{font-size:14px;color:var(--mute);margin:8px 0 0}
+.result{margin-top:10px;font-size:15px;min-height:1.6em}
+.frames{margin-top:12px;font:13px var(--mono)}
+.frame{display:flex;flex-wrap:wrap;margin:6px 0;align-items:stretch}
+.frame span{border:1.5px solid var(--ink);border-right:0;padding:5px 8px;background:#fff;white-space:nowrap}
+.frame span:last-child{border-right:1.5px solid var(--ink)}
+.frame .ftag{background:#fff8e1;font-weight:700}
+.frame .ftag.none{background:var(--soft);color:var(--mute);border-style:dashed;font-weight:400}
+.frame b{font-family:var(--body)}
+.flab{font:600 14px var(--ui);margin-top:8px}
+
+/* Regelwerk */
+.rules{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:760px){.rules{grid-template-columns:1fr}}
+.rules .card{margin:0}
+.rules h3{font:400 19px var(--head);margin:0 0 6px}
+.rules ul{margin:0;padding-left:20px}
+.rules li{margin:3px 0}
+code,pre{font-family:var(--mono);font-size:13.5px}
+pre.cli{background:#1c2b33;color:#e6edf2;border-radius:4px;padding:10px 12px;margin:8px 0 0;overflow-x:auto;line-height:1.5}
+.check{background:#fff8e1;border:1px solid #ffe082}
+
+/* Übungen */
+.pager{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:4px;padding:12px 14px;margin:14px 0}
+.pinfo{text-align:center;line-height:1.3}
+.pinfo span{display:block;font-size:13px;color:var(--mute)}
+.toc{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:5px}
+.toc button{min-width:36px;padding:4px 0;border:1px solid #cfd8dc;background:#fff;color:var(--ink);border-radius:4px;cursor:pointer;font-size:13px}
+.toc button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.toc button.ok{background:#e3f4e6;border-color:#a5d6a7}
+.toc button.on.ok{background:var(--ok);border-color:var(--ok)}
+.task h3{font:400 22px var(--head);margin:0 0 4px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.tag{font:400 12px var(--head);text-transform:uppercase;letter-spacing:1.5px;color:#3d6e14;background:#eef6e6;padding:2px 8px;border-radius:2px}
+.trunks{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px;margin-top:10px}
+.trunks pre{margin:0}
+.q{margin-top:16px;padding-top:12px;border-top:1px dashed #cfd8dc}
+.q p{margin:0 0 6px;font-weight:600}
+.opts{display:flex;flex-wrap:wrap;gap:6px 10px}
+.opts label{display:inline-flex;align-items:center;gap:6px;border:1.5px solid #cfd8dc;border-radius:4px;padding:5px 10px;cursor:pointer;font-size:15px;background:#fff}
+.opts label.right{border-color:var(--ok);background:#e3f4e6}
+.opts label.wrong{border-color:var(--bad);background:#fde3e3}
+.opts label.missed{border-color:var(--ok);border-style:dashed}
+.dot{width:11px;height:11px;border-radius:50%;display:inline-block}
+.acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;align-items:center}
+.fb{font-weight:600}
+.fb.good{color:var(--ok)} .fb.bad{color:var(--bad)}
+.sol{display:none;margin-top:14px;border-top:2px solid var(--ink);padding-top:12px}
+.sol.open{display:block}
+.sol ul{list-style:none;padding:0;margin:10px 0}
+.sol li{margin:4px 0;padding-left:4px}
+.ans{background:var(--soft);border-left:4px solid var(--accent);padding:8px 12px;margin:8px 0}
+.navrow{display:flex;justify-content:space-between;margin-top:14px;gap:8px}
+.genbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
+.genbar select,.genbar input{padding:8px;border:1.5px solid #90a4ae;border-radius:4px;font-family:var(--body);font-weight:500}
+.err{color:var(--bad)}
+@media print{.jumps,.pager,.acts,.navrow,.genbar,#sandbox,#generator{display:none!important}.task{display:block!important;break-inside:avoid}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 12px}
+.tabs button{padding:9px 14px;border-radius:4px;border:1.5px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer;text-align:left;line-height:1.25}
+.tabs button small{display:block;font:400 12px var(--body);opacity:.8}
+.tabs button[aria-selected="true"]{background:var(--ink);color:#fff}
+.stepbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.stepno{font:600 15px var(--ui);margin-left:auto;color:var(--mute)}
+.tempo{display:inline-flex;gap:6px;align-items:center;font:600 14px var(--ui)}
+.tempo input{accent-color:#61a229}
+.explain{background:var(--soft);border-radius:4px;padding:12px 16px;margin-top:10px;font-size:16px;min-height:5.5em}
+.explain h3{font:400 21px var(--head);margin:0 0 4px}
+.explain p{margin:0 0 6px}
+.badge{display:inline-block;font:700 12px var(--ui);color:#fff;padding:2px 8px;border-radius:3px;margin-right:6px;letter-spacing:.4px;vertical-align:1px}
+.b-up{background:#1565c0}.b-bad{background:#c62828}.b-ok{background:#2e7d32}.b-poison{background:#6a1b9a}.b-info{background:#455a64}
+.meter{display:flex;align-items:center;gap:10px;margin-top:8px;font:600 14px var(--ui)}
+.meter .bar{flex:1;height:14px;background:#eceff1;border-radius:7px;overflow:hidden;max-width:420px}
+.meter .bar i{display:block;height:100%;background:linear-gradient(90deg,#ffb300,#c62828);width:0;transition:width .4s}
+.cmp{width:100%;border-collapse:collapse;font-size:15px;margin-top:6px}
+.cmp th,.cmp td{border:1px solid #cfd8dc;padding:7px 10px;text-align:left;vertical-align:top}
+.cmp th{background:var(--soft);font:600 14px var(--ui)}
+.quiz .q{margin:14px 0 0;padding-top:12px;border-top:1px dashed #cfd8dc}
+.quiz .q p{margin:0 0 6px;font-weight:600}
+.quiz .ex{display:none;margin-top:6px;font-size:15px;background:var(--soft);border-left:4px solid var(--accent);padding:6px 10px}
+.quiz .ex.open{display:block}
+.feat{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.feat span{font:600 13px var(--ui);padding:3px 10px;border-radius:12px;border:1.5px solid}
+.feat .on{color:#2e7d32;border-color:#2e7d32;background:#e8f5e9}.feat .off{color:#90a4ae;border-color:#cfd8dc;text-decoration:line-through}
+.evl{margin:6px 0 0;padding-left:22px;font-size:15.5px}.evl li{margin:3px 0}
+.at{border-collapse:collapse;margin-top:8px;font-size:15px}
+.at th,.at td{border:1px solid #cfd8dc;padding:5px 8px;text-align:left}
+.at th{background:var(--soft);font:600 14px var(--ui)}
+.at input{width:5.5em;padding:5px 7px;border:1.5px solid #90a4ae;border-radius:4px;font:600 15px var(--mono)}
+.at select{padding:5px;border:1.5px solid #90a4ae;border-radius:4px;font:500 14px var(--body)}
+.at .right{border-color:var(--ok);background:#e3f4e6}.at .wrong{border-color:var(--bad);background:#fde3e3}
+.qh{font:600 16px var(--ui);margin:14px 0 4px}
+.slog{list-style:none;padding:0;margin:8px 0}
+.slog li{margin:6px 0;padding:8px 10px;background:var(--soft);border-radius:4px;font-size:15px}
+.slog code{font-size:13px}
+.slog .chg{background:#fff8e1;font-weight:700}
+</style>
+</head>
+<body>
+<main class="vmain">
+<h1>Routing-Schleifen: Count to Infinity, Split Horizon und Route Poisoning</h1>
+<p class="sub">Distanzvektor-Protokolle wie RIP kennen das Netz nur vom Hörensagen: Jeder Router glaubt, was ihm der Nachbar erzählt. Fällt ein Netz aus, kann das zu einer Schleife führen, in der die Router sich gegenseitig immer schlechtere Wege einreden – bis 16 Hops. Drei Tricks verhindern das.</p>
+<nav class="jumps" aria-label="Abschnitte"><a href="#anim">Animation</a><a href="#regeln">Die Schutzmechanismen</a><a href="#quiz">Teste dich</a><a href="#uebungen">Übungen</a><a href="#generator">🎲 Zufallsgenerator</a></nav>
+
+<h2 class="part" id="anim">Animation</h2>
+<div class="tabs" role="tablist" id="tabs"></div>
+<div class="card">
+ <div id="svg"></div>
+ <div class="meter" id="meter" hidden><span>Hop-Zähler</span><span class="bar"><i id="mbar"></i></span><span id="mtxt"></span></div>
+ <div class="stepbar"><button class="btn ghost" id="prev" type="button">‹ Zurück</button><button class="btn" id="next" type="button">Weiter ›</button><button class="btn ghost" id="play" type="button">▶ Abspielen</button>
+  <label class="tempo">🐢 <input type="range" id="spd" min="1" max="5" value="2" aria-label="Tempo"> 🐇</label><span class="stepno" id="no"></span></div>
+ <div class="explain" aria-live="polite"><h3 id="ttl"></h3><div id="txt"></div></div>
+</div>
+
+<h2 class="part" id="regeln">Die Schutzmechanismen</h2>
+<div class="card">
+<table class="cmp"><thead><tr><th>Mechanismus</th><th>Regel</th><th>Was er bewirkt</th></tr></thead><tbody>
+<tr><td><b>Maximaler Hop-Count</b></td><td>16 Hops = unerreichbar</td><td>Beendet Count to Infinity spätestens bei 16 – die Schleife hört auf, dauert aber lange.</td></tr>
+<tr><td><b>Split Horizon</b></td><td>Eine Route wird <b>nicht</b> über das Interface zurück angekündigt, über das sie gelernt wurde.</td><td>R2 erzählt R1 nichts über das Netz, das er von R1 kennt. Die Schleife zwischen zwei Nachbarn kann gar nicht entstehen.</td></tr>
+<tr><td><b>Route Poisoning</b></td><td>Fällt ein Netz aus, wird es sofort mit <b>Metrik 16</b> angekündigt (Triggered Update).</td><td>Alle erfahren schnell und ausdrücklich: „Dieses Netz ist tot“ – statt auf Timer zu warten.</td></tr>
+<tr><td><b>Poison Reverse</b></td><td>Ausnahme von Split Horizon: Die vergiftete Route wird mit 16 zurückgeschickt.</td><td>Bestätigt dem Absender: „Verstanden, ich nutze dich nicht mehr für dieses Netz.“</td></tr>
+<tr><td><b>Hold-Down-Timer</b></td><td>Nach einer „unerreichbar“-Meldung werden schlechtere Angebote für das Netz eine Zeit lang (RIP: 180 s) ignoriert.</td><td>Alte, veraltete Updates können die tote Route nicht wiederbeleben.</td></tr>
+</tbody></table>
+<p class="hint">Split Horizon schützt nur zwischen zwei Nachbarn. In Ringen aus drei und mehr Routern kann trotzdem eine Schleife entstehen – dort helfen Route Poisoning und Hold-Down. Bei Cisco ist Split Horizon auf den meisten Interfaces standardmäßig an (<code>ip split-horizon</code>).</p>
+<pre class="cli">R1(config)# interface Gi0/1
+R1(config-if)# ip split-horizon          ! Standard – so lassen
+R1(config-if)# no ip split-horizon       ! nur in Sonderfällen (z. B. Hub-and-Spoke)</pre>
+</div>
+
+<h2 class="part" id="quiz">Teste dich</h2>
+<div class="card quiz" id="qz"></div>
+
+<h2 class="part" id="uebungen">Übungen</h2>
+<p class="sub">Alle Router kennen das Netz an R1 (Bild: Stand vor dem Ausfall). Dann passieren die Ereignisse der Reihe nach. Was steht danach in den Routing-Tabellen – und kreisen Pakete?</p>
+<div class="pager"><button class="btn ghost" id="pprev" type="button">‹ Zurück</button><div class="pinfo"><b id="pnum"></b><span id="ppart"></span></div><button class="btn" id="pnext" type="button">Weiter ›</button><div class="toc" id="ptoc"></div></div>
+<div id="tasks"></div>
+
+<h2 class="part" id="generator">🎲 Zufallsgenerator</h2>
+<p class="sub">Jede Aufgabe hat eine Nummer. Mit der Nummer bekommt jede Schülerin und jeder Schüler genau dieselbe Aufgabe.</p>
+<div class="genbar"><label for="glvl">Stufe</label><select id="glvl"><option value="L">Leicht (3 Router, ohne Schutz)</option><option value="M" selected>Mittel (Split Horizon oder Poisoning)</option><option value="S">Schwer (bis 5 Router, Poison Reverse)</option></select>
+<button class="btn" id="gnew" type="button">Neue Aufgabe</button><label for="gcode">Nummer</label><input id="gcode" size="8" placeholder="M-123" autocomplete="off"><button class="btn ghost" id="gload" type="button">Laden</button><span id="gmsg" class="err"></span></div>
+<div id="gout"></div>
+</main>
+<script>
+/* NWT · Routing-Schleifen: Distanzvektor-Simulation mit Split Horizon, Route Poisoning, Poison Reverse; Aufgaben-Generator.
+   Browser: window.RL · Node: globalThis.RL */
+(function (G) {
+'use strict';
+var LVNAME = {L: 'Leicht', M: 'Mittel', S: 'Schwer'};
+var LVCODE = {L: 3, M: 4, S: 5};
+var INF = 16;
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function ri(r, a, b) { return a + Math.floor(r() * (b - a + 1)); }
+function pick(r, a) { return a[Math.floor(r() * a.length)]; }
+
+/* Kette R1 – R2 – … – Rn, das Netz hängt an R1. Zustand: tb[i] = {m, via} (via: -1 = direkt, sonst Index) */
+function initial(n) { var tb = []; for (var i = 0; i < n; i++) tb.push({m: i, via: i === 0 ? -1 : i - 1}); return tb; }
+function clone(tb) { return tb.map(function (x) { return {m: x.m, via: x.via, hd: x.hd}; }); }
+
+/* Was kündigt Router s an Nachbar t an? null = nichts (Split Horizon) */
+function advert(T, tb, s, t) {
+  var e = tb[s];
+  if (T.sh && e.via === t && e.m < INF) return T.pr ? INF : null;
+  if (T.sh && e.via === t && e.m >= INF) return T.pr ? INF : null;
+  return e.m;
+}
+/* Ereignisse: {k:'fail'} | {k:'upd', s, t} | {k:'trig', s, t} (Triggered Update mit aktuellem Wert) */
+function apply(T, tb, ev) {
+  var out = {ev: ev, adv: null, changed: [], note: ''};
+  if (ev.k === 'fail') { tb[0] = {m: INF, via: -1, hd: T.hd}; out.changed.push(0); return out; }
+  var a = advert(T, tb, ev.s, ev.t); out.adv = a;
+  if (a === null) { out.note = 'sh'; return out; }
+  var nm = Math.min(INF, a + 1), cur = tb[ev.t];
+  if (ev.t === 0 && cur.via === -1 && cur.m === 0) { out.note = 'direct'; return out; }
+  if (cur.hd && cur.m >= INF) { out.note = 'holddown'; return out; }
+  if (cur.via === ev.s) {
+    if (cur.m !== nm) { tb[ev.t] = {m: nm, via: nm >= INF ? cur.via : ev.s, hd: nm >= INF && T.hd}; out.changed.push(ev.t); out.note = nm > cur.m ? 'worse-from-nexthop' : 'better'; }
+    else out.note = 'same';
+  } else if (nm < cur.m) { tb[ev.t] = {m: nm, via: ev.s}; out.changed.push(ev.t); out.note = cur.m >= INF ? 'revive' : 'better'; }
+  else out.note = 'ignore';
+  return out;
+}
+function run(T) {
+  var tb = initial(T.n), log = [];
+  T.events.forEach(function (ev) { var r = apply(T, tb, ev); r.tb = clone(tb); log.push(r); });
+  return {tb: tb, log: log, loop: hasLoop(T, tb)};
+}
+/* Schleife: folgt man den Next Hops, kommt man nie bei R1 (direkt) an und landet wieder bei einem Router */
+function hasLoop(T, tb) {
+  for (var i = 0; i < T.n; i++) {
+    var seen = {}, c = i, steps = 0;
+    while (tb[c].m < INF && tb[c].via >= 0 && steps < 20) { if (seen[c]) return true; seen[c] = 1; c = tb[c].via; steps++; }
+  }
+  return false;
+}
+
+var CFG = {
+  L: {n: [3, 3], ev: [2, 2], modes: ['none', 'none', 'sh']},
+  M: {n: [3, 4], ev: [2, 4], modes: ['none', 'sh', 'poison']},
+  S: {n: [4, 5], ev: [3, 5], modes: ['none', 'sh', 'poison', 'pr']}
+};
+function makeTask(seed, lvl) {
+  lvl = String(lvl).toUpperCase();
+  if (!LVCODE[lvl] || !(seed >= 1)) return null;
+  var c = CFG[lvl];
+  for (var att = 0; att < 400; att++) {
+    var r = mulberry32((seed * 7919 + att * 104729 + LVCODE[lvl] * 1000003 + 777) >>> 0);
+    var n = ri(r, c.n[0], c.n[1]), mode = pick(r, c.modes);
+    var T = {n: n, mode: mode, sh: mode !== 'none', poison: mode === 'poison' || mode === 'pr', pr: mode === 'pr', events: [{k: 'fail'}]};
+    T.hd = T.poison;
+    var k = ri(r, c.ev[0], c.ev[1]);
+    if (T.poison) T.events.push({k: 'trig', s: 0, t: 1});
+    while (T.events.length < k + 1) {
+      var s = ri(r, 0, n - 1), dir = r() < 0.5 ? -1 : 1, t = s + dir;
+      if (t < 0 || t >= n) t = s - dir;
+      if (t < 0 || t >= n) continue;
+      /* in Leicht: die klassische Falle zuerst */
+      if (lvl === 'L' && T.events.length === 1) { s = 1; t = 0; }
+      var last = T.events[T.events.length - 1];
+      if (last.s === s && last.t === t) continue;
+      T.events.push({k: 'upd', s: s, t: t});
+    }
+    var R = run(T);
+    /* interessant: mindestens zwei Tabellen ändern sich, und nicht jedes Update ist wirkungslos */
+    var changes = R.log.reduce(function (a, x) { return a + x.changed.length; }, 0);
+    if (changes < (lvl === 'L' ? 2 : 3)) continue;
+    if (lvl !== 'L' && T.mode === 'none' && !R.loop && r() < 0.5) continue;
+    if (lvl === 'L' && !R.loop) continue;
+    T.code = lvl + '-' + seed; T.level = lvl; T.res = R;
+    return T;
+  }
+  return null;
+}
+function name(i) { return 'R' + (i + 1); }
+function evText(T, ev) {
+  if (ev.k === 'fail') return 'Das Netz an R1 fällt aus. R1 setzt die Route auf 16.';
+  if (ev.k === 'trig') return name(ev.s) + ' schickt sofort ein Triggered Update an ' + name(ev.t) + '.';
+  return name(ev.s) + ' schickt sein reguläres Update an ' + name(ev.t) + '.';
+}
+function explain(T, r) {
+  var ev = r.ev, S = name(ev.s), Tn = name(ev.t);
+  if (ev.k === 'fail') return 'R1 bemerkt den Ausfall: 16 = unerreichbar.';
+  if (r.note === 'sh') return 'Split Horizon: ' + S + ' hat das Netz über ' + Tn + ' gelernt und erwähnt es gegenüber ' + Tn + ' nicht. Nichts ändert sich.';
+  var adv = r.adv >= INF ? '16 (unerreichbar)' : r.adv + ' Hop' + (r.adv === 1 ? '' : 's');
+  var pre = S + ' meldet „' + adv + '“' + (T.pr && r.adv >= INF && r.tb[ev.s].via === ev.t ? ' (Poison Reverse)' : '') + '. ';
+  var t = r.tb[ev.t];
+  switch (r.note) {
+    case 'direct': return pre + 'R1 ist direkt verbunden und hat 0 Hops – das Update ändert nichts.';
+    case 'worse-from-nexthop': return pre + Tn + ' nutzt ' + S + ' als Next Hop und muss die schlechtere Info glauben: jetzt ' + (t.m >= INF ? '16 (unerreichbar)' : t.m + ' Hops über ' + S) + '.';
+    case 'better': return pre + 'Für ' + Tn + ' ist das besser als bisher: ' + t.m + ' Hops über ' + S + '.';
+    case 'revive': return pre + Tn + ' hatte das Netz als unerreichbar und nimmt das Angebot an: ' + t.m + ' Hops über ' + S + '.' + (T.mode === 'none' ? ' Ohne Hold-Down wird die tote Route so wiederbelebt.' : '');
+    case 'holddown': return pre + Tn + ' hat die Route gerade als unerreichbar gelernt und hält sie im Hold-Down: Angebote von anderen Routern werden ignoriert.';
+    case 'same': return pre + 'Für ' + Tn + ' ändert sich nichts.';
+    default: return pre + 'Für ' + Tn + ' ist das nicht besser als der bisherige Weg – ignoriert.';
+  }
+}
+
+G.RL = {LVNAME: LVNAME, INF: INF, makeTask: makeTask, run: run, initial: initial, hasLoop: hasLoop, evText: evText, explain: explain, name: name};
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+(function(){
+'use strict';
+var $=function(i){return document.getElementById(i);},reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+var NET='10.1.0.0/24';
+var X={R1:200,R2:470,R3:740},Y=150,LAN=[55,150];
+
+/* ---------- Szenarien ---------- */
+/* Tabelle je Router: {h: Hops (16 = unerreichbar), via: 'direkt'|'R1'|...}; Nachrichten: {f, t, h, kind:'up'|'bad'|'poison'} */
+function T(r1,r2,r3){return{R1:r1,R2:r2,R3:r3};}
+function e(h,via){return{h:h,via:via};}
+var S={};
+var base=T(e(0,'direkt'),e(1,'R1'),e(2,'R2'));
+S.normal={name:'Normalbetrieb',sub:'So lernt RIP das Netz',steps:[
+ {tb:T(e(0,'direkt'),null,null),ttl:'Start',txt:'<p>R1 hängt direkt am Netz <b>'+NET+'</b>. R2 und R3 kennen es noch nicht.</p>'},
+ {tb:T(e(0,'direkt'),e(1,'R1'),null),msg:[{f:'R1',t:'R2',h:0,k:'up'}],ttl:'R1 → R2: „0 Hops“',txt:'<p><span class="badge b-up">Update</span>R1 schickt sein Update: „Ich erreiche '+NET+' mit 0 Hops.“ R2 rechnet +1 und trägt ein: <b>1 Hop über R1</b>.</p>'},
+ {tb:base,msg:[{f:'R2',t:'R3',h:1,k:'up'}],ttl:'R2 → R3: „1 Hop“',txt:'<p>R2 gibt weiter: „1 Hop“. R3 trägt ein: <b>2 Hops über R2</b>. Alle kennen den Weg – das Netz ist <b>konvergiert</b>.</p>'},
+ {tb:base,msg:[{f:'R2',t:'R1',h:1,k:'up'},{f:'R2',t:'R3',h:1,k:'up'}],ttl:'Alle 30 Sekunden: Updates in alle Richtungen',txt:'<p>RIP schickt alle <b>30 Sekunden</b> die ganze Tabelle an alle Nachbarn – auch zurück an R1. R1 ignoriert „1 Hop über R2“, weil er selbst 0 Hops hat. Solange das Netz läuft, ist das harmlos. Gefährlich wird es, wenn das Netz ausfällt …</p>'}
+]};
+/* Count to Infinity */
+(function(){
+ var st=[{tb:base,ttl:'Alles läuft',txt:'<p>Alle Router kennen '+NET+'. Jetzt fällt das Kabel zwischen R1 und dem LAN aus.</p>'},
+  {tb:T(e(16,'–'),e(1,'R1'),e(2,'R2')),fail:1,ttl:'Das Netz fällt aus',txt:'<p><span class="badge b-bad">Ausfall</span>R1 merkt es sofort und setzt die Route auf <b>16 = unerreichbar</b>. Aber er wartet bis zu seinem nächsten Update – und R2 ist schneller.</p>'},
+  {tb:T(e(2,'R2'),e(1,'R1'),e(2,'R2')),fail:1,msg:[{f:'R2',t:'R1',h:1,k:'bad'}],ttl:'R2 → R1: „Ich erreiche es mit 1 Hop!“',txt:'<p><span class="badge b-bad">Falsche Info</span>R2 schickt sein reguläres Update – <b>ohne Split Horizon</b> auch zurück an R1: „1 Hop“. R2 meint damit natürlich den Weg <i>über R1</i> – aber das steht nicht im Update.</p><p>R1 glaubt ihm: Besser als 16! Neu: <b>2 Hops über R2</b>. Die Schleife ist da: R1 schickt Pakete für das Netz zu R2, R2 schickt sie zurück zu R1.</p>',loop:1}];
+ var h1=2,h2=1,turn='R1';
+ while(true){
+  if(turn==='R1'){ /* R1 meldet h1 an R2, R2 nutzt R1 als Next Hop → muss es glauben */
+   h2=h1+1; if(h2>16)h2=16;
+   st.push({tb:T(e(h1,'R2'),e(h2,h2>=16?'–':'R1'),e(Math.min(16,h2+1),h2>=16?'–':'R2')),fail:1,loop:h2<16,msg:[{f:'R1',t:'R2',h:h1,k:'bad'},{f:'R2',t:'R3',h:Math.min(16,h2),k:h2>=16?'poison':'bad'}],
+    ttl:'R1 → R2: „'+h1+' Hops“',txt:h2<16?'<p>R1 meldet „'+h1+' Hops“. R2 nutzt R1 als Next Hop und <b>muss</b> der neuen Info glauben – auch wenn sie schlechter ist: jetzt <b>'+h2+' Hops über R1</b>. R3 zieht nach.</p>':'<p>R2 kommt auf <b>16 Hops</b> – das bedeutet bei RIP <b>unerreichbar</b>. Die Schleife ist endlich vorbei.</p>'});
+   turn='R2';
+  } else {
+   h1=h2+1; if(h1>16)h1=16;
+   st.push({tb:T(e(h1,h1>=16?'–':'R2'),e(h2,'R1'),e(Math.min(16,h2+1),'R2')),fail:1,loop:h1<16,msg:[{f:'R2',t:'R1',h:h2,k:'bad'}],
+    ttl:'R2 → R1: „'+h2+' Hops“',txt:h1<16?'<p>R2 meldet „'+h2+' Hops“, R1 nutzt R2 als Next Hop → <b>'+h1+' Hops über R2</b>. So schaukeln sich die beiden hoch – alle 30 Sekunden ein Schritt.</p>':'<p>R1 kommt auf <b>16 = unerreichbar</b>.</p>'});
+   turn='R1';
+  }
+  if(h1>=16&&h2>=16)break;
+  if(st.length>40)break;
+ }
+ st.push({tb:T(e(16,'–'),e(16,'–'),e(16,'–')),fail:1,ttl:'Ergebnis: Minuten verloren',txt:'<p><span class="badge b-info">Fazit</span>Erst bei 16 Hops wissen alle, dass das Netz weg ist. Das hat '+(st.length-3)+' Update-Runden gedauert – bei 30 Sekunden pro Runde mehrere Minuten, in denen Pakete im Kreis liefen, bis ihre TTL abgelaufen war. Das ist <b>Count to Infinity</b>.</p>'});
+ S.cti={name:'Count to Infinity',sub:'ohne Schutz',steps:st,meter:1};
+})();
+S.sh={name:'Split Horizon',sub:'nicht zurück erzählen',steps:[
+ {tb:base,ttl:'Alles läuft – mit Split Horizon',txt:'<p>Gleiches Netz, aber mit <b>Split Horizon</b>: R2 hat '+NET+' über sein Interface zu R1 gelernt – also erzählt er R1 darüber <b>nichts</b>. R3 erzählt R2 ebenfalls nichts davon.</p>'},
+ {tb:base,msg:[{f:'R2',t:'R3',h:1,k:'up'},{f:'R2',t:'R1',h:null,k:'sh'}],ttl:'Updates mit Split Horizon',txt:'<p>R2 schickt R3 „1 Hop“ – aber das Update an R1 enthält '+NET+' gar nicht (durchgestrichen).</p>'},
+ {tb:T(e(16,'–'),e(1,'R1'),e(2,'R2')),fail:1,ttl:'Das Netz fällt aus',txt:'<p><span class="badge b-bad">Ausfall</span>R1 setzt die Route auf 16.</p>'},
+ {tb:T(e(16,'–'),e(1,'R1'),e(2,'R2')),fail:1,msg:[{f:'R2',t:'R1',h:null,k:'sh'},{f:'R2',t:'R3',h:1,k:'up'}],ttl:'R2 schickt sein Update – aber nicht an R1',txt:'<p><span class="badge b-ok">Geschützt</span>Diesmal kann R2 R1 nichts Falsches erzählen: Split Horizon verbietet es. R1 bleibt bei <b>unerreichbar</b> – keine Schleife zwischen R1 und R2.</p>'},
+ {tb:T(e(16,'–'),e(16,'–'),e(16,'–')),fail:1,ttl:'Aber: langsam',txt:'<p>R1 kündigt das tote Netz einfach nicht mehr an. R2 merkt es erst, wenn sein <b>Invalid-Timer</b> abläuft (RIP: 180 s ohne Update), R3 noch später. Sicher, aber langsam – deshalb kombiniert man Split Horizon mit <b>Route Poisoning</b>.</p>'}
+]};
+S.rp={name:'Route Poisoning',sub:'+ Poison Reverse',steps:[
+ {tb:base,ttl:'Alles läuft',txt:'<p>Split Horizon ist an. Jetzt kommt <b>Route Poisoning</b> dazu.</p>'},
+ {tb:T(e(16,'–'),e(1,'R1'),e(2,'R2')),fail:1,ttl:'Das Netz fällt aus',txt:'<p><span class="badge b-bad">Ausfall</span>R1 setzt die Route auf 16 – und wartet diesmal <b>nicht</b> auf sein nächstes reguläres Update.</p>'},
+ {tb:T(e(16,'–'),e(16,'–'),e(2,'R2')),fail:1,msg:[{f:'R1',t:'R2',h:16,k:'poison'}],ttl:'R1 vergiftet die Route: „16 Hops!“',txt:'<p><span class="badge b-poison">Poisoning</span>R1 schickt sofort ein <b>Triggered Update</b>: „'+NET+' – 16 Hops“. 16 heißt unerreichbar – die Route ist <b>vergiftet</b>. R2 setzt sie auf 16 und startet den <b>Hold-Down-Timer</b>.</p>'},
+ {tb:T(e(16,'–'),e(16,'–'),e(16,'–')),fail:1,msg:[{f:'R2',t:'R3',h:16,k:'poison'},{f:'R2',t:'R1',h:16,k:'poison'}],ttl:'R2 gibt das Gift weiter – und zurück',txt:'<p>R2 gibt die vergiftete Route sofort an R3 weiter. Zusätzlich schickt er sie mit 16 <b>zurück an R1</b> – das ist <b>Poison Reverse</b>: „Verstanden, ich nutze dich dafür nicht mehr.“ Poison Reverse ist eine bewusste Ausnahme von Split Horizon.</p>'},
+ {tb:T(e(16,'–'),e(16,'–'),e(16,'–')),fail:1,ttl:'In Sekunden konvergiert',txt:'<p><span class="badge b-ok">Ergebnis</span>Nach wenigen Sekunden wissen alle: Das Netz ist weg. Keine Schleife, kein Hochzählen. Der Hold-Down-Timer sorgt dafür, dass ein verspätetes altes Update („1 Hop“) die Route nicht wiederbelebt.</p>'}
+]};
+var ORDER=['normal','cti','sh','rp'];
+
+/* ---------- Zeichnen ---------- */
+function router(x,name){return'<g transform="translate('+x+' '+Y+')"><ellipse cx="0" cy="9" rx="32" ry="11" fill="#1f5872"/><rect x="-32" y="-9" width="64" height="18" fill="#2f7392"/><ellipse cx="0" cy="-9" rx="32" ry="11" fill="#5a9dbb" stroke="#1f5872"/><path d="M-16 -9h10M6 -9h10M-1 -16v5M-1 -7v5" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></g><text x="'+x+'" y="'+(Y+40)+'" text-anchor="middle" font-size="17" font-weight="700" font-family="Open Sans,Arial,sans-serif" fill="#1c2b33">'+name+'</text>';}
+function table(x,r,tb,prev){
+  var c=tb[r],p=prev&&prev[r],chg=!p&&c||p&&c&&(p.h!==c.h||p.via!==c.via),h=c?c.h:null;
+  var col=h===null?'#90a4ae':h>=16?'#c62828':'#1c2b33',bg=chg?'#fff8e1':'#fff';
+  return'<g transform="translate('+(x-80)+' '+(Y+62)+')"><rect width="160" height="78" rx="5" fill="'+bg+'" stroke="'+(chg?'#ffa000':'#cfd8dc')+'" stroke-width="'+(chg?2.5:1.5)+'"/>'+
+   '<text x="80" y="20" text-anchor="middle" font-size="12" font-weight="700" fill="#546e7a" font-family="Open Sans,Arial,sans-serif">'+NET+'</text>'+
+   (c?'<text x="80" y="46" text-anchor="middle" font-size="20" font-weight="700" fill="'+col+'" font-family="ui-monospace,Menlo,Consolas,monospace">'+(h>=16?'16 ✕':h+' Hop'+(h===1?'':'s'))+'</text><text x="80" y="66" text-anchor="middle" font-size="12.5" fill="#455a64" font-family="Open Sans,Arial,sans-serif">'+(h>=16?'unerreichbar':c.via==='direkt'?'direkt verbunden':'über '+c.via)+'</text>'
+     :'<text x="80" y="50" text-anchor="middle" font-size="13" fill="#90a4ae" font-family="Open Sans,Arial,sans-serif">unbekannt</text>')+'</g>';
+}
+function scene(s,i){
+  var step=S[s].steps[i],prev=i>0?S[s].steps[i-1].tb:null,fail=!!step.fail;
+  var h='<svg viewBox="0 0 860 300" role="img" aria-label="Drei Router und ein Netz"><defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#c62828"/></marker></defs>';
+  h+='<line x1="'+(LAN[0]+30)+'" y1="'+Y+'" x2="'+X.R1+'" y2="'+Y+'" stroke="'+(fail?'#c62828':'#1c2b33')+'" stroke-width="3"'+(fail?' stroke-dasharray="8 6"':'')+'/>';
+  if(fail)h+='<g transform="translate('+((LAN[0]+30+X.R1)/2)+' '+Y+')"><circle r="15" fill="#c62828"/><path d="M-6 -6l12 12M6 -6l-12 12" stroke="#fff" stroke-width="3" stroke-linecap="round"/></g>';
+  h+='<line x1="'+X.R1+'" y1="'+Y+'" x2="'+X.R3+'" y2="'+Y+'" stroke="#1c2b33" stroke-width="3"/>';
+  h+='<g transform="translate('+LAN[0]+' '+Y+')"><path d="M-30 -3l10 -10h42l-10 10z" fill="'+(fail?'#b0bec5':'#6aaecb')+'" stroke="#1f5872"/><path d="M-30 -3h42v13h-42z" fill="'+(fail?'#90a4ae':'#2f7392')+'"/></g><text x="'+LAN[0]+'" y="'+(Y-26)+'" text-anchor="middle" font-size="13" font-weight="700" fill="'+(fail?'#c62828':'#1c2b33')+'" font-family="Open Sans,Arial,sans-serif">'+NET+'</text>';
+  if(step.loop)h+='<path d="M'+(X.R1+40)+' '+(Y-34)+' Q'+((X.R1+X.R2)/2)+' '+(Y-95)+' '+(X.R2-40)+' '+(Y-34)+'" fill="none" stroke="#c62828" stroke-width="2.5" stroke-dasharray="6 5" marker-end="url(#ah)"/><path d="M'+(X.R2-40)+' '+(Y-26)+' Q'+((X.R1+X.R2)/2)+' '+(Y-60)+' '+(X.R1+40)+' '+(Y-26)+'" fill="none" stroke="#c62828" stroke-width="2.5" stroke-dasharray="6 5" marker-end="url(#ah)"/><text x="'+((X.R1+X.R2)/2)+'" y="'+(Y-100)+'" text-anchor="middle" font-size="13" font-weight="700" fill="#c62828" font-family="Open Sans,Arial,sans-serif">Schleife: Pakete kreisen zwischen R1 und R2</text>';
+  ['R1','R2','R3'].forEach(function(r){h+=router(X[r],r)+table(X[r],r,step.tb,prev);});
+  return h+'<g class="pk"></g></svg>';
+}
+var COL={up:'#1565c0',bad:'#e65100',poison:'#6a1b9a',sh:'#90a4ae'};
+function animMsgs(step,done){
+  var svg=$('svg').querySelector('svg'),g=svg.querySelector('.pk');if(!step.msg){if(done)done();return;}
+  var dur=[0,2600,1700,1100,700,420][+$('spd').value];
+  var items=step.msg.map(function(m){var el=document.createElementNS('http://www.w3.org/2000/svg','g'),lbl=m.k==='sh'?'kein Update für '+NET:m.h>=16?'16 = unerreichbar':m.h+' Hop'+(m.h===1?'':'s'),w=lbl.length*7.2+22;
+    el.innerHTML='<rect x="'+(-w/2)+'" y="-34" width="'+w+'" height="22" rx="11" fill="'+COL[m.k]+'"/><text y="-19" text-anchor="middle" font-size="12.5" font-weight="700" fill="#fff" font-family="Open Sans,Arial,sans-serif">'+lbl+'</text><rect x="-13" y="-9" width="26" height="18" rx="2" fill="'+COL[m.k]+'"/><path d="M-13 -9l13 10 13 -10" fill="none" stroke="#fff" stroke-width="1.8"/>'+(m.k==='sh'?'<path d="M-16 -12l32 24" stroke="#c62828" stroke-width="3"/>':'');
+    g.appendChild(el);return{el:el,a:X[m.f],b:X[m.t],sh:m.k==='sh'};});
+  if(reduce){items.forEach(function(it){it.el.setAttribute('transform','translate('+((it.a+it.b)/2)+' '+Y+')');});if(done)done();return;}
+  var t0=null;
+  function f(ts){if(t0===null)t0=ts;var k=Math.min(1,(ts-t0)/dur);items.forEach(function(it){var kk=it.sh?Math.min(k,0.35):k;it.el.setAttribute('transform','translate('+(it.a+(it.b-it.a)*kk)+' '+(Y-2)+')');});
+    if(k<1)requestAnimationFrame(f);else setTimeout(function(){if(done)done();},Math.min(500,dur/3));}
+  requestAnimationFrame(f);
+}
+
+/* ---------- Steuerung ---------- */
+var cur='cti',i=0,playing=false,timer=0,busy=false;
+function render(animate){
+  var sc=S[cur],st=sc.steps[i];
+  /* während der Animation die alte Tabelle zeigen, danach die neue */
+  var showPrev=animate&&st.msg&&i>0;
+  $('svg').innerHTML=scene(cur,showPrev?i-1:i);
+  if(showPrev){/* Ausfall/Schleife schon zeigen */$('svg').innerHTML=scene(cur,i-1).replace('<svg','<svg');}
+  $('ttl').innerHTML=st.ttl;$('txt').innerHTML=st.txt;
+  $('no').textContent='Schritt '+(i+1)+' von '+sc.steps.length;$('prev').disabled=i===0;$('next').disabled=i===sc.steps.length-1;
+  var m=sc.meter;$('meter').hidden=!m;
+  if(m){var mx=0;['R1','R2','R3'].forEach(function(r){var c=st.tb[r];if(c&&c.h<16&&c.via!=='direkt'&&st.fail)mx=Math.max(mx,c.h);});var all16=['R1','R2'].every(function(r){return st.tb[r]&&st.tb[r].h>=16;})&&st.fail&&i>2;
+    $('mbar').style.width=(all16?100:mx/16*100)+'%';$('mtxt').textContent=all16?'16 = unerreichbar':st.fail&&i>1?'höchster falscher Wert: '+mx:'–';}
+  if(showPrev){busy=true;animMsgs(st,function(){busy=false;$('svg').innerHTML=scene(cur,i);if(playing)schedule();});}
+  else if(playing)schedule();
+}
+function schedule(){clearTimeout(timer);timer=setTimeout(function(){if(!playing)return;if(i<S[cur].steps.length-1){i++;render(true);}else stop();},[0,3200,2200,1400,900,500][+$('spd').value]);}
+function stop(){playing=false;clearTimeout(timer);$('play').textContent='▶ Abspielen';}
+$('prev').onclick=function(){stop();if(i>0){i--;render(false);}};
+$('next').onclick=function(){if(busy)return;stop();if(i<S[cur].steps.length-1){i++;render(true);}};
+$('play').onclick=function(){if(playing){stop();return;}playing=true;$('play').textContent='❚❚ Pause';if(i>=S[cur].steps.length-1){i=0;render(false);}else{i++;render(true);}};
+$('tabs').innerHTML=ORDER.map(function(k){return'<button type="button" role="tab" data-s="'+k+'" aria-selected="'+(k===cur)+'">'+S[k].name+'<small>'+S[k].sub+'</small></button>';}).join('');
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-s]');if(!b)return;stop();cur=b.dataset.s;i=0;document.querySelectorAll('[data-s]').forEach(function(x){x.setAttribute('aria-selected',x===b);});render(false);});
+render(false);
+
+/* ---------- Quiz ---------- */
+var Q=[
+ ['Warum entsteht Count to Infinity überhaupt?',['Weil RIP die Bandbreite nicht kennt','Weil ein Router dem Nachbarn glaubt, der seine Info ursprünglich von ihm selbst hat','Weil die Router zu viele Netze haben','Weil Updates per Broadcast verschickt werden'],1,'Distanzvektor-Router kennen nur „Entfernung und Richtung“. R2 erzählt R1 den Weg zurück, den er von R1 gelernt hat – nach dem Ausfall hält R1 das für einen echten Ersatzweg.'],
+ ['Was bedeutet bei RIP ein Hop-Count von 16?',['16 Router bis zum Ziel','Das Netz ist unerreichbar','Die maximale Anzahl Updates','Die Route ist besonders gut'],1,'RIP erlaubt maximal 15 Hops. 16 heißt „unendlich“ – unerreichbar. Damit endet Count to Infinity spätestens.'],
+ ['Split Horizon bedeutet …',['eine Route nie über das Interface zurück anzukündigen, über das sie gelernt wurde','Updates nur alle 60 Sekunden zu senden','eine tote Route sofort mit 16 anzukündigen','das Netz in zwei Hälften zu teilen'],0,'Was R2 über das Interface zu R1 gelernt hat, erzählt er R1 nicht zurück. So kann zwischen zwei Nachbarn keine Schleife entstehen.'],
+ ['Was macht Route Poisoning?',['Es löscht die Routing-Tabelle','Es kündigt eine ausgefallene Route sofort mit Metrik 16 an','Es verschlüsselt RIP-Updates','Es blockiert Updates vom Nachbarn'],1,'Statt die Route einfach nicht mehr zu erwähnen, sagt der Router ausdrücklich: „16 – tot“. Per Triggered Update, also sofort.'],
+ ['Poison Reverse ist …',['das Gleiche wie Split Horizon','eine Ausnahme von Split Horizon: die vergiftete Route wird mit 16 zurückgeschickt','ein Angriff auf RIP','ein Timer von 180 Sekunden'],1,'Normalerweise würde Split Horizon das Zurückschicken verbieten. Bei Poison Reverse geht die Route ausdrücklich mit 16 zurück – als Bestätigung.'],
+ ['Wofür ist der Hold-Down-Timer gut?',['Er verhindert, dass ein altes, schlechteres Update eine gerade als tot gemeldete Route wiederbelebt','Er beschleunigt die Updates','Er zählt die Hops','Er schaltet Split Horizon aus'],0,'Nach „unerreichbar“ werden schlechtere Angebote für dieses Netz eine Zeit lang ignoriert (RIP: 180 s).']];
+$('qz').innerHTML=Q.map(function(q,n){return'<div class="q" data-n="'+n+'"><p>'+(n+1)+'. '+q[0]+'</p><div class="opts col">'+q[1].map(function(o,j){return'<label><input type="radio" name="q'+n+'" value="'+j+'"> '+o+'</label>';}).join('')+'</div><div class="ex">'+q[3]+'</div></div>';}).join('')+
+ '<div class="acts"><button class="btn" type="button" id="qcheck">Prüfen</button><span class="fb" id="qfb" aria-live="polite"></span></div>';
+$('qcheck').onclick=function(){var ok=0;Q.forEach(function(q,n){var box=document.querySelector('.q[data-n="'+n+'"]'),c=box.querySelector('input:checked');box.querySelectorAll('label').forEach(function(l){var v=+l.querySelector('input').value;l.classList.remove('right','wrong','missed');if(c&&+c.value===v)l.classList.add(v===q[2]?'right':'wrong');else if(v===q[2]&&c)l.classList.add('missed');});if(c){box.querySelector('.ex').classList.add('open');if(+c.value===q[2])ok++;}});
+ var fb=$('qfb');fb.className='fb '+(ok===Q.length?'good':'bad');fb.textContent=ok+' von '+Q.length+' richtig'+(ok===Q.length?' ✓':'.');};
+
+/* ---------- Übungen ---------- */
+var L=window.RL,cache={};
+function taskOf(card){var c=card.dataset.code;if(!cache[c]){var m=c.split('-');cache[c]=L.makeTask(+m[1],m[0]);}return cache[c];}
+function chain(T){
+  var n=T.n,W=Math.max(620,140+n*190),gap=(W-230)/(n-1),y=90,h='<svg viewBox="0 0 '+W+' 230" role="img" aria-label="Router-Kette">';
+  var x=function(i){return 160+i*gap;};
+  h+='<line x1="70" y1="'+y+'" x2="'+x(0)+'" y2="'+y+'" stroke="#1c2b33" stroke-width="3"/><line x1="'+x(0)+'" y1="'+y+'" x2="'+x(n-1)+'" y2="'+y+'" stroke="#1c2b33" stroke-width="3"/>';
+  h+='<g transform="translate(55 '+y+')"><path d="M-26 -3l9 -9h36l-9 9z" fill="#6aaecb" stroke="#1f5872"/><path d="M-26 -3h36v12h-36z" fill="#2f7392"/></g><text x="55" y="'+(y-24)+'" text-anchor="middle" font-size="12.5" font-weight="700" font-family="Open Sans,Arial,sans-serif">'+NET+'</text>';
+  for(var i=0;i<n;i++){var X0=x(i);h+='<g transform="translate('+X0+' '+y+')"><ellipse cx="0" cy="8" rx="28" ry="10" fill="#1f5872"/><rect x="-28" y="-8" width="56" height="16" fill="#2f7392"/><ellipse cx="0" cy="-8" rx="28" ry="10" fill="#5a9dbb" stroke="#1f5872"/></g><text x="'+X0+'" y="'+(y+36)+'" text-anchor="middle" font-size="16" font-weight="700" font-family="Open Sans,Arial,sans-serif">R'+(i+1)+'</text>'+
+    '<g transform="translate('+(X0-62)+' '+(y+52)+')"><rect width="124" height="54" rx="5" fill="#fff" stroke="#cfd8dc" stroke-width="1.5"/><text x="62" y="22" text-anchor="middle" font-size="16" font-weight="700" font-family="ui-monospace,Menlo,monospace">'+i+' Hop'+(i===1?'':'s')+'</text><text x="62" y="42" text-anchor="middle" font-size="12" fill="#455a64" font-family="Open Sans,Arial,sans-serif">'+(i===0?'direkt':'über R'+i)+'</text></g>';}
+  h+='<text x="'+(W-10)+'" y="225" text-anchor="end" font-size="12" fill="#78909c" font-family="Open Sans,Arial,sans-serif">Stand vor dem Ausfall</text>';
+  return h+'</svg>';
+}
+function feats(T){return'<div class="feat"><span class="'+(T.sh?'on':'off')+'">Split Horizon</span><span class="'+(T.poison?'on':'off')+'">Route Poisoning</span><span class="'+(T.pr?'on':'off')+'">Poison Reverse</span><span class="'+(T.hd?'on':'off')+'">Hold-Down</span></div>';}
+function taskHTML(T,id,label){
+  var rows='';for(var i=0;i<T.n;i++){var opts='<option value="">– wählen –</option><option value="x">– (unerreichbar)</option>'+(i===0?'<option value="d">direkt</option>':'')+(i>0?'<option value="'+(i-1)+'">R'+i+'</option>':'')+(i<T.n-1?'<option value="'+(i+1)+'">R'+(i+2)+'</option>':'');
+    rows+='<tr data-r="'+i+'"><td><b>R'+(i+1)+'</b></td><td><input inputmode="numeric" aria-label="Hops R'+(i+1)+'" autocomplete="off"></td><td><select aria-label="Next Hop R'+(i+1)+'">'+opts+'</select></td></tr>';}
+  return'<div class="card task" id="'+id+'" data-code="'+T.code+'"><h3>'+label+' <span class="tag">'+L.LVNAME[T.level]+'</span><span class="tag">Nr. '+T.code+'</span></h3>'+feats(T)+chain(T)+
+   '<p class="qh">Ereignisse</p><ol class="evl">'+T.events.map(function(e){return'<li>'+esc(L.evText(T,e))+'</li>';}).join('')+'</ol>'+
+   '<p class="qh">1. Was steht danach in den Tabellen für '+NET+'?</p><p class="hint" style="margin:0">Unerreichbar = 16 Hops.</p><table class="at"><thead><tr><th>Router</th><th>Hops</th><th>Next Hop</th></tr></thead><tbody>'+rows+'</tbody></table>'+
+   '<p class="qh">2. Kreisen danach Pakete für '+NET+' zwischen Routern (Routing-Schleife)?</p><div class="opts"><label><input type="radio" name="'+id+'-lp" value="1"> Ja</label><label><input type="radio" name="'+id+'-lp" value="0"> Nein</label></div>'+
+   '<div class="acts"><button class="btn" type="button" data-act="check">Prüfen</button><button class="btn ghost" type="button" data-act="sol">Lösung anzeigen</button><span class="fb" aria-live="polite"></span></div><div class="sol"></div></div>';
+}
+function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function want(e){return e.m>=16?{m:16,v:'x'}:{m:e.m,v:e.via<0?'d':String(e.via)};}
+function check(card){
+  var T=taskOf(card),R=T.res,ok=0,tot=0;
+  card.querySelectorAll('.at tbody tr').forEach(function(tr){var i=+tr.dataset.r,w=want(R.tb[i]),inp=tr.querySelector('input'),sel=tr.querySelector('select');
+    var v=inp.value.trim().toLowerCase(),m=/^(16|unerreichbar|∞|inf)$/.test(v)?16:v===''?null:+v;
+    inp.classList.remove('right','wrong');sel.classList.remove('right','wrong');tot+=2;
+    if(m!==null){var g=m===w.m;inp.classList.add(g?'right':'wrong');if(g)ok++;}
+    if(sel.value){var gs=sel.value===w.v||(w.m>=16&&sel.value==='x');sel.classList.add(gs?'right':'wrong');if(gs)ok++;}});
+  var lp=card.querySelector('input[name$="-lp"]:checked'),wl=R.loop?'1':'0';tot++;
+  card.querySelectorAll('input[name$="-lp"]').forEach(function(rb){var l=rb.parentNode;l.classList.remove('right','wrong');if(rb.checked)l.classList.add(rb.value===wl?'right':'wrong');});
+  if(lp&&lp.value===wl)ok++;
+  var fb=card.querySelector('.fb'),all=ok===tot;fb.className='fb '+(all?'good':'bad');fb.textContent=all?'Alles richtig! ✓':ok+' von '+tot+' richtig.';
+  if(all)card.dataset.solved='1';markToc();
+}
+function cell(e,chg){var t=e.m>=16?'16 ✕':e.m+(e.via<0?' direkt':' über R'+(e.via+1));return'<code class="'+(chg?'chg':'')+'">'+t+'</code>';}
+function solHTML(T){
+  var R=T.res;
+  return'<h3 style="font:400 20px var(--head);margin:0">Lösung</h3><ul class="slog">'+R.log.map(function(r,k){return'<li><b>'+(k+1)+'. '+esc(L.evText(T,r.ev))+'</b><br>'+esc(L.explain(T,r))+'<br>'+r.tb.map(function(e,i){return'R'+(i+1)+': '+cell(e,r.changed.indexOf(i)>=0);}).join(' &nbsp; ')+'</li>';}).join('')+'</ul>'+
+   '<div class="ans"><b>'+(R.loop?'Ja – Schleife!':'Nein – keine Schleife.')+'</b> '+(R.loop?'Folgt man den Next Hops, landet man im Kreis, ohne R1 zu erreichen: '+loopPath(T,R.tb)+'. Ohne Schutz würden die Router weiter hochzählen bis 16.':T.mode==='none'?'Zufällig ist (noch) keine Schleife entstanden – ohne Schutzmechanismen kann sich das beim nächsten Update ändern.':'Die eingeschalteten Schutzmechanismen verhindern, dass falsche Infos zurückfließen.')+'</div>';
+}
+function loopPath(T,tb){for(var i=0;i<T.n;i++){var seen=[],c=i;while(tb[c].m<16&&tb[c].via>=0&&seen.indexOf(c)<0){seen.push(c);c=tb[c].via;}if(seen.indexOf(c)>=0){var st=seen.slice(seen.indexOf(c));return st.map(function(x){return'R'+(x+1);}).join(' → ')+' → R'+(c+1);}}return'';}
+document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('[data-act]');if(!t)return;var card=t.closest('.task');if(!card)return;
+  if(t.dataset.act==='check')check(card);
+  if(t.dataset.act==='sol'){var so=card.querySelector('.sol');if(!so.innerHTML)so.innerHTML=solHTML(taskOf(card));var o=so.classList.toggle('open');t.textContent=o?'Lösung ausblenden':'Lösung anzeigen';}});
+var list=['L-1','L-2','L-3','M-5','M-3','M-1','M-4','S-10','S-9','S-4','S-1','S-2'];
+var host=$('tasks'),cp=0;
+list.forEach(function(code,k){var m=code.split('-'),T=L.makeTask(+m[1],m[0]);cache[code]=T;var d=document.createElement('div');d.className='page';d.hidden=k!==0;
+  d.innerHTML=taskHTML(T,'t'+(k+1),'Aufgabe '+(k+1))+'<div class="navrow">'+(k>0?'<button class="btn ghost" type="button" data-go="'+(k-1)+'">‹ Aufgabe '+k+'</button>':'<span></span>')+(k<list.length-1?'<button class="btn" type="button" data-go="'+(k+1)+'">Aufgabe '+(k+2)+' ›</button>':'<a class="btn" href="#generator" style="text-decoration:none">🎲 Weiter mit dem Zufallsgenerator</a>')+'</div>';host.appendChild(d);});
+var pages=[].slice.call(host.children);
+list.forEach(function(c,k){var b=document.createElement('button');b.type='button';b.textContent=k+1;b.dataset.go=k;$('ptoc').appendChild(b);});
+function markToc(){[].forEach.call($('ptoc').children,function(b,k){b.classList.toggle('on',k===cp);b.classList.toggle('ok',pages[k].querySelector('.task').dataset.solved==='1');});}
+function show(k,scroll){k=Math.max(0,Math.min(pages.length-1,k));cp=k;pages.forEach(function(p,j){p.hidden=j!==k;});$('pnum').textContent='Aufgabe '+(k+1)+' von '+pages.length;$('ppart').textContent=L.LVNAME[list[k][0]];$('pprev').disabled=k===0;$('pnext').disabled=k===pages.length-1;markToc();if(scroll){var top=$('uebungen').getBoundingClientRect().top+window.pageYOffset;if(window.pageYOffset>top)window.scrollTo({top:top,behavior:reduce?'auto':'smooth'});}}
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-go]');if(b)show(+b.dataset.go,true);});
+$('pprev').onclick=function(){show(cp-1,true);};$('pnext').onclick=function(){show(cp+1,true);};show(0,false);
+function gen(lvl,seed){var T=L.makeTask(seed,lvl);if(!T){$('gmsg').textContent='Zu dieser Nummer gibt es keine Aufgabe.';return;}$('gmsg').textContent='';cache[T.code]=T;$('gout').innerHTML=taskHTML(T,'g'+T.code,'Aufgabe '+T.code);$('gcode').value=T.code;$('glvl').value=lvl;}
+$('gnew').onclick=function(){gen($('glvl').value,1+Math.floor(Math.random()*99999));};
+function load(){var m=/^\s*([LMS])\s*-?\s*(\d{1,6})\s*$/i.exec($('gcode').value);if(!m){$('gmsg').textContent='Bitte eine Nummer wie L-12, M-305 oder S-4711 eingeben.';return;}gen(m[1].toUpperCase(),+m[2]);}
+$('gload').onclick=load;$('gcode').addEventListener('keydown',function(e){if(e.key==='Enter')load();});
+gen('M',1+Math.floor(Math.random()*99999));
+})();
+</script>
+</body>
+</html>
