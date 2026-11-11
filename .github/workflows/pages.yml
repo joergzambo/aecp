@@ -9,7 +9,7 @@ permissions:
   pages: write
   id-token: write
 concurrency:
-  group: pages
+  group: pages-nwt
   cancel-in-progress: true
 jobs:
   build:
