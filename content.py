@@ -12,7 +12,8 @@ SITE = {
     'intro': '<strong>Analyze</strong> – Topologien durchschauen. <strong>Explain</strong> – verstehen, warum das Netz so entscheidet. '
              '<strong>Configure</strong> – selbst Hand anlegen. <strong>Practice</strong> – üben, bis es sitzt. '
              'Vom OSI-Modell bis zu Angriffen im LAN, mit Animationen, Lösungen zum Aufklappen und Zufallsgenerator.',
-    'news': ['<strong>Neu:</strong> <a href="routing/inter-vlan-routing/">Inter-VLAN-Routing</a> – Paketweg Schritt für Schritt und Fehlersuche in echten Configs. '
+    'news': ['<strong>Neu:</strong> <a href="grundlagen/osi-modell/">Das OSI-Modell zum Ziehen</a> – Schichten, PDUs, Geräte und Protokolle zuordnen. '
+             'Außerdem <a href="routing/inter-vlan-routing/">Inter-VLAN-Routing</a> – Paketweg Schritt für Schritt und Fehlersuche in echten Configs. '
              'Außerdem <a href="switching/vlan/">VLANs und Trunking</a> – Broadcasts verfolgen, 802.1Q-Tags verstehen, '
              'Native-VLAN-Mismatch entdecken. Dazu <a href="switching/spanning-tree/">Spanning Tree und RSTP</a> mit 50 Übungen.'],
 }
@@ -20,7 +21,8 @@ SITE = {
 AREAS = [
     {'slug': 'grundlagen', 'title': 'Grundlagen', 'text': 'Schichtenmodelle, Adressierung und wie Daten im LAN unterwegs sind.',
      'topics': [
-         {'slug': 'osi-modell', 'title': 'Das OSI- und TCP/IP-Modell', 'text': 'Welche Schicht macht was – und welches Gerät arbeitet wo?'},
+         {'slug': 'osi-modell', 'title': 'Das OSI- und TCP/IP-Modell', 'tool': 'osi-modell',
+          'text': 'Schichten, PDUs, Geräte und Protokolle per Drag-and-Drop zuordnen – mit Eselsbrücken und Kapselung.'},
          {'slug': 'ip-adressierung', 'title': 'IP-Adressierung und Subnetting', 'text': 'Netzanteil, Hostanteil, Subnetzmasken und CIDR rechnen.'},
          {'slug': 'ethernet-switching', 'title': 'Ethernet und Switching', 'text': 'MAC-Adressen, Frames und wie ein Switch lernt.'},
      ]},
