@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CDP – Nachbarn erkennen</title>
+<style>
+/*BASECSS*/
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-top:10px}
+.rules{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+@media(max-width:760px){.two,.rules{grid-template-columns:minmax(0,1fr)}}
+.ph{font:600 14px var(--ui);margin:0 0 4px}
+pre.cli .rw{display:block;cursor:pointer;border-radius:3px;margin:0 -6px;padding:0 6px}
+pre.cli .rw:hover{background:#2d4350}
+pre.cli .rw.on{background:#f9a825;color:#1c2b33}
+pre.cli .hl{background:#f9a825;color:#1c2b33;border-radius:2px}
+.explain{background:var(--soft);border-radius:4px;padding:12px 16px;margin-top:10px;font-size:16px;min-height:4em}
+.explain p{margin:0 0 6px}
+.k{display:inline-block;font:700 12px var(--ui);color:#fff;padding:1px 7px;border-radius:3px;margin-right:4px}
+.k1{background:#1565c0}.k2{background:#2e7d32}.k3{background:#e65100}.k4{background:#6a1b9a}
+.outs{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin-top:10px}
+@media(max-width:860px){.outs{grid-template-columns:minmax(0,1fr)}}
+.outs details{border:1px solid var(--line);border-radius:4px;background:#1c2b33}
+.outs summary{cursor:pointer;color:#fff;font:600 14px var(--mono);padding:8px 12px;list-style-position:inside}
+.outs pre.cli{margin:0;border-radius:0 0 4px 4px;max-height:380px;overflow:auto;font-size:12.5px}
+.wire svg [data-pin] rect{transition:fill .12s}
+.wire svg [data-pin]:hover rect{fill:#fff8e1}
+.wbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px;font-size:14.5px;color:var(--mute)}
+.wbar .btn{padding:5px 12px;font-size:14px}
+.at{border-collapse:collapse;margin-top:6px;font-size:15px;width:100%}
+.at th,.at td{border:1px solid #cfd8dc;padding:5px 9px;text-align:left}
+.at th{background:var(--soft);font:600 14px var(--ui)}
+.at select,.at input{padding:5px 7px;border:1.5px solid #90a4ae;border-radius:4px;font:500 14px var(--mono);width:100%;max-width:240px}
+.at .right{border-color:var(--ok);background:#e3f4e6}.at .wrong{border-color:var(--bad);background:#fde3e3}
+.qh{font:600 16px var(--ui);margin:16px 0 4px}
+.slist{list-style:none;padding:0;margin:6px 0}
+.slist li{margin:5px 0;padding:6px 10px;background:var(--soft);border-radius:4px;font-size:14.5px}
+.slist code{font-size:12.5px}
+.cmp{width:100%;border-collapse:collapse;font-size:15px;margin-top:6px}
+.cmp th,.cmp td{border:1px solid #cfd8dc;padding:6px 10px;text-align:left;vertical-align:top}
+.cmp th{background:var(--soft);font:600 14px var(--ui)}
+.quiz .q .ex{display:none;margin-top:6px;font-size:15px;background:var(--soft);border-left:4px solid var(--accent);padding:6px 10px}
+.quiz .q .ex.open{display:block}
+.opts.col{flex-direction:column;align-items:flex-start}
+</style>
+</head>
+<body>
+<main class="vmain">
+<h1>CDP – Nachbarn erkennen und den Netzplan rekonstruieren</h1>
+<p class="sub">Das <b>Cisco Discovery Protocol</b> verrät, welches Cisco-Gerät an welchem Port hängt – mit Hostname, Modell, IP-Adresse und Software-Version. Damit kann man ein unbekanntes Netz Stück für Stück aufzeichnen.</p>
+<nav class="jumps" aria-label="Abschnitte"><a href="#lesen">Ausgabe lesen</a><a href="#regeln">Wissen und Befehle</a><a href="#quiz">Teste dich</a><a href="#uebungen">Übungen</a><a href="#generator">🎲 Zufallsgenerator</a></nav>
+
+<h2 class="part" id="lesen">Eine CDP-Ausgabe lesen</h2>
+<p class="sub">Der Befehl wurde auf <b>KERN</b> eingegeben. Klick auf eine Zeile der Ausgabe – dann siehst du, welches Kabel sie beschreibt und was in der Detail-Ausgabe dazu steht.</p>
+<div class="card">
+ <div id="exsvg"></div>
+ <p class="ph" style="margin-top:12px">KERN# show cdp neighbors</p><pre class="cli" id="exbrief"></pre>
+ <div class="explain" id="exexp" aria-live="polite"><p>Jede Zeile ist <b>ein direkt verbundener Nachbar</b> – also ein Kabel. Klick auf eine Zeile.</p></div>
+ <p class="ph" style="margin-top:12px">KERN# show cdp neighbors detail (nur dieser Nachbar)</p><pre class="cli" id="exdet">Klick oben auf eine Zeile.</pre>
+</div>
+
+<h2 class="part" id="regeln">Wissen und Befehle</h2>
+<div class="rules">
+ <div class="card"><h3>Was ist CDP?</h3><ul>
+  <li>Cisco-eigenes Protokoll auf <b>Layer 2</b> – funktioniert auch ohne IP-Konfiguration.</li>
+  <li>Zeigt nur <b>direkt verbundene</b> Cisco-Geräte. Was hinter dem Nachbarn liegt, sieht man nicht.</li>
+  <li>Standardmäßig an, alle <b>60 Sekunden</b> ein Paket, ein Eintrag gilt <b>180 Sekunden</b> (Holdtime).</li>
+  <li>Die herstellerneutrale Alternative ist <b>LLDP</b> (IEEE 802.1AB).</li></ul></div>
+ <div class="card check"><h3>Die zwei Ports einer Zeile</h3><ul>
+  <li><b>Local Intrfce</b> = der Port <b>am eigenen Gerät</b>, auf dem der Befehl läuft.</li>
+  <li><b>Port ID</b> = der Port <b>am Nachbarn</b>.</li>
+  <li>In der Detail-Ausgabe heißen sie <code>Interface</code> und <code>Port ID (outgoing port)</code>.</li></ul>
+  <p class="hint">Häufigster Fehler: die beiden vertauschen.</p></div>
+ <div class="card"><h3>Modell und IP-Adresse</h3><ul>
+  <li>In <code>show cdp neighbors</code> ist die Platform-Spalte <b>abgeschnitten</b> (<code>WS-C2960-</code>). Das volle Modell steht nur in <code>detail</code>.</li>
+  <li>Die IP-Adresse gibt es <b>nur</b> in <code>detail</code> (<code>Entry address</code>).</li>
+  <li>Ein <b>Switch</b> meldet seine Management-IP (SVI). Ein <b>Router</b> meldet die IP des Interfaces, über das das CDP-Paket hinausgeht – jedem Nachbarn also eine andere.</li>
+  <li>Ist eine Domain konfiguriert, steht sie in der Device ID: <code>ZEUS.htl.local</code> ist das Gerät mit dem Hostname ZEUS.</li></ul></div>
+ <div class="card"><h3>Sicherheit</h3><ul>
+  <li>CDP verrät Modell, IOS-Version und IP-Adressen – wertvoll für Angreifer.</li>
+  <li>An Ports zu fremden Geräten, Gästen und zum Internet abschalten.</li>
+  <li>CDP-Pakete sind nicht authentifiziert und lassen sich fälschen.</li></ul></div>
+</div>
+<div class="card">
+<table class="cmp"><thead><tr><th>Befehl</th><th>Was er macht</th></tr></thead><tbody>
+<tr><td><code>show cdp neighbors</code></td><td>Kurzliste aller Nachbarn: Device ID, eigener Port, Holdtime, Fähigkeiten, Plattform (abgeschnitten), Port am Nachbarn</td></tr>
+<tr><td><code>show cdp neighbors detail</code></td><td>Alles pro Nachbar: IP-Adresse, volles Modell, beide Ports, IOS-Version, Native VLAN, Duplex</td></tr>
+<tr><td><code>show cdp entry ZEUS</code></td><td>Details nur für einen Nachbarn</td></tr>
+<tr><td><code>show cdp interface</code></td><td>Auf welchen Interfaces CDP läuft, Timer</td></tr>
+<tr><td><code>no cdp run</code> / <code>cdp run</code></td><td>CDP auf dem ganzen Gerät aus- bzw. einschalten (global)</td></tr>
+<tr><td><code>interface g0/1</code> → <code>no cdp enable</code></td><td>CDP nur auf einem Interface abschalten</td></tr>
+<tr><td><code>lldp run</code>, <code>show lldp neighbors</code></td><td>LLDP einschalten (bei Cisco standardmäßig aus) und Nachbarn anzeigen</td></tr>
+</tbody></table>
+</div>
+
+<h2 class="part" id="quiz">Teste dich</h2>
+<div class="card quiz" id="qz"></div>
+
+<h2 class="part" id="uebungen">Übungen</h2>
+<p class="sub">Die Geräte und ihre Ports sind aufgezeichnet – aber nicht verkabelt. Lies die CDP-Ausgaben und finde für jedes Gerät <b>Modell</b> und <b>IP-Adresse</b>. Dann steck die Kabel: erst auf einen Port klicken, dann auf den Port am anderen Ende. Ein Klick auf ein Kabel zieht es wieder ab. Nicht jeder Port wird gebraucht.</p>
+<div class="pager"><button class="btn ghost" id="pprev" type="button">‹ Zurück</button><div class="pinfo"><b id="pnum"></b><span id="ppart"></span></div><button class="btn" id="pnext" type="button">Weiter ›</button><div class="toc" id="ptoc"></div></div>
+<div id="tasks"></div>
+
+<h2 class="part" id="generator">🎲 Zufallsgenerator</h2>
+<p class="sub">Jede Aufgabe hat eine Nummer. Mit der Nummer bekommt jede Schülerin und jeder Schüler genau dieselbe Aufgabe.</p>
+<div class="genbar"><label for="glvl">Stufe</label><select id="glvl"><option value="L">Leicht (3 Geräte, viele Ausgaben)</option><option value="M" selected>Mittel (4–5 Geräte)</option><option value="S">Schwer (6 Geräte, Domains, redundanter Link, wenig Ausgaben)</option></select>
+<button class="btn" id="gnew" type="button">Neue Aufgabe</button><label for="gcode">Nummer</label><input id="gcode" size="8" placeholder="M-123" autocomplete="off"><button class="btn ghost" id="gload" type="button">Laden</button><span id="gmsg" class="err"></span></div>
+<div id="gout"></div>
+</main>
+<script>
+/*CDPJS*/
+</script>
+<script>
+(function(){
+'use strict';
+var $=function(i){return document.getElementById(i);},C=window.CDP,reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+/* ---------- Beispiel ---------- */
+var EX=C.example(),exRows=C.nbrs(EX,1).sort(function(a,b){return EX.devs[a.it.d].id<EX.devs[b.it.d].id?-1:1;}),exSel=-1;
+function exRender(){
+ var lines=EX.outs[0].text.split('\n'),start=lines.findIndex(function(l){return l.indexOf('Device ID')===0;}),h='';
+ lines.forEach(function(l,i){var r=i-start-1;if(i===0)return;if(r>=0&&r<exRows.length)h+='<span class="rw'+(r===exSel?' on':'')+'" data-r="'+r+'">'+esc(l)+'</span>';else h+=esc(l)+'\n';});
+ $('exbrief').innerHTML=h;
+ $('exsvg').innerHTML=C.draw(EX,{cables:EX.links.map(function(l){return[l.a.d+'|'+l.a.p,l.b.d+'|'+l.b.p];}),hot:exSel>=0?exRows[exSel].k:-1});
+ if(exSel<0)return;
+ var x=exRows[exSel],N=EX.devs[x.it.d],m=C.MODELS[N.model],blk=EX.outs[1].text.split('-------------------------').filter(function(b){return b.indexOf('Device ID: '+N.id+'\n')>=0;})[0];
+ var ip=C.advIP(EX,x.it);
+ $('exdet').innerHTML=esc('-------------------------'+blk.replace(/\nTotal[\s\S]*$/,'')).replace(new RegExp('(IP address: '+ip.replace(/\./g,'\\.')+')','g'),'<span class="hl">$1</span>').replace(/(Platform: cisco [^,]+)/,'<span class="hl">$1</span>').replace(/(Interface: [^,]+),  (Port ID \(outgoing port\): \S+)/,'<span class="hl">$1</span>,  <span class="hl">$2</span>');
+ $('exexp').innerHTML='<p><span class="k k1">Device ID</span><b>'+esc(N.id)+'</b> – das ist der Nachbar'+(N.id!==N.host?' mit dem Hostname <b>'+N.host+'</b> (die Domain hängt hinten dran)':'')+'.</p>'+
+  '<p><span class="k k2">Local Intrfce</span><b>'+C.abbr(x.me.p)+'</b> – der Port <b>an KERN</b>, also an dem Gerät, auf dem der Befehl läuft. <span class="k k3">Port ID</span><b>'+C.abbr(x.it.p)+'</b> – der Port <b>am Nachbarn '+N.host+'</b>. Das Kabel: KERN '+C.short(x.me.p)+' ↔ '+N.host+' '+C.short(x.it.p)+'.</p>'+
+  '<p><span class="k k4">Platform</span><b>'+m.plat.slice(0,9)+'</b> ist abgeschnitten. Erst <code>detail</code> zeigt das volle Modell <b>'+m.plat+'</b> und die IP <b>'+ip+'</b>'+(m.type==='r'?' – bei einem Router die IP des Interfaces '+C.short(x.it.p)+', über das er mit KERN spricht':' – die Management-IP des Switches')+'.</p>';
+}
+$('exbrief').addEventListener('click',function(e){var r=e.target.closest('[data-r]');if(!r)return;exSel=+r.dataset.r;exRender();});
+exRender();
+
+/* ---------- Quiz ---------- */
+var Q=[
+ ['Welche Geräte zeigt show cdp neighbors an?',['Alle Cisco-Geräte im ganzen Netz','Nur direkt verbundene Cisco-Geräte','Alle Geräte im selben VLAN','Alle Geräte mit IP-Adresse im selben Subnetz'],1,'CDP-Pakete werden nicht weitergeleitet. Man sieht nur das Gerät am anderen Ende des Kabels.'],
+ ['Auf SW1 steht die Zeile: SW2   Gig 0/1   150   S I   WS-C2960-   Fas 0/24. An welchem Port von SW2 steckt das Kabel?',['Gi0/1','Fa0/24','An beiden','Das sieht man nicht'],1,'Port ID ist der Port am Nachbarn: SW2 Fa0/24. Gi0/1 (Local Intrfce) ist der Port an SW1.'],
+ ['Wo findest du die IP-Adresse eines Nachbarn?',['In der Spalte Platform','In show cdp neighbors detail (Entry address)','In der Holdtime','Gar nicht – CDP arbeitet auf Layer 2'],1,'Die Kurzliste hat keine IP. Erst die Detail-Ausgabe (oder show cdp entry) zeigt sie.'],
+ ['Welche IP-Adresse meldet ein Router seinem Nachbarn per CDP?',['Immer die Loopback-Adresse','Die IP des Interfaces, über das das CDP-Paket hinausgeht','Die IP seines Default-Gateways','Gar keine'],1,'Darum sehen zwei Nachbarn desselben Routers oft verschiedene IPs. Ein Switch meldet dagegen seine Management-IP.'],
+ ['Warum schaltet man CDP an Ports zum Internet oder zu Gast-Geräten ab?',['Es verbraucht zu viel Bandbreite','Es verrät Modell, IOS-Version und IP-Adressen an Fremde','Es stört DHCP','Es erzeugt Schleifen'],1,'Ein Angreifer weiß dann sofort, welche Software-Version läuft und welche Lücken es dafür gibt. Abschalten mit no cdp enable am Interface.'],
+ ['Wie heißt die herstellerneutrale Alternative zu CDP?',['STP','LLDP','LACP','VTP'],1,'LLDP (IEEE 802.1AB). Bei Cisco mit lldp run einschalten, anzeigen mit show lldp neighbors.'],
+ ['Wie oft sendet CDP standardmäßig, und wie lange bleibt ein Eintrag gültig?',['Alle 10 s / 30 s','Alle 30 s / 90 s','Alle 60 s / 180 s','Alle 180 s / 600 s'],2,'Alle 60 Sekunden ein Update, Holdtime 180 Sekunden. Die Holdtime zählt in der Ausgabe herunter.']];
+$('qz').innerHTML=Q.map(function(q,n){return'<div class="q" data-n="'+n+'"><p>'+(n+1)+'. '+esc(q[0])+'</p><div class="opts col">'+q[1].map(function(o,j){return'<label><input type="radio" name="q'+n+'" value="'+j+'"> '+esc(o)+'</label>';}).join('')+'</div><div class="ex">'+q[3]+'</div></div>';}).join('')+
+ '<div class="acts"><button class="btn" type="button" id="qcheck">Prüfen</button><span class="fb" id="qfb" aria-live="polite"></span></div>';
+$('qcheck').onclick=function(){var ok=0;Q.forEach(function(q,n){var box=document.querySelector('.q[data-n="'+n+'"]'),c=box.querySelector('input:checked');box.querySelectorAll('label').forEach(function(l){var v=+l.querySelector('input').value;l.classList.remove('right','wrong','missed');if(c&&+c.value===v)l.classList.add(v===q[2]?'right':'wrong');else if(v===q[2]&&c)l.classList.add('missed');});if(c){box.querySelector('.ex').classList.add('open');if(+c.value===q[2])ok++;}});
+ var fb=$('qfb');fb.className='fb '+(ok===Q.length?'good':'bad');fb.textContent=ok+' von '+Q.length+' richtig'+(ok===Q.length?' ✓':'.');};
+
+/* ---------- Übungen ---------- */
+var cache={},state={};
+function taskOf(card){var c=card.dataset.code;if(!cache[c]){var m=c.split('-');cache[c]=C.makeTask(+m[1],m[0]);}return cache[c];}
+function st(card){var c=card.dataset.code+'#'+card.id;if(!state[c])state[c]={cables:[],sel:null,marks:null};return state[c];}
+function taskHTML(T,id,label){
+ var outs='<div class="outs">'+T.outs.map(function(o,k){var t=o.text.split('\n');return'<details'+(k<2?' open':'')+'><summary>'+esc(t[0])+'</summary><pre class="cli">'+esc(t.slice(1).join('\n'))+'</pre></details>';}).join('')+'</div>';
+ var opts='<option value="">– Modell wählen –</option>'+C.MODEL_KEYS.map(function(k){return'<option value="'+k+'">'+C.MODELS[k].plat+'</option>';}).join('');
+ var tab='<table class="at"><thead><tr><th>Gerät</th><th>Modell</th><th>IP-Adresse laut CDP</th></tr></thead><tbody>'+T.devs.map(function(d,i){return'<tr data-i="'+i+'"><td><b>'+esc(d.host)+'</b></td><td><select aria-label="Modell '+esc(d.host)+'">'+opts+'</select></td><td><input aria-label="IP '+esc(d.host)+'" placeholder="z. B. 10.1.99.11" autocomplete="off" spellcheck="false"></td></tr>';}).join('')+'</tbody></table>';
+ return'<div class="card task" id="'+id+'" data-code="'+T.code+'"><h3>'+label+' <span class="tag">'+C.LVNAME[T.level]+'</span><span class="tag">Nr. '+T.code+'</span></h3>'+
+  '<p class="qh" style="margin-top:6px">CDP-Ausgaben</p>'+outs+
+  '<p class="qh">1. Modell und IP-Adresse jedes Geräts</p><p class="hint" style="margin:0 0 4px">Bei Routern reicht eine IP, die ein Nachbar per CDP sieht.</p>'+tab+
+  '<p class="qh">2. Kabel stecken</p><div class="wire"></div><div class="wbar"><span class="cnt"></span><button class="btn ghost" type="button" data-act="clear">Alle Kabel abziehen</button></div>'+
+  '<div class="acts"><button class="btn" type="button" data-act="check">Prüfen</button><button class="btn ghost" type="button" data-act="sol">Lösung anzeigen</button><span class="fb" aria-live="polite"></span></div><div class="sol"></div></div>';
+}
+function wire(card){var T=taskOf(card),S=st(card);card.querySelector('.wire').innerHTML=C.draw(T,{interactive:1,cables:S.cables,sel:S.sel,marks:S.marks});
+ card.querySelector('.cnt').textContent=S.cables.length+(S.cables.length===1?' Kabel':' Kabel')+' gesteckt'+(S.sel?' · zweiten Port wählen':'');}
+function keyOf(c){return c[0]<c[1]?c[0]+'~'+c[1]:c[1]+'~'+c[0];}
+document.addEventListener('click',function(e){
+ var p=e.target.closest&&e.target.closest('[data-pin]'),cb=e.target.closest&&e.target.closest('[data-cab]');if(!p&&!cb)return;
+ var card=e.target.closest('.task');if(!card)return;var S=st(card);S.marks=null;
+ if(cb){S.cables.splice(+cb.dataset.cab,1);wire(card);return;}
+ var k=p.dataset.pin;
+ if(!S.sel){var had=S.cables.findIndex(function(c){return c[0]===k||c[1]===k;});if(had>=0)S.cables.splice(had,1);S.sel=k;}
+ else if(S.sel===k)S.sel=null;
+ else if(S.sel.split('|')[0]===k.split('|')[0])S.sel=k;
+ else{var a=S.sel;S.cables=S.cables.filter(function(c){return c[0]!==a&&c[1]!==a&&c[0]!==k&&c[1]!==k;});S.cables.push([a,k]);S.sel=null;}
+ wire(card);
+});
+function check(card){
+ var T=taskOf(card),S=st(card),ok=0,tot=0,want=C.solutionKeys(T);
+ card.querySelectorAll('.at tbody tr').forEach(function(tr){var i=+tr.dataset.i,a=T.ans[i],s=tr.querySelector('select'),inp=tr.querySelector('input');
+  tot+=2;s.classList.remove('right','wrong');inp.classList.remove('right','wrong');
+  if(s.value){var g=s.value===a.model;s.classList.add(g?'right':'wrong');if(g)ok++;}
+  var v=inp.value.trim();if(v){var gi=a.ips.indexOf(v)>=0;inp.classList.add(gi?'right':'wrong');if(gi)ok++;}});
+ S.marks={};var good=0;S.cables.forEach(function(c){var k=keyOf(c),g=want.indexOf(k)>=0;S.marks[k]=g?'ok':'bad';if(g)good++;});
+ S.sel=null;wire(card);
+ var wrong=S.cables.length-good,miss=want.length-good;
+ var all=ok===tot&&wrong===0&&miss===0,fb=card.querySelector('.fb');fb.className='fb '+(all?'good':'bad');
+ fb.textContent=all?'Alles richtig – der Netzplan stimmt! ✓':'Tabelle: '+card.querySelectorAll('.at .right').length+' von '+(T.devs.length*2)+' richtig · Kabel: '+good+' richtig'+(wrong?', '+wrong+' falsch':'')+(miss?', '+miss+' fehlen':'')+'.';
+ if(all)card.dataset.solved='1';markToc();
+}
+function solHTML(T){
+ var labels=T.devs.map(function(d,i){var a=T.ans[i];return C.MODELS[a.model].plat+' · '+a.ips.join(' / ');});
+ var h='<h3 style="font:400 20px var(--head);margin:0">Lösung</h3>'+C.draw(T,{solution:1,labels:labels});
+ h+='<p class="qh">Modelle und IP-Adressen</p><ul class="slist">'+T.devs.map(function(d,i){var a=T.ans[i],m=C.MODELS[a.model];return'<li><b>'+esc(d.host)+'</b>'+(d.id!==d.host?' (Device ID '+esc(d.id)+')':'')+': '+m.plat+' – IP '+a.ips.join(' oder ')+'<br><span class="hint">'+C.ipEvidence(T,i).map(esc).join(' · ')+(m.type==='r'&&a.ips.length>1?' · Ein Router meldet jedem Nachbarn die IP des Interfaces, über das er mit ihm spricht.':'')+'</span></li>';}).join('')+'</ul>';
+ h+='<p class="qh">Verbindungen</p><ul class="slist">'+T.links.map(function(l){return'<li><b>'+esc(T.devs[l.a.d].host)+' '+C.short(l.a.p)+' ↔ '+esc(T.devs[l.b.d].host)+' '+C.short(l.b.p)+'</b><br><span class="hint">'+esc(C.evidence(T,l))+'</span></li>';}).join('')+'</ul>';
+ var unused=[];T.devs.forEach(function(d){var u={};T.links.forEach(function(l){if(l.a.d===d.i)u[l.a.p]=1;if(l.b.d===d.i)u[l.b.p]=1;});d.pins.forEach(function(p){if(!u[p])unused.push(d.host+' '+C.short(p));});});
+ if(unused.length)h+='<div class="ans">Frei bleiben: '+unused.map(esc).join(', ')+'.</div>';
+ return h;
+}
+document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('[data-act]');if(!t)return;var card=t.closest('.task');if(!card)return;
+ if(t.dataset.act==='check')check(card);
+ if(t.dataset.act==='clear'){var S=st(card);S.cables=[];S.sel=null;S.marks=null;wire(card);}
+ if(t.dataset.act==='sol'){var so=card.querySelector('.sol');if(!so.innerHTML)so.innerHTML=solHTML(taskOf(card));var o=so.classList.toggle('open');t.textContent=o?'Lösung ausblenden':'Lösung anzeigen';}});
+var list=/*LIST*/;
+var host=$('tasks'),cp=0;
+list.forEach(function(code,k){var m=code.split('-'),T=C.makeTask(+m[1],m[0]);cache[code]=T;var d=document.createElement('div');d.className='page';d.hidden=k!==0;
+ d.innerHTML=taskHTML(T,'t'+(k+1),'Aufgabe '+(k+1))+'<div class="navrow">'+(k>0?'<button class="btn ghost" type="button" data-go="'+(k-1)+'">‹ Aufgabe '+k+'</button>':'<span></span>')+(k<list.length-1?'<button class="btn" type="button" data-go="'+(k+1)+'">Aufgabe '+(k+2)+' ›</button>':'<a class="btn" href="#generator" style="text-decoration:none">🎲 Weiter mit dem Zufallsgenerator</a>')+'</div>';host.appendChild(d);wire(d.querySelector('.task'));});
+var pages=[].slice.call(host.children);
+list.forEach(function(c,k){var b=document.createElement('button');b.type='button';b.textContent=k+1;b.dataset.go=k;$('ptoc').appendChild(b);});
+function markToc(){[].forEach.call($('ptoc').children,function(b,k){b.classList.toggle('on',k===cp);b.classList.toggle('ok',pages[k].querySelector('.task').dataset.solved==='1');});}
+function show(k,scroll){k=Math.max(0,Math.min(pages.length-1,k));cp=k;pages.forEach(function(p,j){p.hidden=j!==k;});$('pnum').textContent='Aufgabe '+(k+1)+' von '+pages.length;$('ppart').textContent=C.LVNAME[list[k][0]];$('pprev').disabled=k===0;$('pnext').disabled=k===pages.length-1;markToc();if(scroll){var top=$('uebungen').getBoundingClientRect().top+window.pageYOffset;if(window.pageYOffset>top)window.scrollTo({top:top,behavior:reduce?'auto':'smooth'});}}
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-go]');if(b)show(+b.dataset.go,true);});
+$('pprev').onclick=function(){show(cp-1,true);};$('pnext').onclick=function(){show(cp+1,true);};show(0,false);
+function gen(lvl,seed){var T=C.makeTask(seed,lvl);if(!T){$('gmsg').textContent='Zu dieser Nummer gibt es keine Aufgabe.';return;}$('gmsg').textContent='';cache[T.code]=T;$('gout').innerHTML=taskHTML(T,'g'+T.code.replace('-','_'),'Aufgabe '+T.code);wire($('gout').querySelector('.task'));$('gcode').value=T.code;$('glvl').value=lvl;}
+$('gnew').onclick=function(){gen($('glvl').value,1+Math.floor(Math.random()*99999));};
+function load(){var m=/^\s*([LMS])\s*-?\s*(\d{1,6})\s*$/i.exec($('gcode').value);if(!m){$('gmsg').textContent='Bitte eine Nummer wie L-12, M-305 oder S-4711 eingeben.';return;}gen(m[1].toUpperCase(),+m[2]);}
+$('gload').onclick=load;$('gcode').addEventListener('keydown',function(e){if(e.key==='Enter')load();});
+gen('M',1+Math.floor(Math.random()*99999));
+})();
+</script>
+</body>
+</html>

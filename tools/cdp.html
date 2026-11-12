@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CDP – Nachbarn erkennen</title>
+<style>
+
+:root{
+  /* AECP-Stil: weiß, schwarz, Belgrano/Bitter/Open Sans; VLAN-Farben tragen Bedeutung */
+  --ink:#1c2b33; --mute:#546e7a; --line:#e3e1e8; --soft:#f3f5f7; --ok:#2e7d32; --bad:#c62828; --warn:#e65100; --accent:#61a229;
+  --head:"Belgrano",Georgia,serif; --ui:"Bitter",Georgia,serif; --body:"Open Sans","Helvetica Neue",Arial,sans-serif; --mono:ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#fff;color:var(--ink);font:16px/1.65 var(--body)}
+.vmain{max-width:980px;margin:0 auto;padding:24px 20px 60px}
+.vmain h1{font:400 clamp(30px,4.5vw,42px)/1.15 var(--head);letter-spacing:.5px;margin:.3em 0 .2em;text-wrap:balance}
+.vmain h2{font:400 26px/1.2 var(--head);letter-spacing:.5px;margin:0 0 .4em;text-wrap:balance}
+.sub{color:var(--mute);max-width:72ch;margin:0 0 14px}
+.jumps{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 6px}
+.jumps a{font:600 15px var(--ui);letter-spacing:.4px;color:#fff;background:var(--ink);padding:8px 14px;border-radius:4px;text-decoration:none}
+.jumps a:hover{background:#000}
+.part{border-top:3px solid var(--ink);margin-top:40px;padding-top:12px}
+.card{border:1px solid var(--line);border-radius:4px;background:#fff;padding:18px 20px;margin:14px 0}
+svg{width:100%;height:auto;display:block;background:#fbfcfd;border:1px solid var(--line);border-radius:4px}
+button,select,input{font:600 15px var(--ui);letter-spacing:.3px}
+.btn{padding:9px 16px;border-radius:4px;border:1.5px solid var(--ink);background:var(--ink);color:#fff;cursor:pointer}
+.btn:hover{background:#000}
+.btn.ghost{background:#fff;color:var(--ink)}
+.btn.ghost:hover{background:var(--soft)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Schritt-Animation */
+.sbgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+@media(max-width:760px){.sbgrid{grid-template-columns:1fr}}
+.cfg{background:var(--soft);border-radius:4px;padding:10px 14px;font-size:14px}
+.cfg h3{font:600 15px var(--ui);margin:0 0 6px}
+.cfg label{margin-right:12px;white-space:nowrap}
+.cfg select{font:500 14px var(--body);padding:2px 4px}
+.hint{font-size:14px;color:var(--mute);margin:8px 0 0}
+.result{margin-top:10px;font-size:15px;min-height:1.6em}
+.frames{margin-top:12px;font:13px var(--mono)}
+.frame{display:flex;flex-wrap:wrap;margin:6px 0;align-items:stretch}
+.frame span{border:1.5px solid var(--ink);border-right:0;padding:5px 8px;background:#fff;white-space:nowrap}
+.frame span:last-child{border-right:1.5px solid var(--ink)}
+.frame .ftag{background:#fff8e1;font-weight:700}
+.frame .ftag.none{background:var(--soft);color:var(--mute);border-style:dashed;font-weight:400}
+.frame b{font-family:var(--body)}
+.flab{font:600 14px var(--ui);margin-top:8px}
+
+/* Regelwerk */
+.rules{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:760px){.rules{grid-template-columns:1fr}}
+.rules .card{margin:0}
+.rules h3{font:400 19px var(--head);margin:0 0 6px}
+.rules ul{margin:0;padding-left:20px}
+.rules li{margin:3px 0}
+code,pre{font-family:var(--mono);font-size:13.5px}
+pre.cli{background:#1c2b33;color:#e6edf2;border-radius:4px;padding:10px 12px;margin:8px 0 0;overflow-x:auto;line-height:1.5}
+.check{background:#fff8e1;border:1px solid #ffe082}
+
+/* Übungen */
+.pager{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:4px;padding:12px 14px;margin:14px 0}
+.pinfo{text-align:center;line-height:1.3}
+.pinfo span{display:block;font-size:13px;color:var(--mute)}
+.toc{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:5px}
+.toc button{min-width:36px;padding:4px 0;border:1px solid #cfd8dc;background:#fff;color:var(--ink);border-radius:4px;cursor:pointer;font-size:13px}
+.toc button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.toc button.ok{background:#e3f4e6;border-color:#a5d6a7}
+.toc button.on.ok{background:var(--ok);border-color:var(--ok)}
+.task h3{font:400 22px var(--head);margin:0 0 4px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.tag{font:400 12px var(--head);text-transform:uppercase;letter-spacing:1.5px;color:#3d6e14;background:#eef6e6;padding:2px 8px;border-radius:2px}
+.trunks{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px;margin-top:10px}
+.trunks pre{margin:0}
+.q{margin-top:16px;padding-top:12px;border-top:1px dashed #cfd8dc}
+.q p{margin:0 0 6px;font-weight:600}
+.opts{display:flex;flex-wrap:wrap;gap:6px 10px}
+.opts label{display:inline-flex;align-items:center;gap:6px;border:1.5px solid #cfd8dc;border-radius:4px;padding:5px 10px;cursor:pointer;font-size:15px;background:#fff}
+.opts label.right{border-color:var(--ok);background:#e3f4e6}
+.opts label.wrong{border-color:var(--bad);background:#fde3e3}
+.opts label.missed{border-color:var(--ok);border-style:dashed}
+.dot{width:11px;height:11px;border-radius:50%;display:inline-block}
+.acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;align-items:center}
+.fb{font-weight:600}
+.fb.good{color:var(--ok)} .fb.bad{color:var(--bad)}
+.sol{display:none;margin-top:14px;border-top:2px solid var(--ink);padding-top:12px}
+.sol.open{display:block}
+.sol ul{list-style:none;padding:0;margin:10px 0}
+.sol li{margin:4px 0;padding-left:4px}
+.ans{background:var(--soft);border-left:4px solid var(--accent);padding:8px 12px;margin:8px 0}
+.navrow{display:flex;justify-content:space-between;margin-top:14px;gap:8px}
+.genbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
+.genbar select,.genbar input{padding:8px;border:1.5px solid #90a4ae;border-radius:4px;font-family:var(--body);font-weight:500}
+.err{color:var(--bad)}
+@media print{.jumps,.pager,.acts,.navrow,.genbar,#sandbox,#generator{display:none!important}.task{display:block!important;break-inside:avoid}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-top:10px}
+.rules{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+@media(max-width:760px){.two,.rules{grid-template-columns:minmax(0,1fr)}}
+.ph{font:600 14px var(--ui);margin:0 0 4px}
+pre.cli .rw{display:block;cursor:pointer;border-radius:3px;margin:0 -6px;padding:0 6px}
+pre.cli .rw:hover{background:#2d4350}
+pre.cli .rw.on{background:#f9a825;color:#1c2b33}
+pre.cli .hl{background:#f9a825;color:#1c2b33;border-radius:2px}
+.explain{background:var(--soft);border-radius:4px;padding:12px 16px;margin-top:10px;font-size:16px;min-height:4em}
+.explain p{margin:0 0 6px}
+.k{display:inline-block;font:700 12px var(--ui);color:#fff;padding:1px 7px;border-radius:3px;margin-right:4px}
+.k1{background:#1565c0}.k2{background:#2e7d32}.k3{background:#e65100}.k4{background:#6a1b9a}
+.outs{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin-top:10px}
+@media(max-width:860px){.outs{grid-template-columns:minmax(0,1fr)}}
+.outs details{border:1px solid var(--line);border-radius:4px;background:#1c2b33}
+.outs summary{cursor:pointer;color:#fff;font:600 14px var(--mono);padding:8px 12px;list-style-position:inside}
+.outs pre.cli{margin:0;border-radius:0 0 4px 4px;max-height:380px;overflow:auto;font-size:12.5px}
+.wire svg [data-pin] rect{transition:fill .12s}
+.wire svg [data-pin]:hover rect{fill:#fff8e1}
+.wbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px;font-size:14.5px;color:var(--mute)}
+.wbar .btn{padding:5px 12px;font-size:14px}
+.at{border-collapse:collapse;margin-top:6px;font-size:15px;width:100%}
+.at th,.at td{border:1px solid #cfd8dc;padding:5px 9px;text-align:left}
+.at th{background:var(--soft);font:600 14px var(--ui)}
+.at select,.at input{padding:5px 7px;border:1.5px solid #90a4ae;border-radius:4px;font:500 14px var(--mono);width:100%;max-width:240px}
+.at .right{border-color:var(--ok);background:#e3f4e6}.at .wrong{border-color:var(--bad);background:#fde3e3}
+.qh{font:600 16px var(--ui);margin:16px 0 4px}
+.slist{list-style:none;padding:0;margin:6px 0}
+.slist li{margin:5px 0;padding:6px 10px;background:var(--soft);border-radius:4px;font-size:14.5px}
+.slist code{font-size:12.5px}
+.cmp{width:100%;border-collapse:collapse;font-size:15px;margin-top:6px}
+.cmp th,.cmp td{border:1px solid #cfd8dc;padding:6px 10px;text-align:left;vertical-align:top}
+.cmp th{background:var(--soft);font:600 14px var(--ui)}
+.quiz .q .ex{display:none;margin-top:6px;font-size:15px;background:var(--soft);border-left:4px solid var(--accent);padding:6px 10px}
+.quiz .q .ex.open{display:block}
+.opts.col{flex-direction:column;align-items:flex-start}
+</style>
+</head>
+<body>
+<main class="vmain">
+<h1>CDP – Nachbarn erkennen und den Netzplan rekonstruieren</h1>
+<p class="sub">Das <b>Cisco Discovery Protocol</b> verrät, welches Cisco-Gerät an welchem Port hängt – mit Hostname, Modell, IP-Adresse und Software-Version. Damit kann man ein unbekanntes Netz Stück für Stück aufzeichnen.</p>
+<nav class="jumps" aria-label="Abschnitte"><a href="#lesen">Ausgabe lesen</a><a href="#regeln">Wissen und Befehle</a><a href="#quiz">Teste dich</a><a href="#uebungen">Übungen</a><a href="#generator">🎲 Zufallsgenerator</a></nav>
+
+<h2 class="part" id="lesen">Eine CDP-Ausgabe lesen</h2>
+<p class="sub">Der Befehl wurde auf <b>KERN</b> eingegeben. Klick auf eine Zeile der Ausgabe – dann siehst du, welches Kabel sie beschreibt und was in der Detail-Ausgabe dazu steht.</p>
+<div class="card">
+ <div id="exsvg"></div>
+ <p class="ph" style="margin-top:12px">KERN# show cdp neighbors</p><pre class="cli" id="exbrief"></pre>
+ <div class="explain" id="exexp" aria-live="polite"><p>Jede Zeile ist <b>ein direkt verbundener Nachbar</b> – also ein Kabel. Klick auf eine Zeile.</p></div>
+ <p class="ph" style="margin-top:12px">KERN# show cdp neighbors detail (nur dieser Nachbar)</p><pre class="cli" id="exdet">Klick oben auf eine Zeile.</pre>
+</div>
+
+<h2 class="part" id="regeln">Wissen und Befehle</h2>
+<div class="rules">
+ <div class="card"><h3>Was ist CDP?</h3><ul>
+  <li>Cisco-eigenes Protokoll auf <b>Layer 2</b> – funktioniert auch ohne IP-Konfiguration.</li>
+  <li>Zeigt nur <b>direkt verbundene</b> Cisco-Geräte. Was hinter dem Nachbarn liegt, sieht man nicht.</li>
+  <li>Standardmäßig an, alle <b>60 Sekunden</b> ein Paket, ein Eintrag gilt <b>180 Sekunden</b> (Holdtime).</li>
+  <li>Die herstellerneutrale Alternative ist <b>LLDP</b> (IEEE 802.1AB).</li></ul></div>
+ <div class="card check"><h3>Die zwei Ports einer Zeile</h3><ul>
+  <li><b>Local Intrfce</b> = der Port <b>am eigenen Gerät</b>, auf dem der Befehl läuft.</li>
+  <li><b>Port ID</b> = der Port <b>am Nachbarn</b>.</li>
+  <li>In der Detail-Ausgabe heißen sie <code>Interface</code> und <code>Port ID (outgoing port)</code>.</li></ul>
+  <p class="hint">Häufigster Fehler: die beiden vertauschen.</p></div>
+ <div class="card"><h3>Modell und IP-Adresse</h3><ul>
+  <li>In <code>show cdp neighbors</code> ist die Platform-Spalte <b>abgeschnitten</b> (<code>WS-C2960-</code>). Das volle Modell steht nur in <code>detail</code>.</li>
+  <li>Die IP-Adresse gibt es <b>nur</b> in <code>detail</code> (<code>Entry address</code>).</li>
+  <li>Ein <b>Switch</b> meldet seine Management-IP (SVI). Ein <b>Router</b> meldet die IP des Interfaces, über das das CDP-Paket hinausgeht – jedem Nachbarn also eine andere.</li>
+  <li>Ist eine Domain konfiguriert, steht sie in der Device ID: <code>ZEUS.htl.local</code> ist das Gerät mit dem Hostname ZEUS.</li></ul></div>
+ <div class="card"><h3>Sicherheit</h3><ul>
+  <li>CDP verrät Modell, IOS-Version und IP-Adressen – wertvoll für Angreifer.</li>
+  <li>An Ports zu fremden Geräten, Gästen und zum Internet abschalten.</li>
+  <li>CDP-Pakete sind nicht authentifiziert und lassen sich fälschen.</li></ul></div>
+</div>
+<div class="card">
+<table class="cmp"><thead><tr><th>Befehl</th><th>Was er macht</th></tr></thead><tbody>
+<tr><td><code>show cdp neighbors</code></td><td>Kurzliste aller Nachbarn: Device ID, eigener Port, Holdtime, Fähigkeiten, Plattform (abgeschnitten), Port am Nachbarn</td></tr>
+<tr><td><code>show cdp neighbors detail</code></td><td>Alles pro Nachbar: IP-Adresse, volles Modell, beide Ports, IOS-Version, Native VLAN, Duplex</td></tr>
+<tr><td><code>show cdp entry ZEUS</code></td><td>Details nur für einen Nachbarn</td></tr>
+<tr><td><code>show cdp interface</code></td><td>Auf welchen Interfaces CDP läuft, Timer</td></tr>
+<tr><td><code>no cdp run</code> / <code>cdp run</code></td><td>CDP auf dem ganzen Gerät aus- bzw. einschalten (global)</td></tr>
+<tr><td><code>interface g0/1</code> → <code>no cdp enable</code></td><td>CDP nur auf einem Interface abschalten</td></tr>
+<tr><td><code>lldp run</code>, <code>show lldp neighbors</code></td><td>LLDP einschalten (bei Cisco standardmäßig aus) und Nachbarn anzeigen</td></tr>
+</tbody></table>
+</div>
+
+<h2 class="part" id="quiz">Teste dich</h2>
+<div class="card quiz" id="qz"></div>
+
+<h2 class="part" id="uebungen">Übungen</h2>
+<p class="sub">Die Geräte und ihre Ports sind aufgezeichnet – aber nicht verkabelt. Lies die CDP-Ausgaben und finde für jedes Gerät <b>Modell</b> und <b>IP-Adresse</b>. Dann steck die Kabel: erst auf einen Port klicken, dann auf den Port am anderen Ende. Ein Klick auf ein Kabel zieht es wieder ab. Nicht jeder Port wird gebraucht.</p>
+<div class="pager"><button class="btn ghost" id="pprev" type="button">‹ Zurück</button><div class="pinfo"><b id="pnum"></b><span id="ppart"></span></div><button class="btn" id="pnext" type="button">Weiter ›</button><div class="toc" id="ptoc"></div></div>
+<div id="tasks"></div>
+
+<h2 class="part" id="generator">🎲 Zufallsgenerator</h2>
+<p class="sub">Jede Aufgabe hat eine Nummer. Mit der Nummer bekommt jede Schülerin und jeder Schüler genau dieselbe Aufgabe.</p>
+<div class="genbar"><label for="glvl">Stufe</label><select id="glvl"><option value="L">Leicht (3 Geräte, viele Ausgaben)</option><option value="M" selected>Mittel (4–5 Geräte)</option><option value="S">Schwer (6 Geräte, Domains, redundanter Link, wenig Ausgaben)</option></select>
+<button class="btn" id="gnew" type="button">Neue Aufgabe</button><label for="gcode">Nummer</label><input id="gcode" size="8" placeholder="M-123" autocomplete="off"><button class="btn ghost" id="gload" type="button">Laden</button><span id="gmsg" class="err"></span></div>
+<div id="gout"></div>
+</main>
+<script>
+/* NWT · CDP: Netzplan aus CDP-Ausgaben rekonstruieren. Topologie-Generator, CDP-Ausgaben, Zeichnen.
+   Browser: window.CDP · Node: globalThis.CDP */
+(function (G) {
+'use strict';
+var LVNAME = {L: 'Leicht', M: 'Mittel', S: 'Schwer'};
+var LVCODE = {L: 3, M: 4, S: 5};
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function ri(r, a, b) { return a + Math.floor(r() * (b - a + 1)); }
+function pick(r, a) { return a[Math.floor(r() * a.length)]; }
+function shuffle(r, a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(r() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+
+/* ---------- Geräte ---------- */
+function range(pre, a, b) { var o = []; for (var i = a; i <= b; i++) o.push(pre + i); return o; }
+var RCAP = ['R B S I', 'Router Source-Route-Bridge Switch IGMP'];
+var MODELS = {
+  c2960a: {plat: 'WS-C2960-24TT-L', type: 'sw', caps: 'S I', capl: 'Switch IGMP', ports: range('FastEthernet0/', 1, 24).concat(range('GigabitEthernet0/', 1, 2)), up: ['GigabitEthernet0/1', 'GigabitEthernet0/2'],
+    ver: 'Cisco IOS Software, C2960 Software (C2960-LANBASEK9-M), Version 15.2(7)E8, RELEASE SOFTWARE (fc3)'},
+  c2960b: {plat: 'WS-C2960-48TT-L', type: 'sw', caps: 'S I', capl: 'Switch IGMP', ports: range('FastEthernet0/', 1, 48).concat(range('GigabitEthernet0/', 1, 2)), up: ['GigabitEthernet0/1', 'GigabitEthernet0/2'],
+    ver: 'Cisco IOS Software, C2960 Software (C2960-LANBASEK9-M), Version 15.2(7)E8, RELEASE SOFTWARE (fc3)'},
+  c3650: {plat: 'WS-C3650-24PS', type: 'sw', caps: 'R S I', capl: 'Router Switch IGMP', ports: range('GigabitEthernet1/0/', 1, 24).concat(range('GigabitEthernet1/1/', 1, 4)), up: range('GigabitEthernet1/1/', 1, 4),
+    ver: 'Cisco IOS Software [Gibraltar], Catalyst L3 Switch Software (CAT3K_CAA-UNIVERSALK9-M), Version 16.12.10, RELEASE SOFTWARE (fc2)'},
+  c9200: {plat: 'C9200L-24P-4G', type: 'sw', caps: 'S I', capl: 'Switch IGMP', ports: range('GigabitEthernet1/0/', 1, 24).concat(range('GigabitEthernet1/1/', 1, 4)), up: range('GigabitEthernet1/1/', 1, 4),
+    ver: 'Cisco IOS Software [Cupertino], Catalyst L3 Switch Software (CAT9K_LITE_IOSXE), Version 17.9.4a, RELEASE SOFTWARE (fc3)'},
+  isr4331: {plat: 'ISR4331/K9', type: 'r', caps: RCAP[0], capl: RCAP[1], ports: range('GigabitEthernet0/0/', 0, 2), up: [],
+    ver: 'Cisco IOS Software [Bengaluru], ISR Software (X86_64_LINUX_IOSD-UNIVERSALK9-M), Version 17.6.5, RELEASE SOFTWARE (fc2)'},
+  c2911: {plat: 'CISCO2911/K9', type: 'r', caps: RCAP[0], capl: RCAP[1], ports: range('GigabitEthernet0/', 0, 2), up: [],
+    ver: 'Cisco IOS Software, C2900 Software (C2900-UNIVERSALK9-M), Version 15.7(3)M8, RELEASE SOFTWARE (fc1)'},
+  c1111: {plat: 'C1111-8P', type: 'r', caps: RCAP[0], capl: RCAP[1], ports: range('GigabitEthernet0/0/', 0, 1), up: [],
+    ver: 'Cisco IOS Software [Cupertino], c1100 Software (ARMV8EB_LINUX_IOSD-UNIVERSALK9_IAS-M), Version 17.9.4a, RELEASE SOFTWARE (fc3)'}
+};
+var MODEL_KEYS = ['c2960a', 'c2960b', 'c3650', 'c9200', 'isr4331', 'c2911', 'c1111'];
+var SWK = ['c2960a', 'c2960b', 'c3650', 'c9200'], RK = ['isr4331', 'c2911', 'c1111'];
+var NAMES = ['ZEUS', 'HERA', 'APOLLO', 'ATHENE', 'KELLER-01', 'GANG-OST', 'EDV-RACK', 'LAB-A', 'LAB-B', 'AULA', 'TURM', 'NORD', 'SUED', 'FALKE', 'ADLER', 'BIBER', 'LUCHS', 'KOBRA', 'WERKSTATT', 'BIBLIOTHEK', 'STIEGE-2', 'MERKUR', 'SATURN', 'PLUTO'];
+var DOMAINS = ['.htl.local', '.schule.intern', '.pinkafeld.lan'];
+
+function short(p) { return p.replace('FastEthernet', 'Fa').replace('GigabitEthernet', 'Gi'); }
+function abbr(p) { return p.replace('FastEthernet', 'Fas ').replace('GigabitEthernet', 'Gig '); }
+function pidx(m, p) { return MODELS[m].ports.indexOf(p); }
+
+/* ---------- Aufgabe ---------- */
+function build(r, lvl) {
+  var nr = lvl === 'L' ? 1 : lvl === 'M' ? ri(r, 1, 2) : 2, ns = lvl === 'L' ? 2 : lvl === 'M' ? (nr === 1 ? ri(r, 3, 4) : 3) : 4;
+  var names = shuffle(r, NAMES), devs = [];
+  for (var i = 0; i < nr + ns; i++) {
+    var isR = i < nr;
+    devs.push({i: i, host: names[i], model: isR ? pick(r, RK) : pick(r, SWK), used: {}});
+  }
+  /* Baum: Router zuerst, dann jeder Switch an ein bestehendes Gerät */
+  var links = [], deg = devs.map(function () { return 0; });
+  function cap(d) { return d.model in {isr4331: 1, c2911: 1, c1111: 1} ? MODELS[d.model].ports.length : 6; }
+  function can(a, b) { return deg[a.i] < cap(a) && deg[b.i] < cap(b) && !linked(a.i, b.i); }
+  function linked(a, b) { return links.some(function (l) { return (l.a.d === a && l.b.d === b) || (l.a.d === b && l.b.d === a); }); }
+  function add(a, b) { links.push({a: {d: a.i}, b: {d: b.i}}); deg[a.i]++; deg[b.i]++; }
+  if (nr === 2) add(devs[0], devs[1]);
+  for (i = nr; i < devs.length; i++) {
+    var cand = devs.slice(0, i).filter(function (d) { return can(d, devs[i]); });
+    if (!cand.length) return null;
+    /* Switches hängen bevorzugt an Switches (Hierarchie), der erste an einem Router */
+    var sw = cand.filter(function (d) { return MODELS[d.model].type === 'sw'; });
+    add(i === nr || !sw.length || r() < 0.3 ? pick(r, cand.filter(function (d) { return MODELS[d.model].type === 'r'; }).concat(i === nr ? [] : sw)) || pick(r, cand) : pick(r, sw), devs[i]);
+  }
+  if (lvl === 'S') { /* redundanter Link zwischen zwei Switches */
+    var sws = devs.filter(function (d) { return MODELS[d.model].type === 'sw'; }), pairs = [];
+    sws.forEach(function (a) { sws.forEach(function (b) { if (a.i < b.i && can(a, b)) pairs.push([a, b]); }); });
+    if (!pairs.length) return null;
+    var pr = pick(r, pairs); add(pr[0], pr[1]);
+  }
+  /* Ports vergeben */
+  function port(d, peer) {
+    var m = MODELS[d.model], free = m.ports.filter(function (p) { return !d.used[p]; });
+    var ups = m.up.filter(function (p) { return !d.used[p]; });
+    var p = ups.length && (MODELS[peer.model].type === 'r' || r() < 0.55) ? pick(r, ups) : pick(r, free.filter(function (q) { return m.up.indexOf(q) < 0; }).slice(0, 24).concat(ups));
+    d.used[p] = 1; return p;
+  }
+  links.forEach(function (l) { var A = devs[l.a.d], B = devs[l.b.d]; l.a.p = port(A, B); l.b.p = port(B, A); });
+  /* Adressen */
+  var mg = pick(r, [['10.' + ri(r, 1, 30) + '.99.', 1], ['192.168.' + ri(r, 100, 199) + '.', 1], ['172.16.' + ri(r, 1, 9) + '.', 1]])[0];
+  var hosts = shuffle(r, range('', 2, 60).map(Number));
+  devs.forEach(function (d, k) { if (MODELS[d.model].type === 'sw') d.ip = mg + hosts[k]; });
+  var tn = 0, mgUsed = false;
+  links.forEach(function (l) {
+    var A = devs[l.a.d], B = devs[l.b.d], ra = MODELS[A.model].type === 'r', rb = MODELS[B.model].type === 'r';
+    if (ra && rb) { var base = '10.255.' + ri(r, 0, 9) * 4 + tn + '.'; tn++; l.a.ip = base + '1'; l.b.ip = base + '2'; }
+    else if (ra || rb) {
+      var ip; if (!mgUsed) { ip = mg + '1'; mgUsed = true; } else { ip = '10.' + ri(r, 40, 90) + '.' + (10 + tn) + '.1'; tn++; }
+      if (ra) l.a.ip = ip; else l.b.ip = ip;
+    }
+  });
+  /* Domains (Schwer) */
+  var dom = lvl === 'S' ? pick(r, DOMAINS) : null;
+  devs.forEach(function (d) { d.id = dom && r() < 0.7 ? d.host + dom : d.host; });
+  /* Pins: benutzte Ports + Attrappen */
+  devs.forEach(function (d) {
+    var m = MODELS[d.model], pins = Object.keys(d.used), nd = lvl === 'L' ? ri(r, 1, 2) : ri(r, 2, 3);
+    var pool = shuffle(r, m.ports.filter(function (p) { return !d.used[p]; }).slice(0, 26));
+    var near = pool.filter(function (p) { return m.up.indexOf(p) >= 0; }).concat(pool.filter(function (p) { return m.up.indexOf(p) < 0; }));
+    pins = pins.concat(near.slice(0, Math.min(nd, Math.max(0, 6 - pins.length))));
+    d.pins = pins.sort(function (a, b) { return pidx(d.model, a) - pidx(d.model, b); });
+  });
+  return {devs: devs, links: links};
+}
+function nbrs(T, d) {
+  var o = [];
+  T.links.forEach(function (l, k) { if (l.a.d === d) o.push({k: k, me: l.a, it: l.b}); else if (l.b.d === d) o.push({k: k, me: l.b, it: l.a}); });
+  return o;
+}
+/* IP, die Gerät x per CDP über den Link meldet: Switch → Management-IP, Router → Interface-IP */
+function advIP(T, end) { var d = T.devs[end.d]; return MODELS[d.model].type === 'sw' ? d.ip : end.ip; }
+function chooseOutputs(T, r, lvl) {
+  var n = T.devs.length, D = {}, B = {};
+  function covered(u) { return nbrs(T, u).some(function (x) { return D[x.it.d]; }); }
+  var order = shuffle(r, range('', 0, n - 1).map(Number));
+  order.forEach(function (u) { if (!covered(u)) D[pick(r, nbrs(T, u)).it.d] = 1; });
+  var pB = lvl === 'L' ? 1 : lvl === 'M' ? 0.5 : 0.2;
+  for (var i = 0; i < n; i++) if (!D[i] && r() < pB) B[i] = 1;
+  T.links.forEach(function (l) { if (!D[l.a.d] && !D[l.b.d] && !B[l.a.d] && !B[l.b.d]) B[pick(r, [l.a.d, l.b.d])] = 1; });
+  var outs = [];
+  for (i = 0; i < n; i++) { if (D[i]) outs.push({d: i, kind: 'detail'}); if (B[i]) outs.push({d: i, kind: 'brief'}); }
+  outs = shuffle(r, outs);
+  outs.forEach(function (o) { o.hold = nbrs(T, o.d).map(function () { return ri(r, 120, 179); }); o.text = o.kind === 'detail' ? detailOut(T, o) : briefOut(T, o); });
+  return outs;
+}
+function pad(t, w) { t = String(t); while (t.length < w) t += ' '; return t; }
+function padL(t, w) { t = String(t); while (t.length < w) t = ' ' + t; return t; }
+var CAPCODES = 'Capability Codes: R - Router, T - Trans Bridge, B - Source Route Bridge\n                  S - Switch, H - Host, I - IGMP, r - Repeater, P - Phone,\n                  D - Remote, C - CVTA, M - Two-port Mac Relay\n\n';
+function briefOut(T, o) {
+  var d = T.devs[o.d], s = d.host + '# show cdp neighbors\n' + CAPCODES + 'Device ID        Local Intrfce     Holdtme    Capability  Platform  Port ID\n';
+  var ns = nbrs(T, o.d).sort(function (a, b) { return T.devs[a.it.d].id < T.devs[b.it.d].id ? -1 : 1; });
+  ns.forEach(function (x, k) {
+    var N = T.devs[x.it.d], m = MODELS[N.model], id = N.id;
+    s += (id.length > 16 ? id + '\n' + pad('', 17) : pad(id, 17)) + pad(abbr(x.me.p), 18) + padL(o.hold[k], 7) + padL(m.caps, 15) + ' ' + pad(m.plat.slice(0, 9), 10) + abbr(x.it.p) + '\n';
+  });
+  return s + '\nTotal cdp entries displayed : ' + ns.length;
+}
+function detailOut(T, o) {
+  var d = T.devs[o.d], s = d.host + '# show cdp neighbors detail\n';
+  nbrs(T, o.d).forEach(function (x, k) {
+    var N = T.devs[x.it.d], m = MODELS[N.model], ip = advIP(T, x.it), sw = MODELS[d.model].type === 'sw' && m.type === 'sw';
+    s += '-------------------------\nDevice ID: ' + N.id + '\nEntry address(es): \n  IP address: ' + ip + '\nPlatform: cisco ' + m.plat + ',  Capabilities: ' + m.capl + ' \n' +
+      'Interface: ' + x.me.p + ',  Port ID (outgoing port): ' + x.it.p + '\nHoldtime : ' + o.hold[k] + ' sec\n\nVersion :\n' + m.ver + '\nTechnical Support: http://www.cisco.com/techsupport\n\n' +
+      'advertisement version: 2\n' + (sw ? 'Native VLAN: 1\n' : '') + 'Duplex: full\nManagement address(es): \n  IP address: ' + ip + '\n\n';
+  });
+  return s + 'Total cdp entries displayed : ' + nbrs(T, o.d).length;
+}
+/* Antworten: Modell und akzeptierte IPs je Gerät */
+function solve(T) {
+  var shownD = {}; T.outs.forEach(function (o) { if (o.kind === 'detail') shownD[o.d] = 1; });
+  return T.devs.map(function (d) {
+    var ips = [];
+    nbrs(T, d.i).forEach(function (x) { if (shownD[x.it.d]) { var ip = advIP(T, x.me); if (ips.indexOf(ip) < 0) ips.push(ip); } });
+    return {model: d.model, ips: ips};
+  });
+}
+function cableKey(a, b) { var x = a.d + '|' + a.p, y = b.d + '|' + b.p; return x < y ? x + '~' + y : y + '~' + x; }
+function solutionKeys(T) { return T.links.map(function (l) { return cableKey(l.a, l.b); }).sort(); }
+/* Plätze im Raster (2 Reihen) */
+function place(T, r) {
+  var n = T.devs.length, cols = Math.ceil(n / 2), cells = [];
+  for (var row = 0; row < 2; row++) for (var c = 0; c < cols; c++) cells.push([c, row]);
+  cells = shuffle(r, cells).slice(0, n);
+  T.cols = cols; T.devs.forEach(function (d, k) { d.pos = cells[k]; });
+}
+function makeTask(seed, lvl) {
+  if (!LVCODE[lvl] || !(seed >= 1)) return null;
+  for (var att = 0; att < 200; att++) {
+    var r = mulberry32((seed * 7919 + att * 104729 + LVCODE[lvl] * 1000003 + 4242) >>> 0);
+    var T = build(r, lvl); if (!T) continue;
+    T.outs = chooseOutputs(T, r, lvl);
+    if (lvl !== 'L' && T.outs.length < 2) continue;
+    place(T, r);
+    T.ans = solve(T);
+    if (T.ans.some(function (a) { return !a.ips.length; })) continue;
+    T.level = lvl; T.code = lvl + '-' + seed;
+    return T;
+  }
+  return null;
+}
+
+/* Beweis für einen Link: welche Ausgabe zeigt ihn? */
+function evidence(T, l) {
+  var o = T.outs.filter(function (o) { return o.d === l.a.d || o.d === l.b.d; })[0];
+  var me = o.d === l.a.d ? l.a : l.b, it = o.d === l.a.d ? l.b : l.a;
+  return T.devs[o.d].host + '# show cdp neighbors' + (o.kind === 'detail' ? ' detail' : '') + ': ' + (o.kind === 'detail' ? 'Interface ' + me.p + ', Port ID ' + it.p : 'Local Intrfce ' + abbr(me.p) + ', Port ID ' + abbr(it.p)) + ' bei Device ID ' + T.devs[it.d].id;
+}
+function ipEvidence(T, d) {
+  var o = [];
+  nbrs(T, d).forEach(function (x) { if (T.outs.some(function (q) { return q.d === x.it.d && q.kind === 'detail'; })) o.push(T.devs[x.it.d].host + ' (detail): IP address ' + advIP(T, x.me)); });
+  return o;
+}
+
+/* ---------- Zeichnen ---------- */
+function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]; }); }
+function tx(x, y, t, o) { o = o || {}; return '<text x="' + x + '" y="' + y + '" text-anchor="' + (o.a || 'middle') + '" font-size="' + (o.fs || 13) + '" font-weight="' + (o.fw || 400) + '" fill="' + (o.c || '#1c2b33') + '" font-family="' + (o.mono ? 'ui-monospace,Menlo,Consolas,monospace' : 'Open Sans,Arial,sans-serif') + '"' + (o.pe ? ' pointer-events="none"' : '') + '>' + esc(t) + '</text>'; }
+var PW = 62, PH = 26;
+function geom(T) {
+  var mx = Math.max.apply(null, T.devs.map(function (d) { return Math.max(200, 24 + d.pins.length * (PW + 6)); }));
+  var cw = Math.max(330, mx + 40), W = Math.max(760, T.cols * cw + 20), H = 600, g = {W: W, H: H, d: []};
+  T.devs.forEach(function (d) {
+    var bw = Math.max(200, 24 + d.pins.length * (PW + 6)), cx = 10 + (T.cols === 1 ? W / 2 - 10 : (d.pos[0] + 0.5) * ((W - 20) / T.cols)), top = d.pos[1] === 0 ? 30 : 440;
+    var pins = {};
+    d.pins.forEach(function (p, k) { var px = cx - bw / 2 + 12 + k * (PW + 6) + PW / 2; pins[p] = {x: px, y: d.pos[1] === 0 ? top + 104 : top, row: d.pos[1]}; });
+    g.d.push({cx: cx, top: top, bw: bw, pins: pins});
+  });
+  return g;
+}
+function cablePath(A, B) {
+  var bend = A.row === B.row ? (A.row === 0 ? 110 : -110) : 0;
+  if (A.row === B.row) return 'M' + A.x + ' ' + A.y + 'C' + A.x + ' ' + (A.y + bend) + ' ' + B.x + ' ' + (B.y + bend) + ' ' + B.x + ' ' + B.y;
+  var a = A.row === 0 ? A : B, b = A.row === 0 ? B : A, my = (a.y + b.y) / 2;
+  return 'M' + a.x + ' ' + a.y + 'C' + a.x + ' ' + my + ' ' + b.x + ' ' + my + ' ' + b.x + ' ' + b.y;
+}
+function icon(type, x, y) {
+  if (type === 'r') return '<g transform="translate(' + x + ' ' + y + ')"><ellipse cx="0" cy="7" rx="22" ry="8" fill="#1f5872"/><rect x="-22" y="-7" width="44" height="14" fill="#2f7392"/><ellipse cx="0" cy="-7" rx="22" ry="8" fill="#5a9dbb" stroke="#1f5872"/><path d="M-11 -7h7M4 -7h7M-1 -12v4M-1 -5v4" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></g>';
+  return '<g transform="translate(' + x + ' ' + y + ')"><path d="M-24 -4l8 -8h40l-8 8z" fill="#6aaecb" stroke="#1f5872"/><path d="M-24 -4h40v14h-40z" fill="#2f7392"/><path d="M16 -4l8 -8v14l-8 8z" fill="#1f5872"/><path d="M-16 1h8M-4 1h8M-12 5h8M0 5h8" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></g>';
+}
+/* opt: {cables:[[a,b]], sel:'d|p', marks:{key:'ok'|'bad'}, solution:true, hot:index, interactive} */
+function draw(T, opt) {
+  opt = opt || {};
+  var g = geom(T), o = ['<svg viewBox="0 0 ' + g.W + ' ' + g.H + '" role="img" aria-label="Netzplan zum Verkabeln">'];
+  T.devs.forEach(function (d, i) {
+    var G0 = g.d[i], x0 = G0.cx - G0.bw / 2, top = G0.top, row0 = d.pos[1] === 0, ty = row0 ? top : top + 30;
+    o.push('<rect x="' + x0 + '" y="' + top + '" width="' + G0.bw + '" height="104" rx="8" fill="#fff" stroke="#1c2b33" stroke-width="1.6"/>');
+    o.push(icon(MODELS[d.model].type, x0 + 38, ty + (row0 ? 36 : 38)));
+    o.push(tx(x0 + 72, ty + (row0 ? 34 : 36), d.host, {a: 'start', fs: 17, fw: 700}));
+    o.push(tx(x0 + 72, ty + (row0 ? 52 : 54), opt.labels && opt.labels[i] ? opt.labels[i] : (MODELS[d.model].type === 'r' ? 'Router' : 'Switch'), {a: 'start', fs: 12, c: '#546e7a', mono: !!(opt.labels && opt.labels[i])}));
+    d.pins.forEach(function (p) {
+      var P = G0.pins[p], key = i + '|' + p, sel = opt.sel === key, py = row0 ? P.y - PH - 6 : P.y + 6;
+      o.push('<g' + (opt.interactive ? ' data-pin="' + key + '" style="cursor:pointer"' : '') + '><rect x="' + (P.x - PW / 2) + '" y="' + py + '" width="' + PW + '" height="' + PH + '" rx="4" fill="' + (sel ? '#fff59d' : '#eef3f7') + '" stroke="' + (sel ? '#f9a825' : '#78909c') + '" stroke-width="' + (sel ? 2.5 : 1.3) + '"/>' +
+        tx(P.x, py + 17.5, short(p), {fs: 11.5, mono: 1, fw: 600, pe: 1}) + '<circle cx="' + P.x + '" cy="' + P.y + '" r="4" fill="#1c2b33"/></g>');
+    });
+  });
+  function pin(key) { var k = key.split('|'); return g.d[+k[0]].pins[k[1]]; }
+  var cab = opt.solution ? T.links.map(function (l) { return [l.a.d + '|' + l.a.p, l.b.d + '|' + l.b.p]; }) : (opt.cables || []);
+  cab.forEach(function (c, k) {
+    var A = pin(c[0]), B = pin(c[1]), d = cablePath(A, B), key = c[0] < c[1] ? c[0] + '~' + c[1] : c[1] + '~' + c[0];
+    var mk = opt.marks && opt.marks[key], col = opt.solution ? '#2e7d32' : mk === 'ok' ? '#2e7d32' : mk === 'bad' ? '#c62828' : opt.hot === k ? '#f9a825' : '#1c2b33';
+    o.push('<g' + (opt.interactive ? ' data-cab="' + k + '" style="cursor:pointer"' : '') + '><path d="' + d + '" fill="none" stroke="transparent" stroke-width="14"/><path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="' + (opt.hot === k ? 5 : 3) + '"' + (mk === 'bad' ? ' stroke-dasharray="8 5"' : '') + ' stroke-linecap="round"/></g>');
+  });
+  o.push('</svg>');
+  return o.join('');
+}
+
+/* Beispiel für die Erklärung */
+function example() {
+  var T = {cols: 3, devs: [
+    {i: 0, host: 'GATE', id: 'GATE', model: 'isr4331', pos: [1, 0], pins: ['GigabitEthernet0/0/0', 'GigabitEthernet0/0/1']},
+    {i: 1, host: 'KERN', id: 'KERN', model: 'c3650', ip: '10.1.99.2', pos: [1, 1], pins: ['GigabitEthernet1/0/23', 'GigabitEthernet1/0/24', 'GigabitEthernet1/1/1']},
+    {i: 2, host: 'ETAGE1', id: 'ETAGE1', model: 'c2960a', ip: '10.1.99.11', pos: [0, 0], pins: ['FastEthernet0/24', 'GigabitEthernet0/1']},
+    {i: 3, host: 'ETAGE2', id: 'ETAGE2.htl.local', model: 'c2960b', ip: '10.1.99.12', pos: [2, 0], pins: ['GigabitEthernet0/1', 'GigabitEthernet0/2']}],
+    links: [{a: {d: 1, p: 'GigabitEthernet1/1/1'}, b: {d: 0, p: 'GigabitEthernet0/0/1', ip: '10.1.99.1'}},
+      {a: {d: 1, p: 'GigabitEthernet1/0/23'}, b: {d: 2, p: 'GigabitEthernet0/1'}},
+      {a: {d: 1, p: 'GigabitEthernet1/0/24'}, b: {d: 3, p: 'GigabitEthernet0/2'}}]};
+  T.outs = [{d: 1, kind: 'brief', hold: [163, 141, 177]}, {d: 1, kind: 'detail', hold: [163, 141, 177]}];
+  T.outs.forEach(function (o) { o.text = o.kind === 'detail' ? detailOut(T, o) : briefOut(T, o); });
+  return T;
+}
+
+G.CDP = {LVNAME: LVNAME, MODELS: MODELS, MODEL_KEYS: MODEL_KEYS, makeTask: makeTask, draw: draw, nbrs: nbrs, cableKey: cableKey, solutionKeys: solutionKeys,
+  evidence: evidence, ipEvidence: ipEvidence, short: short, abbr: abbr, example: example, briefOut: briefOut, detailOut: detailOut, advIP: advIP};
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+(function(){
+'use strict';
+var $=function(i){return document.getElementById(i);},C=window.CDP,reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+/* ---------- Beispiel ---------- */
+var EX=C.example(),exRows=C.nbrs(EX,1).sort(function(a,b){return EX.devs[a.it.d].id<EX.devs[b.it.d].id?-1:1;}),exSel=-1;
+function exRender(){
+ var lines=EX.outs[0].text.split('\n'),start=lines.findIndex(function(l){return l.indexOf('Device ID')===0;}),h='';
+ lines.forEach(function(l,i){var r=i-start-1;if(i===0)return;if(r>=0&&r<exRows.length)h+='<span class="rw'+(r===exSel?' on':'')+'" data-r="'+r+'">'+esc(l)+'</span>';else h+=esc(l)+'\n';});
+ $('exbrief').innerHTML=h;
+ $('exsvg').innerHTML=C.draw(EX,{cables:EX.links.map(function(l){return[l.a.d+'|'+l.a.p,l.b.d+'|'+l.b.p];}),hot:exSel>=0?exRows[exSel].k:-1});
+ if(exSel<0)return;
+ var x=exRows[exSel],N=EX.devs[x.it.d],m=C.MODELS[N.model],blk=EX.outs[1].text.split('-------------------------').filter(function(b){return b.indexOf('Device ID: '+N.id+'\n')>=0;})[0];
+ var ip=C.advIP(EX,x.it);
+ $('exdet').innerHTML=esc('-------------------------'+blk.replace(/\nTotal[\s\S]*$/,'')).replace(new RegExp('(IP address: '+ip.replace(/\./g,'\\.')+')','g'),'<span class="hl">$1</span>').replace(/(Platform: cisco [^,]+)/,'<span class="hl">$1</span>').replace(/(Interface: [^,]+),  (Port ID \(outgoing port\): \S+)/,'<span class="hl">$1</span>,  <span class="hl">$2</span>');
+ $('exexp').innerHTML='<p><span class="k k1">Device ID</span><b>'+esc(N.id)+'</b> – das ist der Nachbar'+(N.id!==N.host?' mit dem Hostname <b>'+N.host+'</b> (die Domain hängt hinten dran)':'')+'.</p>'+
+  '<p><span class="k k2">Local Intrfce</span><b>'+C.abbr(x.me.p)+'</b> – der Port <b>an KERN</b>, also an dem Gerät, auf dem der Befehl läuft. <span class="k k3">Port ID</span><b>'+C.abbr(x.it.p)+'</b> – der Port <b>am Nachbarn '+N.host+'</b>. Das Kabel: KERN '+C.short(x.me.p)+' ↔ '+N.host+' '+C.short(x.it.p)+'.</p>'+
+  '<p><span class="k k4">Platform</span><b>'+m.plat.slice(0,9)+'</b> ist abgeschnitten. Erst <code>detail</code> zeigt das volle Modell <b>'+m.plat+'</b> und die IP <b>'+ip+'</b>'+(m.type==='r'?' – bei einem Router die IP des Interfaces '+C.short(x.it.p)+', über das er mit KERN spricht':' – die Management-IP des Switches')+'.</p>';
+}
+$('exbrief').addEventListener('click',function(e){var r=e.target.closest('[data-r]');if(!r)return;exSel=+r.dataset.r;exRender();});
+exRender();
+
+/* ---------- Quiz ---------- */
+var Q=[
+ ['Welche Geräte zeigt show cdp neighbors an?',['Alle Cisco-Geräte im ganzen Netz','Nur direkt verbundene Cisco-Geräte','Alle Geräte im selben VLAN','Alle Geräte mit IP-Adresse im selben Subnetz'],1,'CDP-Pakete werden nicht weitergeleitet. Man sieht nur das Gerät am anderen Ende des Kabels.'],
+ ['Auf SW1 steht die Zeile: SW2   Gig 0/1   150   S I   WS-C2960-   Fas 0/24. An welchem Port von SW2 steckt das Kabel?',['Gi0/1','Fa0/24','An beiden','Das sieht man nicht'],1,'Port ID ist der Port am Nachbarn: SW2 Fa0/24. Gi0/1 (Local Intrfce) ist der Port an SW1.'],
+ ['Wo findest du die IP-Adresse eines Nachbarn?',['In der Spalte Platform','In show cdp neighbors detail (Entry address)','In der Holdtime','Gar nicht – CDP arbeitet auf Layer 2'],1,'Die Kurzliste hat keine IP. Erst die Detail-Ausgabe (oder show cdp entry) zeigt sie.'],
+ ['Welche IP-Adresse meldet ein Router seinem Nachbarn per CDP?',['Immer die Loopback-Adresse','Die IP des Interfaces, über das das CDP-Paket hinausgeht','Die IP seines Default-Gateways','Gar keine'],1,'Darum sehen zwei Nachbarn desselben Routers oft verschiedene IPs. Ein Switch meldet dagegen seine Management-IP.'],
+ ['Warum schaltet man CDP an Ports zum Internet oder zu Gast-Geräten ab?',['Es verbraucht zu viel Bandbreite','Es verrät Modell, IOS-Version und IP-Adressen an Fremde','Es stört DHCP','Es erzeugt Schleifen'],1,'Ein Angreifer weiß dann sofort, welche Software-Version läuft und welche Lücken es dafür gibt. Abschalten mit no cdp enable am Interface.'],
+ ['Wie heißt die herstellerneutrale Alternative zu CDP?',['STP','LLDP','LACP','VTP'],1,'LLDP (IEEE 802.1AB). Bei Cisco mit lldp run einschalten, anzeigen mit show lldp neighbors.'],
+ ['Wie oft sendet CDP standardmäßig, und wie lange bleibt ein Eintrag gültig?',['Alle 10 s / 30 s','Alle 30 s / 90 s','Alle 60 s / 180 s','Alle 180 s / 600 s'],2,'Alle 60 Sekunden ein Update, Holdtime 180 Sekunden. Die Holdtime zählt in der Ausgabe herunter.']];
+$('qz').innerHTML=Q.map(function(q,n){return'<div class="q" data-n="'+n+'"><p>'+(n+1)+'. '+esc(q[0])+'</p><div class="opts col">'+q[1].map(function(o,j){return'<label><input type="radio" name="q'+n+'" value="'+j+'"> '+esc(o)+'</label>';}).join('')+'</div><div class="ex">'+q[3]+'</div></div>';}).join('')+
+ '<div class="acts"><button class="btn" type="button" id="qcheck">Prüfen</button><span class="fb" id="qfb" aria-live="polite"></span></div>';
+$('qcheck').onclick=function(){var ok=0;Q.forEach(function(q,n){var box=document.querySelector('.q[data-n="'+n+'"]'),c=box.querySelector('input:checked');box.querySelectorAll('label').forEach(function(l){var v=+l.querySelector('input').value;l.classList.remove('right','wrong','missed');if(c&&+c.value===v)l.classList.add(v===q[2]?'right':'wrong');else if(v===q[2]&&c)l.classList.add('missed');});if(c){box.querySelector('.ex').classList.add('open');if(+c.value===q[2])ok++;}});
+ var fb=$('qfb');fb.className='fb '+(ok===Q.length?'good':'bad');fb.textContent=ok+' von '+Q.length+' richtig'+(ok===Q.length?' ✓':'.');};
+
+/* ---------- Übungen ---------- */
+var cache={},state={};
+function taskOf(card){var c=card.dataset.code;if(!cache[c]){var m=c.split('-');cache[c]=C.makeTask(+m[1],m[0]);}return cache[c];}
+function st(card){var c=card.dataset.code+'#'+card.id;if(!state[c])state[c]={cables:[],sel:null,marks:null};return state[c];}
+function taskHTML(T,id,label){
+ var outs='<div class="outs">'+T.outs.map(function(o,k){var t=o.text.split('\n');return'<details'+(k<2?' open':'')+'><summary>'+esc(t[0])+'</summary><pre class="cli">'+esc(t.slice(1).join('\n'))+'</pre></details>';}).join('')+'</div>';
+ var opts='<option value="">– Modell wählen –</option>'+C.MODEL_KEYS.map(function(k){return'<option value="'+k+'">'+C.MODELS[k].plat+'</option>';}).join('');
+ var tab='<table class="at"><thead><tr><th>Gerät</th><th>Modell</th><th>IP-Adresse laut CDP</th></tr></thead><tbody>'+T.devs.map(function(d,i){return'<tr data-i="'+i+'"><td><b>'+esc(d.host)+'</b></td><td><select aria-label="Modell '+esc(d.host)+'">'+opts+'</select></td><td><input aria-label="IP '+esc(d.host)+'" placeholder="z. B. 10.1.99.11" autocomplete="off" spellcheck="false"></td></tr>';}).join('')+'</tbody></table>';
+ return'<div class="card task" id="'+id+'" data-code="'+T.code+'"><h3>'+label+' <span class="tag">'+C.LVNAME[T.level]+'</span><span class="tag">Nr. '+T.code+'</span></h3>'+
+  '<p class="qh" style="margin-top:6px">CDP-Ausgaben</p>'+outs+
+  '<p class="qh">1. Modell und IP-Adresse jedes Geräts</p><p class="hint" style="margin:0 0 4px">Bei Routern reicht eine IP, die ein Nachbar per CDP sieht.</p>'+tab+
+  '<p class="qh">2. Kabel stecken</p><div class="wire"></div><div class="wbar"><span class="cnt"></span><button class="btn ghost" type="button" data-act="clear">Alle Kabel abziehen</button></div>'+
+  '<div class="acts"><button class="btn" type="button" data-act="check">Prüfen</button><button class="btn ghost" type="button" data-act="sol">Lösung anzeigen</button><span class="fb" aria-live="polite"></span></div><div class="sol"></div></div>';
+}
+function wire(card){var T=taskOf(card),S=st(card);card.querySelector('.wire').innerHTML=C.draw(T,{interactive:1,cables:S.cables,sel:S.sel,marks:S.marks});
+ card.querySelector('.cnt').textContent=S.cables.length+(S.cables.length===1?' Kabel':' Kabel')+' gesteckt'+(S.sel?' · zweiten Port wählen':'');}
+function keyOf(c){return c[0]<c[1]?c[0]+'~'+c[1]:c[1]+'~'+c[0];}
+document.addEventListener('click',function(e){
+ var p=e.target.closest&&e.target.closest('[data-pin]'),cb=e.target.closest&&e.target.closest('[data-cab]');if(!p&&!cb)return;
+ var card=e.target.closest('.task');if(!card)return;var S=st(card);S.marks=null;
+ if(cb){S.cables.splice(+cb.dataset.cab,1);wire(card);return;}
+ var k=p.dataset.pin;
+ if(!S.sel){var had=S.cables.findIndex(function(c){return c[0]===k||c[1]===k;});if(had>=0)S.cables.splice(had,1);S.sel=k;}
+ else if(S.sel===k)S.sel=null;
+ else if(S.sel.split('|')[0]===k.split('|')[0])S.sel=k;
+ else{var a=S.sel;S.cables=S.cables.filter(function(c){return c[0]!==a&&c[1]!==a&&c[0]!==k&&c[1]!==k;});S.cables.push([a,k]);S.sel=null;}
+ wire(card);
+});
+function check(card){
+ var T=taskOf(card),S=st(card),ok=0,tot=0,want=C.solutionKeys(T);
+ card.querySelectorAll('.at tbody tr').forEach(function(tr){var i=+tr.dataset.i,a=T.ans[i],s=tr.querySelector('select'),inp=tr.querySelector('input');
+  tot+=2;s.classList.remove('right','wrong');inp.classList.remove('right','wrong');
+  if(s.value){var g=s.value===a.model;s.classList.add(g?'right':'wrong');if(g)ok++;}
+  var v=inp.value.trim();if(v){var gi=a.ips.indexOf(v)>=0;inp.classList.add(gi?'right':'wrong');if(gi)ok++;}});
+ S.marks={};var good=0;S.cables.forEach(function(c){var k=keyOf(c),g=want.indexOf(k)>=0;S.marks[k]=g?'ok':'bad';if(g)good++;});
+ S.sel=null;wire(card);
+ var wrong=S.cables.length-good,miss=want.length-good;
+ var all=ok===tot&&wrong===0&&miss===0,fb=card.querySelector('.fb');fb.className='fb '+(all?'good':'bad');
+ fb.textContent=all?'Alles richtig – der Netzplan stimmt! ✓':'Tabelle: '+card.querySelectorAll('.at .right').length+' von '+(T.devs.length*2)+' richtig · Kabel: '+good+' richtig'+(wrong?', '+wrong+' falsch':'')+(miss?', '+miss+' fehlen':'')+'.';
+ if(all)card.dataset.solved='1';markToc();
+}
+function solHTML(T){
+ var labels=T.devs.map(function(d,i){var a=T.ans[i];return C.MODELS[a.model].plat+' · '+a.ips.join(' / ');});
+ var h='<h3 style="font:400 20px var(--head);margin:0">Lösung</h3>'+C.draw(T,{solution:1,labels:labels});
+ h+='<p class="qh">Modelle und IP-Adressen</p><ul class="slist">'+T.devs.map(function(d,i){var a=T.ans[i],m=C.MODELS[a.model];return'<li><b>'+esc(d.host)+'</b>'+(d.id!==d.host?' (Device ID '+esc(d.id)+')':'')+': '+m.plat+' – IP '+a.ips.join(' oder ')+'<br><span class="hint">'+C.ipEvidence(T,i).map(esc).join(' · ')+(m.type==='r'&&a.ips.length>1?' · Ein Router meldet jedem Nachbarn die IP des Interfaces, über das er mit ihm spricht.':'')+'</span></li>';}).join('')+'</ul>';
+ h+='<p class="qh">Verbindungen</p><ul class="slist">'+T.links.map(function(l){return'<li><b>'+esc(T.devs[l.a.d].host)+' '+C.short(l.a.p)+' ↔ '+esc(T.devs[l.b.d].host)+' '+C.short(l.b.p)+'</b><br><span class="hint">'+esc(C.evidence(T,l))+'</span></li>';}).join('')+'</ul>';
+ var unused=[];T.devs.forEach(function(d){var u={};T.links.forEach(function(l){if(l.a.d===d.i)u[l.a.p]=1;if(l.b.d===d.i)u[l.b.p]=1;});d.pins.forEach(function(p){if(!u[p])unused.push(d.host+' '+C.short(p));});});
+ if(unused.length)h+='<div class="ans">Frei bleiben: '+unused.map(esc).join(', ')+'.</div>';
+ return h;
+}
+document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('[data-act]');if(!t)return;var card=t.closest('.task');if(!card)return;
+ if(t.dataset.act==='check')check(card);
+ if(t.dataset.act==='clear'){var S=st(card);S.cables=[];S.sel=null;S.marks=null;wire(card);}
+ if(t.dataset.act==='sol'){var so=card.querySelector('.sol');if(!so.innerHTML)so.innerHTML=solHTML(taskOf(card));var o=so.classList.toggle('open');t.textContent=o?'Lösung ausblenden':'Lösung anzeigen';}});
+var list=["L-1", "L-2", "L-3", "M-1", "M-2", "M-3", "M-4", "S-1", "S-2", "S-3"];
+var host=$('tasks'),cp=0;
+list.forEach(function(code,k){var m=code.split('-'),T=C.makeTask(+m[1],m[0]);cache[code]=T;var d=document.createElement('div');d.className='page';d.hidden=k!==0;
+ d.innerHTML=taskHTML(T,'t'+(k+1),'Aufgabe '+(k+1))+'<div class="navrow">'+(k>0?'<button class="btn ghost" type="button" data-go="'+(k-1)+'">‹ Aufgabe '+k+'</button>':'<span></span>')+(k<list.length-1?'<button class="btn" type="button" data-go="'+(k+1)+'">Aufgabe '+(k+2)+' ›</button>':'<a class="btn" href="#generator" style="text-decoration:none">🎲 Weiter mit dem Zufallsgenerator</a>')+'</div>';host.appendChild(d);wire(d.querySelector('.task'));});
+var pages=[].slice.call(host.children);
+list.forEach(function(c,k){var b=document.createElement('button');b.type='button';b.textContent=k+1;b.dataset.go=k;$('ptoc').appendChild(b);});
+function markToc(){[].forEach.call($('ptoc').children,function(b,k){b.classList.toggle('on',k===cp);b.classList.toggle('ok',pages[k].querySelector('.task').dataset.solved==='1');});}
+function show(k,scroll){k=Math.max(0,Math.min(pages.length-1,k));cp=k;pages.forEach(function(p,j){p.hidden=j!==k;});$('pnum').textContent='Aufgabe '+(k+1)+' von '+pages.length;$('ppart').textContent=C.LVNAME[list[k][0]];$('pprev').disabled=k===0;$('pnext').disabled=k===pages.length-1;markToc();if(scroll){var top=$('uebungen').getBoundingClientRect().top+window.pageYOffset;if(window.pageYOffset>top)window.scrollTo({top:top,behavior:reduce?'auto':'smooth'});}}
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-go]');if(b)show(+b.dataset.go,true);});
+$('pprev').onclick=function(){show(cp-1,true);};$('pnext').onclick=function(){show(cp+1,true);};show(0,false);
+function gen(lvl,seed){var T=C.makeTask(seed,lvl);if(!T){$('gmsg').textContent='Zu dieser Nummer gibt es keine Aufgabe.';return;}$('gmsg').textContent='';cache[T.code]=T;$('gout').innerHTML=taskHTML(T,'g'+T.code.replace('-','_'),'Aufgabe '+T.code);wire($('gout').querySelector('.task'));$('gcode').value=T.code;$('glvl').value=lvl;}
+$('gnew').onclick=function(){gen($('glvl').value,1+Math.floor(Math.random()*99999));};
+function load(){var m=/^\s*([LMS])\s*-?\s*(\d{1,6})\s*$/i.exec($('gcode').value);if(!m){$('gmsg').textContent='Bitte eine Nummer wie L-12, M-305 oder S-4711 eingeben.';return;}gen(m[1].toUpperCase(),+m[2]);}
+$('gload').onclick=load;$('gcode').addEventListener('keydown',function(e){if(e.key==='Enter')load();});
+gen('M',1+Math.floor(Math.random()*99999));
+})();
+</script>
+</body>
+</html>
