@@ -18,11 +18,17 @@ pre.cli .hl{background:#f9a825;color:#1c2b33;border-radius:2px}
 .explain p{margin:0 0 6px}
 .k{display:inline-block;font:700 12px var(--ui);color:#fff;padding:1px 7px;border-radius:3px;margin-right:4px}
 .k1{background:#1565c0}.k2{background:#2e7d32}.k3{background:#e65100}.k4{background:#6a1b9a}
-.outs{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin-top:10px}
+.outs{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+.wide{width:min(1500px,calc(100vw - 32px));margin-left:calc(50% - min(750px,50vw - 16px))}
+.board{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px;align-items:start;margin-top:8px}
+.board>.left{position:sticky;top:8px}
+.board>.right{max-height:calc(100vh - 24px);overflow:auto;padding-right:2px}
+.board .qh:first-child{margin-top:0}
+@media(max-width:1100px){.wide{width:auto;margin-left:0}.board{grid-template-columns:minmax(0,1fr)}.board>.left{position:static}.board>.right{max-height:none}}
 @media(max-width:860px){.outs{grid-template-columns:minmax(0,1fr)}}
 .outs details{border:1px solid var(--line);border-radius:4px;background:#1c2b33}
 .outs summary{cursor:pointer;color:#fff;font:600 14px var(--mono);padding:8px 12px;list-style-position:inside}
-.outs pre.cli{margin:0;border-radius:0 0 4px 4px;max-height:380px;overflow:auto;font-size:12.5px}
+.outs pre.cli{margin:0;border-radius:0 0 4px 4px;overflow:auto;font-size:12px;line-height:1.45}
 .wire svg [data-pin] rect{transition:fill .12s}
 .wire svg [data-pin]:hover rect{fill:#fff8e1}
 .wbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px;font-size:14.5px;color:var(--mute)}
@@ -52,12 +58,11 @@ pre.cli .hl{background:#f9a825;color:#1c2b33;border-radius:2px}
 
 <h2 class="part" id="lesen">Eine CDP-Ausgabe lesen</h2>
 <p class="sub">Der Befehl wurde auf <b>KERN</b> eingegeben. Klick auf eine Zeile der Ausgabe – dann siehst du, welches Kabel sie beschreibt und was in der Detail-Ausgabe dazu steht.</p>
-<div class="card">
- <div id="exsvg"></div>
- <p class="ph" style="margin-top:12px">KERN# show cdp neighbors</p><pre class="cli" id="exbrief"></pre>
- <div class="explain" id="exexp" aria-live="polite"><p>Jede Zeile ist <b>ein direkt verbundener Nachbar</b> – also ein Kabel. Klick auf eine Zeile.</p></div>
- <p class="ph" style="margin-top:12px">KERN# show cdp neighbors detail (nur dieser Nachbar)</p><pre class="cli" id="exdet">Klick oben auf eine Zeile.</pre>
-</div>
+<div class="card wide"><div class="board">
+ <div class="left"><div id="exsvg"></div><div class="explain" id="exexp" aria-live="polite"><p>Jede Zeile ist <b>ein direkt verbundener Nachbar</b> – also ein Kabel. Klick rechts auf eine Zeile.</p></div></div>
+ <div class="right"><p class="ph">KERN# show cdp neighbors</p><pre class="cli" id="exbrief" style="font-size:12px;margin-top:0"></pre>
+ <p class="ph" style="margin-top:12px">KERN# show cdp neighbors detail (nur dieser Nachbar)</p><pre class="cli" id="exdet" style="font-size:12px;margin-top:0">Klick oben auf eine Zeile.</pre></div>
+</div></div>
 
 <h2 class="part" id="regeln">Wissen und Befehle</h2>
 <div class="rules">
@@ -97,7 +102,7 @@ pre.cli .hl{background:#f9a825;color:#1c2b33;border-radius:2px}
 <div class="card quiz" id="qz"></div>
 
 <h2 class="part" id="uebungen">Übungen</h2>
-<p class="sub">Die Geräte und ihre Ports sind aufgezeichnet – aber nicht verkabelt. Lies die CDP-Ausgaben und finde für jedes Gerät <b>Modell</b> und <b>IP-Adresse</b>. Dann steck die Kabel: erst auf einen Port klicken, dann auf den Port am anderen Ende. Ein Klick auf ein Kabel zieht es wieder ab. Nicht jeder Port wird gebraucht.</p>
+<p class="sub">Die Geräte und ihre Ports sind aufgezeichnet – aber nicht verkabelt. Lies die CDP-Ausgaben rechts daneben, steck die Kabel und finde für jedes Gerät <b>Modell</b> und <b>IP-Adresse</b>. Kabel stecken: erst auf einen Port klicken, dann auf den Port am anderen Ende. Ein Klick auf ein Kabel zieht es wieder ab. Nicht jeder Port wird gebraucht.</p>
 <div class="pager"><button class="btn ghost" id="pprev" type="button">‹ Zurück</button><div class="pinfo"><b id="pnum"></b><span id="ppart"></span></div><button class="btn" id="pnext" type="button">Weiter ›</button><div class="toc" id="ptoc"></div></div>
 <div id="tasks"></div>
 
@@ -153,13 +158,13 @@ var cache={},state={};
 function taskOf(card){var c=card.dataset.code;if(!cache[c]){var m=c.split('-');cache[c]=C.makeTask(+m[1],m[0]);}return cache[c];}
 function st(card){var c=card.dataset.code+'#'+card.id;if(!state[c])state[c]={cables:[],sel:null,marks:null};return state[c];}
 function taskHTML(T,id,label){
- var outs='<div class="outs">'+T.outs.map(function(o,k){var t=o.text.split('\n');return'<details'+(k<2?' open':'')+'><summary>'+esc(t[0])+'</summary><pre class="cli">'+esc(t.slice(1).join('\n'))+'</pre></details>';}).join('')+'</div>';
+ var outs='<div class="outs">'+T.outs.map(function(o,k){var t=o.text.split('\n');return'<details open><summary>'+esc(t[0])+'</summary><pre class="cli">'+esc(t.slice(1).join('\n'))+'</pre></details>';}).join('')+'</div>';
  var opts='<option value="">– Modell wählen –</option>'+C.MODEL_KEYS.map(function(k){return'<option value="'+k+'">'+C.MODELS[k].plat+'</option>';}).join('');
  var tab='<table class="at"><thead><tr><th>Gerät</th><th>Modell</th><th>IP-Adresse laut CDP</th></tr></thead><tbody>'+T.devs.map(function(d,i){return'<tr data-i="'+i+'"><td><b>'+esc(d.host)+'</b></td><td><select aria-label="Modell '+esc(d.host)+'">'+opts+'</select></td><td><input aria-label="IP '+esc(d.host)+'" placeholder="z. B. 10.1.99.11" autocomplete="off" spellcheck="false"></td></tr>';}).join('')+'</tbody></table>';
- return'<div class="card task" id="'+id+'" data-code="'+T.code+'"><h3>'+label+' <span class="tag">'+C.LVNAME[T.level]+'</span><span class="tag">Nr. '+T.code+'</span></h3>'+
-  '<p class="qh" style="margin-top:6px">CDP-Ausgaben</p>'+outs+
-  '<p class="qh">1. Modell und IP-Adresse jedes Geräts</p><p class="hint" style="margin:0 0 4px">Bei Routern reicht eine IP, die ein Nachbar per CDP sieht.</p>'+tab+
-  '<p class="qh">2. Kabel stecken</p><div class="wire"></div><div class="wbar"><span class="cnt"></span><button class="btn ghost" type="button" data-act="clear">Alle Kabel abziehen</button></div>'+
+ return'<div class="card task wide" id="'+id+'" data-code="'+T.code+'"><h3>'+label+' <span class="tag">'+C.LVNAME[T.level]+'</span><span class="tag">Nr. '+T.code+'</span></h3>'+
+  '<div class="board"><div class="left"><p class="qh">1. Kabel stecken</p><div class="wire"></div><div class="wbar"><span class="cnt"></span><button class="btn ghost" type="button" data-act="clear">Alle Kabel abziehen</button></div></div>'+
+  '<div class="right"><p class="qh">CDP-Ausgaben</p>'+outs+'</div></div>'+
+  '<p class="qh">2. Modell und IP-Adresse jedes Geräts</p><p class="hint" style="margin:0 0 4px">Bei Routern reicht eine IP, die ein Nachbar per CDP sieht.</p>'+tab+
   '<div class="acts"><button class="btn" type="button" data-act="check">Prüfen</button><button class="btn ghost" type="button" data-act="sol">Lösung anzeigen</button><span class="fb" aria-live="polite"></span></div><div class="sol"></div></div>';
 }
 function wire(card){var T=taskOf(card),S=st(card);card.querySelector('.wire').innerHTML=C.draw(T,{interactive:1,cables:S.cables,sel:S.sel,marks:S.marks});
