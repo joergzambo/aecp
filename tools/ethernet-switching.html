@@ -387,7 +387,8 @@ var ICON = {
 };
 function draw(T, opts) {
   opts = opts || {};
-  var h = '<svg class="eth" viewBox="0 0 ' + T.W + ' ' + T.H + '" style="max-width:' + Math.round(T.W * 1.15) + 'px;margin:0 auto" role="img" aria-label="Netzwerkplan">';
+  var pad = opts && opts.ips ? 16 : 0;  /* mit IP-Zeile braucht es oben und unten mehr Platz */
+  var h = '<svg class="eth" viewBox="0 ' + (-pad) + ' ' + T.W + ' ' + (T.H + 2 * pad) + '" style="max-width:' + Math.round(T.W * 1.15) + 'px;margin:0 auto" role="img" aria-label="Netzwerkplan">';
   T.links.forEach(function (l, k) {
     var A = T.dev[l.a], B = T.dev[l.b], hl = opts.hl && opts.hl[k];
     if (hl) h += '<line x1="' + A.x + '" y1="' + A.y + '" x2="' + B.x + '" y2="' + B.y + '" stroke="' + hl + '" stroke-opacity=".4" stroke-width="14" stroke-linecap="round"/>';

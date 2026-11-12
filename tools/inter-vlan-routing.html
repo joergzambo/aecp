@@ -376,17 +376,19 @@ function cfgSwitch(T) {
 /* ---------- Zeichnen ---------- */
 var W = 760;
 function t(x, y, s, o) { o = o || {}; return '<text x="' + x + '" y="' + y + '" text-anchor="' + (o.a || 'middle') + '" font-size="' + (o.fs || 12) + '" font-weight="' + (o.fw || 400) + '" fill="' + (o.c || '#1c2b33') + '">' + s + '</text>'; }
+/* Breite wächst mit der Zahl der PCs: Kästen sind 116 breit, mind. 128 Abstand */
+function width(T) { return Math.max(760, (T.pcs.length - 1) * 128 + 160); }
 function layout(T) {
-  var pos = {}, n = T.pcs.length, roas = T.mode === 'roas';
+  var W = width(T), pos = {}, n = T.pcs.length, roas = T.mode === 'roas';
   pos.R = [W / 2, 52]; pos.SW = [W / 2, roas ? 172 : 120];
-  var py = roas ? 300 : 250, sp = Math.min(150, (W - 130) / Math.max(1, n - 1));
+  var py = roas ? 300 : 250, sp = Math.min(150, Math.max(128, (W - 130) / Math.max(1, n - 1)));
   T.pcs.forEach(function (p, i) { pos[p.name] = [n === 1 ? W / 2 : W / 2 + (i - (n - 1) / 2) * sp, py]; });
   pos.H = roas ? 360 : 312;
   return pos;
 }
 function draw(T, opt) {
   opt = opt || {};
-  var pos = layout(T), roas = T.mode === 'roas', o = ['<svg viewBox="0 0 ' + W + ' ' + pos.H + '" role="img" aria-label="Topologie Inter-VLAN-Routing">'];
+  var W = width(T), pos = layout(T), roas = T.mode === 'roas', o = ['<svg viewBox="0 0 ' + W + ' ' + pos.H + '" role="img" aria-label="Topologie Inter-VLAN-Routing">'];
   var hl = opt.hl || {};
   if (roas) {
     var up = T.sw.up, trunk = up.mode === 'trunk';

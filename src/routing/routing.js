@@ -415,9 +415,20 @@ function draw(T, opts) {
   T.links.forEach(function (l, k) {
     var g = geo[k];
     [[g.A, l.ipA, l.ifA, 1], [g.B, l.ipB, l.ifB, -1]].forEach(function (e) {
-      var P = e[0], sg = e[3], d = Math.min(80, g.L * 0.3), px = P.x + g.ux * sg * d, py = P.y + g.uy * sg * d;
-      var host = '.' + e[1].split('.')[3], on = hl.ip === e[1];
-      h += lab(px, py, -g.nx, -g.ny, 10, [host, e[2]], {w: 700, c: on ? '#e65100' : '#1565c0', fs: on ? 14 : 13, ring: on});
+      var P = e[0], sg = e[3], host = '.' + e[1].split('.')[3], on = hl.ip === e[1], keep = BOXES, best = null, bs = 1e9;
+      /* Kandidaten: Abstand vom Router und Seite des Kabels – der erste ohne Überlappung gewinnt */
+      [[0.3, 80, -1], [0.3, 80, 1], [0.22, 58, -1], [0.22, 58, 1], [0.4, 105, -1], [0.4, 105, 1]].forEach(function (c, ci) {
+        var d = Math.min(c[1], g.L * c[0]), px = P.x + g.ux * sg * d, py = P.y + g.uy * sg * d;
+        BOXES = []; var out = lab(px, py, g.nx * c[2], g.ny * c[2], 10, [host, e[2]], {w: 700, c: on ? '#e65100' : '#1565c0', fs: on ? 14 : 13, ring: on});
+        var bb = BOXES, sc = ci * 3;
+        bb.forEach(function (b) {
+          keep.forEach(function (q) { var ox = Math.min(b[2], q[2]) - Math.max(b[0], q[0]), oy = Math.min(b[3], q[3]) - Math.max(b[1], q[1]); if (ox > -2 && oy > -2) sc += (ox + 2) * (oy + 2) * 4; });
+          geo.forEach(function (o, j) { if (j === k) return; for (var t = 0; t <= 1; t += 0.02) { var x = o.A.x + (o.B.x - o.A.x) * t, y = o.A.y + (o.B.y - o.A.y) * t; if (x > b[0] - 2 && x < b[2] + 2 && y > b[1] - 2 && y < b[3] + 2) sc += 30; } });
+          if (b[0] < 2 || b[2] > T.W - 2 || b[1] < 2 || b[3] > T.H - 2) sc += 500;
+        });
+        if (sc < bs) { bs = sc; best = {out: out, boxes: bb}; }
+      });
+      BOXES = keep.concat(best.boxes); h += best.out;
     });
   });
   T.links.forEach(function (l, k) {
