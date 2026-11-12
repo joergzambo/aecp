@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OSPF 1: Dijkstra-Algorithmus</title>
+<style>
+
+:root{
+  /* AECP-Stil: weiß, schwarz, Belgrano/Bitter/Open Sans; VLAN-Farben tragen Bedeutung */
+  --ink:#1c2b33; --mute:#546e7a; --line:#e3e1e8; --soft:#f3f5f7; --ok:#2e7d32; --bad:#c62828; --warn:#e65100; --accent:#61a229;
+  --head:"Belgrano",Georgia,serif; --ui:"Bitter",Georgia,serif; --body:"Open Sans","Helvetica Neue",Arial,sans-serif; --mono:ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#fff;color:var(--ink);font:16px/1.65 var(--body)}
+.vmain{max-width:980px;margin:0 auto;padding:24px 20px 60px}
+.vmain h1{font:400 clamp(30px,4.5vw,42px)/1.15 var(--head);letter-spacing:.5px;margin:.3em 0 .2em;text-wrap:balance}
+.vmain h2{font:400 26px/1.2 var(--head);letter-spacing:.5px;margin:0 0 .4em;text-wrap:balance}
+.sub{color:var(--mute);max-width:72ch;margin:0 0 14px}
+.jumps{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 6px}
+.jumps a{font:600 15px var(--ui);letter-spacing:.4px;color:#fff;background:var(--ink);padding:8px 14px;border-radius:4px;text-decoration:none}
+.jumps a:hover{background:#000}
+.part{border-top:3px solid var(--ink);margin-top:40px;padding-top:12px}
+.card{border:1px solid var(--line);border-radius:4px;background:#fff;padding:18px 20px;margin:14px 0}
+svg{width:100%;height:auto;display:block;background:#fbfcfd;border:1px solid var(--line);border-radius:4px}
+button,select,input{font:600 15px var(--ui);letter-spacing:.3px}
+.btn{padding:9px 16px;border-radius:4px;border:1.5px solid var(--ink);background:var(--ink);color:#fff;cursor:pointer}
+.btn:hover{background:#000}
+.btn.ghost{background:#fff;color:var(--ink)}
+.btn.ghost:hover{background:var(--soft)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Schritt-Animation */
+.sbgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+@media(max-width:760px){.sbgrid{grid-template-columns:1fr}}
+.cfg{background:var(--soft);border-radius:4px;padding:10px 14px;font-size:14px}
+.cfg h3{font:600 15px var(--ui);margin:0 0 6px}
+.cfg label{margin-right:12px;white-space:nowrap}
+.cfg select{font:500 14px var(--body);padding:2px 4px}
+.hint{font-size:14px;color:var(--mute);margin:8px 0 0}
+.result{margin-top:10px;font-size:15px;min-height:1.6em}
+.frames{margin-top:12px;font:13px var(--mono)}
+.frame{display:flex;flex-wrap:wrap;margin:6px 0;align-items:stretch}
+.frame span{border:1.5px solid var(--ink);border-right:0;padding:5px 8px;background:#fff;white-space:nowrap}
+.frame span:last-child{border-right:1.5px solid var(--ink)}
+.frame .ftag{background:#fff8e1;font-weight:700}
+.frame .ftag.none{background:var(--soft);color:var(--mute);border-style:dashed;font-weight:400}
+.frame b{font-family:var(--body)}
+.flab{font:600 14px var(--ui);margin-top:8px}
+
+/* Regelwerk */
+.rules{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:760px){.rules{grid-template-columns:1fr}}
+.rules .card{margin:0}
+.rules h3{font:400 19px var(--head);margin:0 0 6px}
+.rules ul{margin:0;padding-left:20px}
+.rules li{margin:3px 0}
+code,pre{font-family:var(--mono);font-size:13.5px}
+pre.cli{background:#1c2b33;color:#e6edf2;border-radius:4px;padding:10px 12px;margin:8px 0 0;overflow-x:auto;line-height:1.5}
+.check{background:#fff8e1;border:1px solid #ffe082}
+
+/* Übungen */
+.pager{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:4px;padding:12px 14px;margin:14px 0}
+.pinfo{text-align:center;line-height:1.3}
+.pinfo span{display:block;font-size:13px;color:var(--mute)}
+.toc{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:5px}
+.toc button{min-width:36px;padding:4px 0;border:1px solid #cfd8dc;background:#fff;color:var(--ink);border-radius:4px;cursor:pointer;font-size:13px}
+.toc button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.toc button.ok{background:#e3f4e6;border-color:#a5d6a7}
+.toc button.on.ok{background:var(--ok);border-color:var(--ok)}
+.task h3{font:400 22px var(--head);margin:0 0 4px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.tag{font:400 12px var(--head);text-transform:uppercase;letter-spacing:1.5px;color:#3d6e14;background:#eef6e6;padding:2px 8px;border-radius:2px}
+.trunks{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px;margin-top:10px}
+.trunks pre{margin:0}
+.q{margin-top:16px;padding-top:12px;border-top:1px dashed #cfd8dc}
+.q p{margin:0 0 6px;font-weight:600}
+.opts{display:flex;flex-wrap:wrap;gap:6px 10px}
+.opts label{display:inline-flex;align-items:center;gap:6px;border:1.5px solid #cfd8dc;border-radius:4px;padding:5px 10px;cursor:pointer;font-size:15px;background:#fff}
+.opts label.right{border-color:var(--ok);background:#e3f4e6}
+.opts label.wrong{border-color:var(--bad);background:#fde3e3}
+.opts label.missed{border-color:var(--ok);border-style:dashed}
+.dot{width:11px;height:11px;border-radius:50%;display:inline-block}
+.acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;align-items:center}
+.fb{font-weight:600}
+.fb.good{color:var(--ok)} .fb.bad{color:var(--bad)}
+.sol{display:none;margin-top:14px;border-top:2px solid var(--ink);padding-top:12px}
+.sol.open{display:block}
+.sol ul{list-style:none;padding:0;margin:10px 0}
+.sol li{margin:4px 0;padding-left:4px}
+.ans{background:var(--soft);border-left:4px solid var(--accent);padding:8px 12px;margin:8px 0}
+.navrow{display:flex;justify-content:space-between;margin-top:14px;gap:8px}
+.genbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
+.genbar select,.genbar input{padding:8px;border:1.5px solid #90a4ae;border-radius:4px;font-family:var(--body);font-weight:500}
+.err{color:var(--bad)}
+@media print{.jumps,.pager,.acts,.navrow,.genbar,#sandbox,#generator{display:none!important}.task{display:block!important;break-inside:avoid}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+
+.rules{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+@media(max-width:760px){.rules{grid-template-columns:minmax(0,1fr)}}
+.tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
+.tools .sep{width:1px;height:28px;background:var(--line);margin:0 4px}
+.tools button.mode{padding:7px 12px;border-radius:4px;border:1.5px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer;font-size:14px}
+.tools button.mode[aria-pressed="true"]{background:var(--ink);color:#fff}
+.tools select{padding:7px;border:1.5px solid #90a4ae;border-radius:4px;font:600 14px var(--ui)}
+.tools .btn{padding:7px 12px;font-size:14px}
+.hintbar{font-size:14px;color:var(--mute);margin:4px 0 8px;min-height:1.4em}
+.canvas{position:relative}
+.canvas svg.ed{cursor:crosshair}
+.canvas .winp{position:absolute;width:64px;padding:3px 6px;font:700 15px var(--mono);border:2px solid #f9a825;border-radius:12px;text-align:center;transform:translate(-50%,-50%);z-index:5}
+.stepbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.stepno{font:600 15px var(--ui);margin-left:auto;color:var(--mute)}
+.tempo{display:inline-flex;gap:6px;align-items:center;font:600 14px var(--ui)}
+.tempo input{accent-color:#61a229}
+.explain{background:var(--soft);border-radius:4px;padding:12px 16px;margin-top:10px;font-size:16px;min-height:4.5em}
+.explain h3{font:400 20px var(--head);margin:0 0 4px}
+.explain p{margin:0}
+.dt{border-collapse:collapse;font:14px var(--mono);margin-top:10px;width:100%}
+.dt th,.dt td{border:1px solid #cfd8dc;padding:5px 7px;text-align:center;white-space:nowrap}
+.dt th{background:var(--soft);font:600 13.5px var(--ui)}
+.dt td.gone{background:#f1f3f4}
+.dt td.pk{background:#c8e6c9;font-weight:700}
+.dt td.chg{background:#fff8e1}
+.dt tr.cur td:first-child{box-shadow:inset 4px 0 0 #f9a825}
+.dt td.nset{text-align:left;font-family:var(--body);font-size:13px}
+.scroll{overflow-x:auto}
+.rtab{border-collapse:collapse;font-size:15px;margin-top:8px}
+.rtab th,.rtab td{border:1px solid #cfd8dc;padding:5px 10px;text-align:left}
+.rtab th{background:var(--soft);font:600 14px var(--ui)}
+.qh{font:600 16px var(--ui);margin:16px 0 4px}
+.at{border-collapse:collapse;margin-top:6px;font-size:15px}
+.at th,.at td{border:1px solid #cfd8dc;padding:5px 9px;text-align:left}
+.at th{background:var(--soft);font:600 14px var(--ui)}
+.at input,.at select,.ord{padding:5px 7px;border:1.5px solid #90a4ae;border-radius:4px;font:600 14.5px var(--mono)}
+.at input{width:5em}
+.ord{width:100%;max-width:520px}
+.right{border-color:var(--ok)!important;background:#e3f4e6!important}.wrong{border-color:var(--bad)!important;background:#fde3e3!important}
+.cmp{width:100%;border-collapse:collapse;font-size:15px;margin-top:6px}
+.cmp th,.cmp td{border:1px solid #cfd8dc;padding:6px 10px;text-align:left;vertical-align:top}
+.cmp th{background:var(--soft);font:600 14px var(--ui)}
+.quiz .q .ex{display:none;margin-top:6px;font-size:15px;background:var(--soft);border-left:4px solid var(--accent);padding:6px 10px}
+.quiz .q .ex.open{display:block}
+.opts.col{flex-direction:column;align-items:flex-start}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:13.5px;color:var(--mute);margin-top:6px}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:50%;vertical-align:-2px;margin-right:4px;border:2px solid}
+</style>
+</head>
+<body>
+<main class="vmain">
+<h1>OSPF 1: Der Dijkstra-Algorithmus</h1>
+<p class="sub">Der <b>Dijkstra-Algorithmus</b> (auch SPF – Shortest Path First) findet in einem Netz mit Linkkosten den billigsten Weg von einem Start-Router zu allen anderen. Die Kosten sind entweder einfache Zahlen oder werden aus der <b>Bandbreite</b> der Links berechnet. Hier kannst du Dijkstra selbst laufen lassen, Schritt für Schritt.</p>
+<nav class="jumps" aria-label="Abschnitte"><a href="#solver">Dijkstra-Solver</a><a href="#regeln">So funktioniert's</a><a href="#quiz">Teste dich</a><a href="#uebungen">Übungen</a><a href="#generator">🎲 Zufallsgenerator</a></nav>
+
+<h2 class="part" id="solver">Dijkstra-Solver</h2>
+<p class="sub">Baue dein eigenes Netz oder nimm das Beispiel. Klick auf eine Zahl (oder Bandbreite), um einen Link zu ändern. Dann Start-Router wählen und Dijkstra laufen lassen.</p>
+<div class="card">
+ <div class="tools" id="tools">
+  <button type="button" class="mode" data-mode="add" aria-pressed="true">＋ Router</button>
+  <button type="button" class="mode" data-mode="link" aria-pressed="false">⟷ Verbinden</button>
+  <button type="button" class="mode" data-mode="move" aria-pressed="false">✥ Verschieben</button>
+  <button type="button" class="mode" data-mode="del" aria-pressed="false">✕ Löschen</button>
+  <span class="sep"></span>
+  <span style="font:600 14px var(--ui)">Kosten</span><button type="button" class="mode" data-cm="0" aria-pressed="true">Zahlen</button><button type="button" class="mode" data-cm="1" aria-pressed="false">Bandbreiten</button>
+  <span class="sep"></span>
+  <button type="button" class="btn ghost" id="sex">Beispiel</button>
+  <button type="button" class="btn ghost" id="srnd">Zufallsnetz</button>
+  <button type="button" class="btn ghost" id="sclr">Alles löschen</button>
+  <span class="sep"></span>
+  <label for="ssrc" style="font:600 14px var(--ui)">Start</label><select id="ssrc"></select>
+  <button type="button" class="btn" id="srun">▶ Dijkstra starten</button>
+ </div>
+ <div class="hintbar" id="shint"></div>
+ <div class="canvas" id="scanvas"><div id="ssvg"></div></div>
+ <div class="legend"><span><i style="border-color:#1565c0"></i>Start</span><span><i style="border-color:#e65100;background:#ffe0b2"></i>wird gerade bearbeitet</span><span><i style="border-color:#2e7d32;background:#c8e6c9"></i>fix (kürzester Weg gefunden)</span><span>Kästchen über dem Router: bisher beste Kosten · Vorgänger</span></div>
+ <div id="runui" hidden>
+  <div class="stepbar"><button class="btn ghost" id="sprev" type="button">‹ Zurück</button><button class="btn" id="snext" type="button">Weiter ›</button><button class="btn ghost" id="splay" type="button">▶ Abspielen</button>
+   <label class="tempo">🐢 <input type="range" id="sspd" min="1" max="5" value="3" aria-label="Tempo"> 🐇</label><button class="btn ghost" id="sedit" type="button">✎ Netz bearbeiten</button><span class="stepno" id="sno"></span></div>
+  <div class="explain" aria-live="polite"><h3 id="sttl"></h3><p id="stxt"></p></div>
+  <p class="qh">Dijkstra-Tabelle</p>
+  <div class="scroll"><table class="dt" id="sdt"></table></div>
+  <div id="srt"></div>
+ </div>
+</div>
+
+<h2 class="part" id="regeln">So funktioniert's</h2>
+<div class="rules">
+ <div class="card"><h3>Der Algorithmus</h3><ol style="margin:0;padding-left:20px">
+  <li>Start-Router: Kosten 0. Alle anderen: ∞.</li>
+  <li>Nimm den Router mit den <b>kleinsten Kosten</b>, der noch nicht fix ist. Er wird <b>fix</b>.</li>
+  <li>Für jeden Nachbarn, der noch nicht fix ist: Kosten des fixen Routers + Linkkosten. Ist das billiger als der bisherige Wert, eintragen – mit dem fixen Router als <b>Vorgänger</b>.</li>
+  <li>Weiter bei 2., bis alle Router fix sind.</li></ol></div>
+ <div class="card check"><h3>Warum darf man „fix“ sagen?</h3><p style="margin:0">Alle Kosten sind positiv. Wenn ein Router die kleinsten Kosten aller offenen Router hat, kann jeder andere Weg zu ihm nur teurer sein – er führt ja über einen Router, der schon mindestens genauso viel kostet.</p>
+  <p class="hint">Die typische Falle: Der direkte Link zu einem Nachbarn ist nicht immer der billigste Weg. Ein Umweg über zwei billige Links kann günstiger sein.</p></div>
+ <div class="card"><h3>Vorgänger und Next Hop</h3><ul style="margin:0;padding-left:20px">
+  <li><b>Vorgänger</b>: der Router direkt vor dem Ziel auf dem billigsten Weg – steht in der Dijkstra-Tabelle.</li>
+  <li><b>Next Hop</b>: der erste Router nach dem Start – das kommt in die Routing-Tabelle.</li>
+  <li>Den Next Hop findest du, indem du den Vorgängern rückwärts bis zum Start folgst.</li></ul></div>
+ <div class="card"><h3>Kosten aus Bandbreiten</h3>
+  <p style="margin:0 0 6px"><b>Kosten = Referenzbandbreite ÷ Bandbreite</b>, abgerundet, mindestens 1. Hier ist die Referenz <b>1000 Mbit/s</b>. Schnelle Links sind billig, langsame teuer.</p>
+  <table class="rtab" style="margin-top:4px"><thead><tr><th>Bandbreite</th><th>Rechnung</th><th>Kosten</th></tr></thead><tbody>
+  <tr><td>1G (1 Gbit/s)</td><td>1000 ÷ 1000</td><td><b>1</b></td></tr><tr><td>500M</td><td>1000 ÷ 500</td><td><b>2</b></td></tr><tr><td>250M</td><td>1000 ÷ 250</td><td><b>4</b></td></tr><tr><td>200M</td><td>1000 ÷ 200</td><td><b>5</b></td></tr>
+  <tr><td>100M</td><td>1000 ÷ 100</td><td><b>10</b></td></tr><tr><td>50M</td><td>1000 ÷ 50</td><td><b>20</b></td></tr><tr><td>20M</td><td>1000 ÷ 20</td><td><b>50</b></td></tr><tr><td>10M</td><td>1000 ÷ 10</td><td><b>100</b></td></tr></tbody></table>
+  <p class="hint">Erst alle Bandbreiten in Kosten umrechnen, dann Dijkstra wie gewohnt.</p></div>
+</div>
+
+<h2 class="part" id="quiz">Teste dich</h2>
+<div class="card quiz" id="qz"></div>
+
+<h2 class="part" id="uebungen">Übungen</h2>
+<p class="sub">Führe Dijkstra vom markierten Start-Router aus durch. Bei Aufgaben mit Bandbreiten rechnest du zuerst die Kosten aus. In welcher Reihenfolge werden die Router fix? Welche Kosten, welcher Vorgänger und welcher Next Hop ergeben sich?</p>
+<div class="pager"><button class="btn ghost" id="pprev" type="button">‹ Zurück</button><div class="pinfo"><b id="pnum"></b><span id="ppart"></span></div><button class="btn" id="pnext" type="button">Weiter ›</button><div class="toc" id="ptoc"></div></div>
+<div id="tasks"></div>
+
+<h2 class="part" id="generator">🎲 Zufallsgenerator</h2>
+<p class="sub">Jede Aufgabe hat eine Nummer. Mit der Nummer bekommt jede Schülerin und jeder Schüler genau dieselbe Aufgabe. Ein B in der Nummer (z. B. MB-305) heißt: Kosten aus Bandbreiten.</p>
+<div class="genbar"><label for="glvl">Stufe</label><select id="glvl"><option value="L">Leicht (5 Router, Kosten bis 10)</option><option value="M" selected>Mittel (6–7 Router, Kosten bis 20)</option><option value="S">Schwer (8–9 Router, Kosten bis 50)</option></select>
+<label for="gcm">Kosten</label><select id="gcm"><option value="0">Zahlen</option><option value="1">Bandbreiten</option></select>
+<button class="btn" id="gnew" type="button">Neue Aufgabe</button><label for="gcode">Nummer</label><input id="gcode" size="8" placeholder="M-123" autocomplete="off"><button class="btn ghost" id="gload" type="button">Laden</button><span id="gmsg" class="err"></span></div>
+<div id="gout"></div>
+</main>
+<script>
+/* NWT · OSPF 1: Dijkstra (SPF). Algorithmus mit Einzelschritten, Aufgaben-Generator, Zeichnen.
+   Browser: window.DJ · Node: globalThis.DJ */
+(function (G) {
+'use strict';
+var LVNAME = {L: 'Leicht', M: 'Mittel', S: 'Schwer'};
+var LVCODE = {L: 3, M: 4, S: 5};
+var INF = Infinity;
+/* Bandbreiten in Mbit/s; Kosten = Referenz 1000 Mbit/s ÷ Bandbreite (abgerundet, mindestens 1) */
+var REF = 1000, BWS = [1000, 500, 250, 200, 100, 50, 20, 10];
+var BWLV = {L: [1000, 100, 50, 10], M: [1000, 500, 200, 100, 50, 20, 10], S: BWS};
+function bwCost(bw) { return Math.max(1, Math.floor(REF / bw)); }
+function bwLabel(bw) { return bw >= 1000 ? (bw / 1000) + 'G' : bw + 'M'; }
+function bwLong(bw) { return bw >= 1000 ? (bw / 1000) + ' Gbit/s' : bw + ' Mbit/s'; }
+function nearestBw(w) { var b = BWS[0]; BWS.forEach(function (x) { if (Math.abs(bwCost(x) - w) < Math.abs(bwCost(b) - w)) b = x; }); return b; }
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function ri(r, a, b) { return a + Math.floor(r() * (b - a + 1)); }
+function shuffle(r, a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(r() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+
+/* Graph: {nodes:[{name,x,y}], edges:[{a,b,w}]} – a,b sind Indizes */
+function adj(Gr) {
+  var A = Gr.nodes.map(function () { return []; });
+  Gr.edges.forEach(function (e, k) { A[e.a].push({v: e.b, w: e.w, k: k}); A[e.b].push({v: e.a, w: e.w, k: k}); });
+  A.forEach(function (l) { l.sort(function (x, y) { return x.v - y.v; }); });
+  return A;
+}
+/* Dijkstra mit allen Einzelschritten.
+   steps: {kind:'init'} | {kind:'pick', u} | {kind:'relax', u, v, k, old, cand, ok} | {kind:'skip', u, v, k} | {kind:'done'}
+   rounds: Tabelle – je Runde Zustand nach Wahl und Relaxierung */
+function run(Gr, src) {
+  var n = Gr.nodes.length, A = adj(Gr), d = [], p = [], fix = [], steps = [{kind: 'init', d: [], p: []}], rounds = [], order = [], ties = 0;
+  for (var i = 0; i < n; i++) { d.push(INF); p.push(-1); fix.push(false); }
+  d[src] = 0;
+  steps[0].d = d.slice(); steps[0].p = p.slice();
+  for (var it = 0; it < n; it++) {
+    var u = -1;
+    for (i = 0; i < n; i++) if (!fix[i] && d[i] < INF && (u < 0 || d[i] < d[u])) u = i;
+    if (u < 0) break;
+    for (i = 0; i < n; i++) if (i !== u && !fix[i] && d[i] === d[u]) ties++;
+    fix[u] = true; order.push(u);
+    steps.push({kind: 'pick', u: u, d: d.slice(), p: p.slice(), fix: fix.slice()});
+    A[u].forEach(function (x) {
+      if (fix[x.v]) { steps.push({kind: 'skip', u: u, v: x.v, k: x.k, d: d.slice(), p: p.slice(), fix: fix.slice()}); return; }
+      var cand = d[u] + x.w, old = d[x.v], ok = cand < old;
+      if (cand === old) ties++;
+      if (ok) { d[x.v] = cand; p[x.v] = u; }
+      steps.push({kind: 'relax', u: u, v: x.v, k: x.k, old: old, oldp: ok ? -1 : p[x.v], cand: cand, ok: ok, d: d.slice(), p: p.slice(), fix: fix.slice()});
+    });
+    rounds.push({u: u, d: d.slice(), p: p.slice(), fix: fix.slice()});
+  }
+  steps.push({kind: 'done', d: d.slice(), p: p.slice(), fix: fix.slice()});
+  var nh = d.map(function (_, v) { if (v === src || d[v] === INF) return -1; var x = v; while (p[x] !== src) x = p[x]; return x; });
+  var tree = {}; p.forEach(function (q, v) { if (q >= 0) Gr.edges.forEach(function (e, k) { if ((e.a === q && e.b === v) || (e.b === q && e.a === v)) tree[k] = 1; }); });
+  return {src: src, d: d, p: p, nh: nh, order: order, steps: steps, rounds: rounds, ties: ties, tree: tree};
+}
+function path(R, v) { var o = []; if (R.d[v] === INF) return o; for (var x = v; x >= 0; x = R.p[x]) o.unshift(x); return o; }
+
+/* ---------- Generator ---------- */
+function cross(p1, p2, p3, p4) {
+  function o(a, b, c) { return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x); }
+  if (p1 === p3 || p1 === p4 || p2 === p3 || p2 === p4) return false;
+  return o(p1, p2, p3) * o(p1, p2, p4) < 0 && o(p3, p4, p1) * o(p3, p4, p2) < 0;
+}
+function nearLine(a, b, c) { /* Knoten c zu nah an der Strecke a–b? */
+  var dx = b.x - a.x, dy = b.y - a.y, t = ((c.x - a.x) * dx + (c.y - a.y) * dy) / (dx * dx + dy * dy);
+  if (t <= 0.05 || t >= 0.95) return false;
+  return Math.hypot(a.x + t * dx - c.x, a.y + t * dy - c.y) < 46;
+}
+function build(r, lvl, bw) {
+  var n = lvl === 'L' ? 5 : lvl === 'M' ? ri(r, 6, 7) : ri(r, 8, 9);
+  var cols = n <= 5 ? 3 : n <= 7 ? 4 : 4, rows = Math.ceil(n / cols) + (n > 6 ? 0 : 1), cells = [];
+  for (var y = 0; y < rows; y++) for (var x = 0; x < cols; x++) cells.push([x, y]);
+  cells = shuffle(r, cells).slice(0, n);
+  var W = 860, H = 460, nodes = cells.map(function (c, i) {
+    return {name: '', x: Math.round(90 + c[0] * (W - 180) / (cols - 1) + ri(r, -40, 40)), y: Math.round(70 + c[1] * (H - 140) / Math.max(1, rows - 1) + ri(r, -30, 30))};
+  });
+  /* Namen nach Position (links oben → rechts unten), damit der Plan lesbar ist */
+  nodes.sort(function (a, b) { return a.y - b.y || a.x - b.x; });
+  nodes.forEach(function (nd, i) { nd.name = 'R' + (i + 1); });
+  var cand = [];
+  for (var i = 0; i < n; i++) for (var j = i + 1; j < n; j++) cand.push([i, j, Math.hypot(nodes[i].x - nodes[j].x, nodes[i].y - nodes[j].y)]);
+  cand.sort(function (a, b) { return a[2] - b[2]; });
+  var edges = [], comp = nodes.map(function (_, i) { return i; });
+  function find(x) { while (comp[x] !== x) x = comp[x] = comp[comp[x]]; return x; }
+  function ok(a, b) {
+    if (edges.some(function (e) { return cross(nodes[a], nodes[b], nodes[e.a], nodes[e.b]); })) return false;
+    for (var c = 0; c < n; c++) if (c !== a && c !== b && nearLine(nodes[a], nodes[b], nodes[c])) return false;
+    return true;
+  }
+  var maxW = lvl === 'L' ? 10 : lvl === 'M' ? 20 : 50;
+  function wt() { if (!bw) return {w: ri(r, 1, maxW)}; var b = BWLV[lvl][ri(r, 0, BWLV[lvl].length - 1)]; return {w: bwCost(b), bw: b}; }
+  function mk(a, b) { var x = wt(); x.a = a; x.b = b; return x; }
+  /* Spannbaum aus kurzen Kanten (Kruskal mit etwas Zufall) */
+  shuffle(r, cand.slice(0, Math.min(cand.length, n * 3))).concat(cand).forEach(function (c) {
+    if (find(c[0]) !== find(c[1]) && ok(c[0], c[1])) { edges.push(mk(c[0], c[1])); comp[find(c[0])] = find(c[1]); }
+  });
+  if (edges.length < n - 1) return null;
+  var extra = lvl === 'L' ? ri(r, 2, 3) : lvl === 'M' ? ri(r, 3, 4) : ri(r, 5, 6);
+  cand.forEach(function (c) {
+    if (extra <= 0 || c[2] > 420) return;
+    if (edges.some(function (e) { return (e.a === c[0] && e.b === c[1]) || (e.a === c[1] && e.b === c[0]); })) return;
+    if (r() < 0.55 && ok(c[0], c[1])) { edges.push(mk(c[0], c[1])); extra--; }
+  });
+  return {nodes: nodes, edges: edges, W: W, H: H, bw: !!bw};
+}
+function makeTask(seed, lvl, bw) {
+  if (!LVCODE[lvl] || !(seed >= 1)) return null;
+  for (var att = 0; att < 400; att++) {
+    var r = mulberry32((seed * 7919 + att * 104729 + LVCODE[lvl] * 1000003 + (bw ? 777 : 0) + 1959) >>> 0);
+    var Gr = build(r, lvl, bw); if (!Gr) continue;
+    /* Linkbeschriftungen dürfen sich nicht überlappen (auch nicht in der Lösung mit „100M = 10“) */
+    var pills = Gr.edges.map(function (e) { var A = Gr.nodes[e.a], B = Gr.nodes[e.b], mx = (A.x + B.x) / 2, my = (A.y + B.y) / 2, L = (bw ? bwLabel(e.bw) + ' = ' + e.w : String(e.w)).length * 8 + 22; return [mx - L / 2, my - 15, mx + L / 2, my + 15]; });
+    var clash = pills.some(function (p, i) { return pills.some(function (q, j) { return j > i && Math.min(p[2], q[2]) > Math.max(p[0], q[0]) && Math.min(p[3], q[3]) > Math.max(p[1], q[1]); }); }) ||
+      pills.some(function (p) { return Gr.nodes.some(function (nd) { return nd.x + 27 > p[0] && nd.x - 27 < p[2] && nd.y + 27 > p[1] && nd.y - 27 < p[3]; }); });
+    if (clash) continue;
+    var src = ri(r, 0, Gr.nodes.length - 1), R = run(Gr, src);
+    if (R.ties) continue;                      /* eindeutig: keine Gleichstände */
+    if (R.order.length !== Gr.nodes.length) continue;
+    /* mindestens ein Nachbar ist über einen Umweg billiger als direkt (die typische Falle) */
+    var trap = Gr.edges.some(function (e) { var o = e.a === src ? e.b : e.b === src ? e.a : -1; return o >= 0 && R.d[o] < e.w; });
+    if (lvl !== 'L' && !trap) continue;
+    Gr.src = src; Gr.res = R; Gr.level = lvl; Gr.code = lvl + (bw ? 'B' : '') + '-' + seed;
+    return Gr;
+  }
+  return null;
+}
+function example() {
+  var nodes = [{name: 'R1', x: 120, y: 230}, {name: 'R2', x: 330, y: 90}, {name: 'R3', x: 330, y: 370}, {name: 'R4', x: 560, y: 110}, {name: 'R5', x: 560, y: 350}, {name: 'R6', x: 770, y: 230}];
+  var e = [[0, 1, 4], [0, 2, 2], [1, 2, 1], [1, 3, 5], [2, 4, 9], [2, 3, 10], [3, 4, 2], [3, 5, 6], [4, 5, 3]];
+  return {nodes: nodes, edges: e.map(function (x) { return {a: x[0], b: x[1], w: x[2]}; }), W: 860, H: 460};
+}
+
+/* ---------- Zeichnen ---------- */
+function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]; }); }
+function tx(x, y, t, o) { o = o || {}; return '<text x="' + x + '" y="' + y + '" text-anchor="' + (o.a || 'middle') + '" font-size="' + (o.fs || 13) + '" font-weight="' + (o.fw || 400) + '" fill="' + (o.c || '#1c2b33') + '" font-family="' + (o.mono ? 'ui-monospace,Menlo,Consolas,monospace' : 'Open Sans,Arial,sans-serif') + '" pointer-events="none">' + esc(t) + '</text>'; }
+function dtxt(v) { return v === INF ? '∞' : String(v); }
+/* opt: {st: Schritt-Objekt, src, tree:{k:1}, sel: Knoten, edit:true, hotEdge:k, hide:true (keine Distanzen)} */
+function draw(Gr, opt) {
+  opt = opt || {};
+  var W = Gr.W || 860, H = Gr.H || 460, st = opt.st, o = ['<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Netz mit Linkkosten"' + (opt.edit ? ' class="ed"' : '') + '>'];
+  o.push('<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="transparent" data-bg="1"/>');
+  Gr.edges.forEach(function (e, k) {
+    var A = Gr.nodes[e.a], B = Gr.nodes[e.b], hot = opt.hotEdge === k, tr = opt.tree && opt.tree[k];
+    var col = hot ? (opt.hotOk === false ? '#c62828' : '#f9a825') : tr ? '#2e7d32' : '#90a4ae', w = hot || tr ? 5 : 2.5;
+    o.push('<g data-edge="' + k + '"><line x1="' + A.x + '" y1="' + A.y + '" x2="' + B.x + '" y2="' + B.y + '" stroke="transparent" stroke-width="16"/><line x1="' + A.x + '" y1="' + A.y + '" x2="' + B.x + '" y2="' + B.y + '" stroke="' + col + '" stroke-width="' + w + '" stroke-linecap="round"/></g>');
+  });
+  var occ = [];  /* belegte Flächen: Linkbeschriftungen, Router, Kosten-Kästchen */
+  Gr.edges.forEach(function (e, k) {
+    var A = Gr.nodes[e.a], B = Gr.nodes[e.b], mx = (A.x + B.x) / 2, my = (A.y + B.y) / 2;
+    var s = Gr.bw && e.bw ? bwLabel(e.bw) + (opt.costs ? ' = ' + e.w : '') : String(e.w), bw = 14 + s.length * 8;
+    occ.push([mx - bw / 2, my - 12, mx + bw / 2, my + 12]);
+    o.push('<g data-w="' + k + '"' + (opt.edit ? ' style="cursor:text"' : '') + '><rect x="' + (mx - bw / 2) + '" y="' + (my - 12) + '" width="' + bw + '" height="24" rx="12" fill="#fff" stroke="' + (opt.hotEdge === k ? '#f9a825' : '#546e7a') + '" stroke-width="1.5"/>' + tx(mx, my + 5, s, {fs: 14, fw: 700, mono: 1}) + '</g>');
+  });
+  Gr.nodes.forEach(function (nd) { occ.push([nd.x - 25, nd.y - 25, nd.x + 25, nd.y + 25]); });
+  var badges = [];
+  Gr.nodes.forEach(function (nd, i) {
+    var fix = st && st.fix && st.fix[i], cur = st && st.u === i && (st.kind === 'pick' || st.kind === 'relax' || st.kind === 'skip'), tgt = st && st.v === i;
+    var fill = opt.sel === i ? '#fff59d' : cur ? '#ffe0b2' : fix ? '#c8e6c9' : '#fff', stroke = i === opt.src ? '#1565c0' : cur ? '#e65100' : fix ? '#2e7d32' : tgt ? '#f9a825' : '#1c2b33';
+    o.push('<g data-node="' + i + '" style="cursor:' + (opt.edit ? 'pointer' : 'default') + '"><circle cx="' + nd.x + '" cy="' + nd.y + '" r="24" fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + (i === opt.src || cur ? 3.5 : 2) + '"/>' + tx(nd.x, nd.y + 5, nd.name, {fs: 15, fw: 700}) + '</g>');
+    if (st && !opt.hide) {
+      var dv = st.d[i], txt = dtxt(dv) + (st.p[i] >= 0 ? ' · ' + Gr.nodes[st.p[i]].name : ''), bw = 12 + txt.length * 7.4;
+      /* Platz suchen: über, unter, rechts, links, schräg – erster ohne Überlappung gewinnt */
+      var C = [[0, -44], [0, 46], [30 + bw / 2, 0], [-30 - bw / 2, 0], [22 + bw / 2, -34], [-22 - bw / 2, -34], [22 + bw / 2, 36], [-22 - bw / 2, 36], [0, -68], [0, 70], [40 + bw / 2, -50], [-40 - bw / 2, -50], [40 + bw / 2, 52], [-40 - bw / 2, 52]], best = null, bs = 1e9;
+      C.forEach(function (c, ci) {
+        var x = nd.x + c[0], y = nd.y + c[1], b = [x - bw / 2 - 2, y - 13, x + bw / 2 + 2, y + 10], sc = ci;
+        occ.concat(badges).forEach(function (q) { var ox = Math.min(b[2], q[2]) - Math.max(b[0], q[0]), oy = Math.min(b[3], q[3]) - Math.max(b[1], q[1]); if (ox > 0 && oy > 0) sc += 100 + ox * oy; });
+        Gr.edges.forEach(function (e) { var A = Gr.nodes[e.a], B = Gr.nodes[e.b]; for (var t = 0.1; t <= 0.9; t += 0.04) { var px = A.x + (B.x - A.x) * t, py = A.y + (B.y - A.y) * t; if (px > b[0] && px < b[2] && py > b[1] && py < b[3]) { sc += 6; } } });
+        if (b[0] < 2 || b[2] > W - 2 || b[1] < 2 || b[3] > H - 2) sc += 5000;
+        if (sc < bs) { bs = sc; best = [x, y, b]; }
+      });
+      badges.push(best[2]);
+      var bx = best[0], by = best[1];
+      o.push('<rect x="' + (bx - bw / 2) + '" y="' + (by - 12) + '" width="' + bw + '" height="21" rx="4" fill="' + (fix ? '#2e7d32' : dv === INF ? '#eceff1' : '#1565c0') + '"/>' + tx(bx, by + 3.5, txt, {fs: 12.5, fw: 700, c: dv === INF && !fix ? '#546e7a' : '#fff', mono: 1}));
+    }
+  });
+  o.push('</svg>');
+  return o.join('');
+}
+
+G.DJ = {REF: REF, BWS: BWS, BWLV: BWLV, bwCost: bwCost, bwLabel: bwLabel, bwLong: bwLong, nearestBw: nearestBw, LVNAME: LVNAME, INF: INF, run: run, path: path, makeTask: makeTask, example: example, draw: draw, dtxt: dtxt, adj: adj};
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+(function(){
+'use strict';
+var $=function(i){return document.getElementById(i);},D=window.DJ,reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+var dt=D.dtxt;
+
+/* ---------- gemeinsame Bausteine ---------- */
+function treeFrom(Gr,st){var t={};if(!st||!st.p)return t;st.p.forEach(function(q,v){if(q<0||!st.fix||!st.fix[v])return;Gr.edges.forEach(function(e,k){if((e.a===q&&e.b===v)||(e.b===q&&e.a===v))t[k]=1;});});return t;}
+/* Dijkstra-Tabelle bis Schritt si */
+function tableHTML(Gr,R,si){
+  var n=Gr.nodes.length,rows=[],cur=null;
+  for(var i=0;i<=si;i++){var s=R.steps[i];
+    if(s.kind==='init'){cur={u:-1,fixBefore:[],st:s,chg:{}};rows.push(cur);}
+    else if(s.kind==='pick'){cur={u:s.u,fixBefore:rows.length?rows[rows.length-1].fixNow||[]:[],st:s,chg:{}};cur.fixNow=cur.fixBefore.concat([s.u]);rows.push(cur);}
+    else if(s.kind==='relax'||s.kind==='skip'||s.kind==='done'){if(cur){cur.st=s;if(s.kind==='relax'&&s.ok)cur.chg[s.v]=1;}}}
+  var h='<thead><tr><th>Schritt</th><th>fix</th>'+Gr.nodes.map(function(nd){return'<th>'+esc(nd.name)+'</th>';}).join('')+'</tr></thead><tbody>';
+  rows.forEach(function(r,k){var s=r.st;h+='<tr'+(k===rows.length-1&&si<R.steps.length-1?' class="cur"':'')+'><td>'+(k===0?'Start':k)+'</td><td class="nset">'+(r.fixNow||[]).map(function(i){return esc(Gr.nodes[i].name);}).join(', ')+'</td>';
+    for(var v=0;v<n;v++){if(r.fixBefore.indexOf(v)>=0){h+='<td class="gone"></td>';continue;}
+      var val=dt(s.d[v])+(s.p[v]>=0&&s.d[v]!==D.INF?', '+Gr.nodes[s.p[v]].name:'');
+      h+='<td class="'+(v===r.u?'pk':r.chg[v]?'chg':'')+'">'+(v===r.u?'✓ ':'')+esc(val)+'</td>';}
+    h+='</tr>';});
+  return h+'</tbody>';
+}
+function routeTable(Gr,R){
+  var s=R.src;return'<p class="qh">Routing-Tabelle von '+esc(Gr.nodes[s].name)+'</p><table class="rtab"><thead><tr><th>Ziel</th><th>Kosten</th><th>Next Hop</th><th>Weg</th></tr></thead><tbody>'+
+   Gr.nodes.map(function(nd,v){if(v===s)return'';var ok=R.d[v]!==D.INF;return'<tr><td><b>'+esc(nd.name)+'</b></td><td>'+dt(R.d[v])+'</td><td>'+(ok?esc(Gr.nodes[R.nh[v]].name):'–')+'</td><td>'+(ok?D.path(R,v).map(function(i){return esc(Gr.nodes[i].name);}).join(' → '):'nicht erreichbar')+'</td></tr>';}).join('')+'</tbody></table>';
+}
+function explain(Gr,R,st){
+  var N=function(i){return'<b>'+esc(Gr.nodes[i].name)+'</b>';},s=R.src;
+  if(st.kind==='init')return['Start',N(s)+' hat die Kosten 0, alle anderen Router ∞ – noch ist kein Weg bekannt. Noch ist kein Router fix.'];
+  if(st.kind==='pick'){var open=[];st.d.forEach(function(d,i){if(!st.fix[i]&&d!==D.INF)open.push(Gr.nodes[i].name+' '+d);});
+    return[Gr.nodes[st.u].name+' wird fix',st.u===s?N(s)+' ist der Start und hat die kleinsten Kosten (0) – er wird zuerst fix. Jetzt werden seine Nachbarn geprüft.':'Von allen Routern, die noch nicht fix sind, hat '+N(st.u)+' die kleinsten Kosten: <b>'+st.d[st.u]+'</b>'+(open.length?' (die anderen: '+esc(open.join(', '))+')':'')+'. Billiger kann es nicht mehr werden – '+N(st.u)+' ist fix. Jetzt werden seine Nachbarn geprüft.'];}
+  if(st.kind==='skip')return['Nachbar '+Gr.nodes[st.v].name+' übersprungen',N(st.v)+' ist schon fix – sein kürzester Weg steht fest.'];
+  if(st.kind==='relax'){var w=st.cand-st.d[st.u];
+    if(st.old===D.INF)return['Neuer Weg zu '+Gr.nodes[st.v].name,'Über '+N(st.u)+': '+st.d[st.u]+' + '+w+' = <b>'+st.cand+'</b>. Bisher war '+N(st.v)+' unbekannt (∞) – also eintragen: '+st.cand+' über '+N(st.u)+'.'];
+    if(st.ok)return['Besserer Weg zu '+Gr.nodes[st.v].name,'Über '+N(st.u)+': '+st.d[st.u]+' + '+w+' = <b>'+st.cand+'</b> &lt; '+st.old+' (bisher). Neuer Bestwert für '+N(st.v)+': '+st.cand+' über '+N(st.u)+'.'];
+    return['Kein Gewinn für '+Gr.nodes[st.v].name,'Über '+N(st.u)+': '+st.d[st.u]+' + '+w+' = '+st.cand+' – nicht billiger als bisher '+st.old+' über '+N(st.p[st.v])+'. Es bleibt beim alten Wert.'];}
+  var un=st.d.filter(function(d){return d===D.INF;}).length;
+  return['Fertig','Alle'+(un?' erreichbaren':'')+' Router sind fix. Die grünen Links bilden den <b>Shortest-Path-Tree</b> von '+N(s)+'. Daraus entsteht die Routing-Tabelle unten.'+(un?' '+un+' Router sind gar nicht erreichbar.':'')];
+}
+
+/* ---------- Solver ---------- */
+var G=D.example(),cm=0,mode='add',sel=-1,src=0,R=null,si=0,playing=false,timer=0,drag=null;
+var HINT={add:'Klick auf eine freie Stelle setzt einen neuen Router (höchstens 12).',link:'Klick auf einen Router, dann auf einen zweiten – schon ist der Link da. Die Kosten richten sich nach der Länge; Klick auf die Zahl ändert sie.',move:'Router mit der Maus ziehen.',del:'Klick auf einen Router oder einen Link löscht ihn.'};
+function freeName(){for(var i=1;;i++){var n='R'+i;if(!G.nodes.some(function(x){return x.name===n;}))return n;}}
+function fillSrc(){var s=$('ssrc');s.innerHTML=G.nodes.map(function(nd,i){return'<option value="'+i+'">'+esc(nd.name)+'</option>';}).join('');if(src>=G.nodes.length)src=0;s.value=src;$('srun').disabled=G.nodes.length<2;}
+function editRender(){$('ssvg').innerHTML=D.draw(G,{edit:1,sel:sel,src:src,costs:1});$('shint').textContent=G.nodes.length?HINT[mode]:'Klick auf die Fläche, um den ersten Router zu setzen – oder lade das Beispiel.';fillSrc();}
+function runRender(){var st=R.steps[si],last=si===R.steps.length-1;
+  $('ssvg').innerHTML=D.draw(G,{costs:1,st:st,src:R.src,tree:last?R.tree:treeFrom(G,st),hotEdge:(st.kind==='relax'||st.kind==='skip')?st.k:-1,hotOk:st.kind==='relax'?st.ok:null});
+  var e=explain(G,R,st);$('sttl').textContent=e[0];$('stxt').innerHTML=e[1];
+  $('sno').textContent='Schritt '+(si+1)+' von '+R.steps.length;$('sprev').disabled=si===0;$('snext').disabled=last;
+  $('sdt').innerHTML=tableHTML(G,R,si);$('srt').innerHTML=last?routeTable(G,R):'';}
+function svgPt(ev){var svg=$('ssvg').querySelector('svg'),p=svg.createSVGPoint();p.x=ev.clientX;p.y=ev.clientY;return p.matrixTransform(svg.getScreenCTM().inverse());}
+function setMode(m){mode=m;sel=-1;document.querySelectorAll('[data-mode]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.mode===m);});editRender();}
+document.querySelectorAll('[data-mode]').forEach(function(b){b.onclick=function(){stopRun();setMode(b.dataset.mode);};});
+function stopRun(){if(!R)return;stop();R=null;$('runui').hidden=true;$('tools').querySelectorAll('button,select').forEach(function(x){x.disabled=false;});}
+$('ssvg').addEventListener('click',function(ev){
+  if(R)return;var w=ev.target.closest('[data-w]'),nd=ev.target.closest('[data-node]'),ed=ev.target.closest('[data-edge]');
+  if(w&&mode!=='del'){editWeight(+w.dataset.w);return;}
+  if(mode==='add'&&!nd&&!ed&&!w){if(G.nodes.length>=12){$('shint').textContent='Mehr als 12 Router passen nicht.';return;}var p=svgPt(ev);G.nodes.push({name:freeName(),x:Math.round(Math.max(30,Math.min(830,p.x))),y:Math.round(Math.max(55,Math.min(435,p.y)))});editRender();return;}
+  if(mode==='link'&&nd){var i=+nd.dataset.node;if(sel<0){sel=i;}else if(sel===i){sel=-1;}else{var a=sel,b=i;if(!G.edges.some(function(e){return(e.a===a&&e.b===b)||(e.a===b&&e.b===a);})){var A=G.nodes[a],B=G.nodes[b];var w0=Math.max(1,Math.round(Math.hypot(A.x-B.x,A.y-B.y)/40));G.edges.push(G.bw?{a:a,b:b,bw:100,w:D.bwCost(100)}:{a:a,b:b,w:w0});}sel=-1;}editRender();return;}
+  if(mode==='del'){if(nd){var k=+nd.dataset.node;G.edges=G.edges.filter(function(e){return e.a!==k&&e.b!==k;}).map(function(e){var x={a:e.a>k?e.a-1:e.a,b:e.b>k?e.b-1:e.b,w:e.w};if(e.bw)x.bw=e.bw;return x;});G.nodes.splice(k,1);if(src===k)src=0;else if(src>k)src--;editRender();return;}
+    var dw=w||ed;if(dw){G.edges.splice(+(dw.dataset.w||dw.dataset.edge),1);editRender();}}
+});
+$('ssvg').addEventListener('pointerdown',function(ev){if(R||mode!=='move')return;var nd=ev.target.closest('[data-node]');if(!nd)return;drag=+nd.dataset.node;ev.preventDefault();});
+window.addEventListener('pointermove',function(ev){if(drag===null)return;var p=svgPt(ev);G.nodes[drag].x=Math.round(Math.max(30,Math.min(830,p.x)));G.nodes[drag].y=Math.round(Math.max(55,Math.min(435,p.y)));editRender();});
+window.addEventListener('pointerup',function(){drag=null;});
+function editWeight(k){
+  var e=G.edges[k],A=G.nodes[e.a],B=G.nodes[e.b],svg=$('ssvg').querySelector('svg'),m=svg.getScreenCTM(),cr=$('scanvas').getBoundingClientRect(),p=svg.createSVGPoint();
+  p.x=(A.x+B.x)/2;p.y=(A.y+B.y)/2;var q=p.matrixTransform(m);
+  var inp;if(G.bw){inp=document.createElement('select');inp.className='winp';inp.style.width='96px';inp.innerHTML=D.BWS.map(function(b){return'<option value="'+b+'">'+D.bwLabel(b)+' = '+D.bwCost(b)+'</option>';}).join('');inp.value=e.bw;inp.setAttribute('aria-label','Bandbreite');}
+  else{inp=document.createElement('input');inp.className='winp';inp.type='number';inp.min=1;inp.max=999;inp.value=e.w;inp.setAttribute('aria-label','Linkkosten');}
+  inp.style.left=(q.x-cr.left)+'px';inp.style.top=(q.y-cr.top)+'px';$('scanvas').appendChild(inp);inp.focus();if(inp.select)inp.select();
+  var done=false;function fin(save){if(done)return;done=true;var v=Math.round(+inp.value);if(save&&G.bw){e.bw=v;e.w=D.bwCost(v);}else if(save&&v>=1&&v<=999)e.w=v;inp.remove();editRender();}
+  inp.addEventListener('keydown',function(ev){if(ev.key==='Enter')fin(true);if(ev.key==='Escape')fin(false);});inp.addEventListener('blur',function(){fin(true);});if(G.bw)inp.addEventListener('change',function(){fin(true);});
+}
+$('ssrc').onchange=function(){src=+this.value;editRender();};
+function applyCm(){if(cm&&!G.bw){G.bw=true;G.edges.forEach(function(e){e.bw=D.nearestBw(e.w);e.w=D.bwCost(e.bw);});}else if(!cm&&G.bw){G.bw=false;G.edges.forEach(function(e){delete e.bw;});}}
+document.querySelectorAll('[data-cm]').forEach(function(b){b.onclick=function(){cm=+b.dataset.cm;document.querySelectorAll('[data-cm]').forEach(function(x){x.setAttribute('aria-pressed',x===b);});applyCm();editRender();};});
+$('sex').onclick=function(){G=D.example();applyCm();src=0;sel=-1;editRender();};
+$('srnd').onclick=function(){var T=D.makeTask(1+Math.floor(Math.random()*99999),'M',!!cm);G={nodes:T.nodes,edges:T.edges,W:T.W,H:T.H,bw:T.bw};src=T.src;sel=-1;editRender();};
+$('sclr').onclick=function(){G={nodes:[],edges:[],W:860,H:460,bw:!!cm};src=0;sel=-1;setMode('add');};
+$('srun').onclick=function(){if(G.nodes.length<2)return;R=D.run(G,src);si=0;$('runui').hidden=false;$('tools').querySelectorAll('button,select').forEach(function(x){x.disabled=true;});$('shint').textContent='Dijkstra läuft – zum Ändern des Netzes auf „Netz bearbeiten“ klicken.';runRender();};
+$('sedit').onclick=function(){stopRun();editRender();};
+$('sprev').onclick=function(){stop();if(si>0){si--;runRender();}};
+$('snext').onclick=function(){stop();if(si<R.steps.length-1){si++;runRender();}};
+function stop(){playing=false;clearTimeout(timer);$('splay').textContent='▶ Abspielen';}
+function tick(){if(!playing)return;if(si<R.steps.length-1){si++;runRender();timer=setTimeout(tick,[0,2600,1700,1100,650,330][+$('sspd').value]);}else stop();}
+$('splay').onclick=function(){if(playing){stop();return;}playing=true;$('splay').textContent='❚❚ Pause';if(si>=R.steps.length-1){si=0;runRender();}timer=setTimeout(tick,reduce?0:400);};
+editRender();
+
+/* ---------- Quiz ---------- */
+var Q=[
+ ['Was braucht Dijkstra, um rechnen zu können?',['Nur die eigenen Nachbarn','Den ganzen Netzplan mit allen Linkkosten','Nur die Anzahl der Router','Die Hop-Anzahl zu jedem Ziel'],1,'Dijkstra rechnet auf dem kompletten Netzplan: alle Router, alle Links, alle Kosten.'],
+ ['Wie viele Router werden in jedem Schritt fix?',['Alle Nachbarn des Starts','Genau einer','Zwei','So viele, wie sich Kosten geändert haben'],1,'In jedem Schritt wird genau ein Router fix – der billigste offene. Danach werden seine Nachbarn geprüft.'],
+ ['Welcher Router wird im nächsten Schritt fix?',['Der mit den meisten Nachbarn','Der zuletzt geänderte','Der mit den kleinsten Kosten unter den noch nicht fixen','Der mit dem kleinsten Namen'],2,'Immer der billigste offene Router. Bei ihm kann es keinen billigeren Weg mehr geben.'],
+ ['R1 ist der Start. Der direkte Link R1–R2 kostet 10, R1–R3 kostet 2 und R3–R2 kostet 3. Welche Kosten hat R2 am Ende?',['10','5','3','13'],1,'Über R3: 2 + 3 = 5 ist billiger als direkt 10. Der direkte Link ist nicht immer der beste Weg.'],
+ ['Welchen Next Hop trägt R1 im Beispiel aus Frage 3 für R2 ein?',['R2','R3','R1','keinen'],1,'Der Weg ist R1 → R3 → R2. Der erste Router nach dem Start ist R3 – das ist der Next Hop. Vorgänger von R2 ist ebenfalls R3.'],
+ ['Was passiert, wenn ein neuer Weg genauso teuer ist wie der bisherige?',['Er ersetzt den alten Wert','Der alte Wert bleibt – nur echt billigere Wege werden eingetragen','Beide werden gestrichen','Der Router wird sofort fix'],1,'Dijkstra trägt nur ein, wenn es echt billiger ist (&lt;). In den Übungen gibt es keine Gleichstände, damit die Lösung eindeutig ist.'],
+ ['Warum funktioniert Dijkstra nur mit positiven Kosten?',['Weil negative Zahlen nicht in die Tabelle passen','Weil sonst ein schon fixer Router nachträglich über einen negativen Link billiger werden könnte','Weil OSPF keine Zahlen über 100 kennt','Das stimmt nicht – negative Kosten gehen auch'],1,'„Fix“ ist nur sicher, wenn jeder weitere Link etwas kostet. Darum sind alle Kosten mindestens 1.'],
+ ['Referenzbandbreite 1000 Mbit/s. Welche Kosten hat ein Link mit 100 Mbit/s?',['1','10','100','1000'],1,'1000 ÷ 100 = 10.'],
+ ['Welcher Weg ist billiger: zwei Links mit je 1 Gbit/s oder ein Link mit 100 Mbit/s (Referenz 1000 Mbit/s)?',['Der eine 100-Mbit/s-Link','Die zwei 1-Gbit/s-Links','Beide gleich','Kommt auf die Hop-Anzahl an'],1,'2 × 1 = 2 gegen 10. Mehr Hops über schnelle Links können billiger sein als ein langsamer direkter Link.']];
+$('qz').innerHTML=Q.map(function(q,n){return'<div class="q" data-n="'+n+'"><p>'+(n+1)+'. '+q[0]+'</p><div class="opts col">'+q[1].map(function(o,j){return'<label><input type="radio" name="q'+n+'" value="'+j+'"> '+o+'</label>';}).join('')+'</div><div class="ex">'+q[3]+'</div></div>';}).join('')+
+ '<div class="acts"><button class="btn" type="button" id="qcheck">Prüfen</button><span class="fb" id="qfb" aria-live="polite"></span></div>';
+$('qcheck').onclick=function(){var ok=0;Q.forEach(function(q,n){var box=document.querySelector('.q[data-n="'+n+'"]'),c=box.querySelector('input:checked');box.querySelectorAll('label').forEach(function(l){var v=+l.querySelector('input').value;l.classList.remove('right','wrong','missed');if(c&&+c.value===v)l.classList.add(v===q[2]?'right':'wrong');else if(v===q[2]&&c)l.classList.add('missed');});if(c){box.querySelector('.ex').classList.add('open');if(+c.value===q[2])ok++;}});
+ var fb=$('qfb');fb.className='fb '+(ok===Q.length?'good':'bad');fb.textContent=ok+' von '+Q.length+' richtig'+(ok===Q.length?' ✓':'.');};
+
+/* ---------- Übungen ---------- */
+var cache={};
+function mk(code){var m=code.split('-');return D.makeTask(+m[1],m[0][0],m[0].length>1);}
+function taskOf(card){var c=card.dataset.code;if(!cache[c])cache[c]=mk(c);return cache[c];}
+function taskHTML(T,id,label){
+ var s=T.src,nb=D.adj(T)[s].map(function(x){return x.v;}),names=T.nodes.map(function(n){return n.name;});
+ var pre='<option value="">–</option>'+names.map(function(n,i){return'<option value="'+i+'">'+n+'</option>';}).join(''),nho='<option value="">–</option>'+nb.map(function(i){return'<option value="'+i+'">'+names[i]+'</option>';}).join('');
+ var rows=T.nodes.map(function(nd,i){if(i===s)return'<tr><td><b>'+esc(nd.name)+'</b> (Start)</td><td>0</td><td>–</td><td>–</td></tr>';
+   return'<tr data-i="'+i+'"><td><b>'+esc(nd.name)+'</b></td><td><input inputmode="numeric" autocomplete="off" aria-label="Kosten '+esc(nd.name)+'"></td><td><select aria-label="Vorgänger '+esc(nd.name)+'">'+pre+'</select></td><td><select aria-label="Next Hop '+esc(nd.name)+'">'+nho+'</select></td></tr>';}).join('');
+ return'<div class="card task" id="'+id+'" data-code="'+T.code+'"><h3>'+label+' <span class="tag">'+D.LVNAME[T.level]+'</span>'+(T.bw?'<span class="tag">Bandbreiten</span>':'')+'<span class="tag">Nr. '+T.code+'</span></h3>'+
+  '<p style="margin:2px 0 6px">Start-Router: <b>'+esc(names[s])+'</b>'+(T.bw?' · An den Links steht die <b>Bandbreite</b>. Kosten = 1000 Mbit/s ÷ Bandbreite (1G = 1, 500M = 2, 250M = 4, 200M = 5, 100M = 10, 50M = 20, 20M = 50, 10M = 100).':'')+'</p>'+D.draw(T,{src:s})+
+  '<p class="qh">1. In welcher Reihenfolge werden die Router fix?</p><input class="ord" placeholder="z. B. '+names[s]+', '+names[(s+1)%names.length]+', …" autocomplete="off" spellcheck="false" aria-label="Reihenfolge">'+
+  '<p class="qh">2. Ergebnis für jeden Router</p><table class="at"><thead><tr><th>Router</th><th>Kosten</th><th>Vorgänger</th><th>Next Hop</th></tr></thead><tbody>'+rows+'</tbody></table>'+
+  '<div class="acts"><button class="btn" type="button" data-act="check">Prüfen</button><button class="btn ghost" type="button" data-act="sol">Lösung anzeigen</button><button class="btn ghost" type="button" data-act="solver">Im Solver ansehen</button><span class="fb" aria-live="polite"></span></div><div class="sol"></div></div>';
+}
+function check(card){
+ var T=taskOf(card),R=T.res,ok=0,tot=0,names=T.nodes.map(function(n){return n.name.toUpperCase();});
+ var oi=card.querySelector('.ord'),got=(oi.value.toUpperCase().match(/R\d+/g)||[]),want=R.order.map(function(i){return names[i];});
+ oi.classList.remove('right','wrong');tot++;if(got.length){var g=got.join(',')===want.join(',')||got.join(',')===want.slice(1).join(',');oi.classList.add(g?'right':'wrong');if(g)ok++;}
+ card.querySelectorAll('.at tbody tr[data-i]').forEach(function(tr){var i=+tr.dataset.i,inp=tr.querySelector('input'),ss=tr.querySelectorAll('select');
+  [[inp,String(R.d[i])],[ss[0],String(R.p[i])],[ss[1],String(R.nh[i])]].forEach(function(x){var el=x[0];el.classList.remove('right','wrong');tot++;var v=el.value.trim();if(v){var g=v===x[1];el.classList.add(g?'right':'wrong');if(g)ok++;}});});
+ var fb=card.querySelector('.fb'),all=ok===tot;fb.className='fb '+(all?'good':'bad');fb.textContent=all?'Alles richtig! ✓':ok+' von '+tot+' richtig.';if(all)card.dataset.solved='1';markToc();
+}
+function solHTML(T){
+ var R=T.res,names=T.nodes.map(function(n){return n.name;}),s=T.src;
+ var traps=T.edges.filter(function(e){var o=e.a===s?e.b:e.b===s?e.a:-1;return o>=0&&R.d[o]<e.w;}).map(function(e){var o=e.a===s?e.b:e.a;return names[o]+': direkt '+e.w+', über '+D.path(R,o).map(function(i){return names[i];}).join(' → ')+' nur '+R.d[o];});
+ var conv=T.bw?'<p class="qh">Kosten der Links</p><p style="margin:0">'+D.BWS.filter(function(b){return T.edges.some(function(e){return e.bw===b;});}).map(function(b){return D.bwLabel(b)+': 1000 ÷ '+b+' = <b>'+D.bwCost(b)+'</b>';}).join(' · ')+'</p>':'';
+ return'<h3 style="font:400 20px var(--head);margin:0">Lösung</h3>'+D.draw(T,{src:s,tree:R.tree,st:R.steps[R.steps.length-1],costs:1})+conv+
+  '<p class="qh">Reihenfolge</p><p style="margin:0;font:600 15px var(--mono)">'+R.order.map(function(i){return names[i];}).join(' → ')+'</p>'+
+  '<p class="qh">Dijkstra-Tabelle</p><div class="scroll"><table class="dt">'+tableHTML(T,R,R.steps.length-1)+'</table></div>'+routeTable(T,R)+
+  (traps.length?'<div class="ans"><b>Falle:</b> Der direkte Link ist nicht immer der billigste Weg – '+esc(traps.join('; '))+'.</div>':'');
+}
+document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('[data-act]');if(!t)return;var card=t.closest('.task');if(!card)return;
+ if(t.dataset.act==='check')check(card);
+ if(t.dataset.act==='sol'){var so=card.querySelector('.sol');if(!so.innerHTML)so.innerHTML=solHTML(taskOf(card));var o=so.classList.toggle('open');t.textContent=o?'Lösung ausblenden':'Lösung anzeigen';}
+ if(t.dataset.act==='solver'){var T=taskOf(card);stopRun();G={nodes:JSON.parse(JSON.stringify(T.nodes)),edges:JSON.parse(JSON.stringify(T.edges)),W:T.W,H:T.H};src=T.src;sel=-1;editRender();$('solver').scrollIntoView({behavior:reduce?'auto':'smooth'});}});
+var list=["L-1", "L-2", "LB-3", "M-1", "MB-2", "M-3", "MB-4", "S-1", "SB-2", "SB-3"];
+var host=$('tasks'),cp=0;
+list.forEach(function(code,k){var T=mk(code);cache[code]=T;var d=document.createElement('div');d.className='page';d.hidden=k!==0;
+ d.innerHTML=taskHTML(T,'t'+(k+1),'Aufgabe '+(k+1))+'<div class="navrow">'+(k>0?'<button class="btn ghost" type="button" data-go="'+(k-1)+'">‹ Aufgabe '+k+'</button>':'<span></span>')+(k<list.length-1?'<button class="btn" type="button" data-go="'+(k+1)+'">Aufgabe '+(k+2)+' ›</button>':'<a class="btn" href="#generator" style="text-decoration:none">🎲 Weiter mit dem Zufallsgenerator</a>')+'</div>';host.appendChild(d);});
+var pages=[].slice.call(host.children);
+list.forEach(function(c,k){var b=document.createElement('button');b.type='button';b.textContent=k+1;b.dataset.go=k;$('ptoc').appendChild(b);});
+function markToc(){[].forEach.call($('ptoc').children,function(b,k){b.classList.toggle('on',k===cp);b.classList.toggle('ok',pages[k].querySelector('.task').dataset.solved==='1');});}
+function show(k,scroll){k=Math.max(0,Math.min(pages.length-1,k));cp=k;pages.forEach(function(p,j){p.hidden=j!==k;});$('pnum').textContent='Aufgabe '+(k+1)+' von '+pages.length;$('ppart').textContent=D.LVNAME[list[k][0]]+(list[k][1]==='B'?' · Bandbreiten':'');$('pprev').disabled=k===0;$('pnext').disabled=k===pages.length-1;markToc();if(scroll){var top=$('uebungen').getBoundingClientRect().top+window.pageYOffset;if(window.pageYOffset>top)window.scrollTo({top:top,behavior:reduce?'auto':'smooth'});}}
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-go]');if(b)show(+b.dataset.go,true);});
+$('pprev').onclick=function(){show(cp-1,true);};$('pnext').onclick=function(){show(cp+1,true);};show(0,false);
+function gen(lvl,seed,bw){var T=D.makeTask(seed,lvl,bw);if(!T){$('gmsg').textContent='Zu dieser Nummer gibt es keine Aufgabe.';return;}$('gmsg').textContent='';cache[T.code]=T;$('gout').innerHTML=taskHTML(T,'g'+T.code.replace('-','_'),'Aufgabe '+T.code);$('gcode').value=T.code;$('glvl').value=lvl;$('gcm').value=bw?'1':'0';}
+$('gnew').onclick=function(){gen($('glvl').value,1+Math.floor(Math.random()*99999),$('gcm').value==='1');};
+function load(){var m=/^\s*([LMS])(B?)\s*-?\s*(\d{1,6})\s*$/i.exec($('gcode').value);if(!m){$('gmsg').textContent='Bitte eine Nummer wie L-12, MB-305 oder S-4711 eingeben.';return;}gen(m[1].toUpperCase(),+m[3],!!m[2]);}
+$('gload').onclick=load;$('gcode').addEventListener('keydown',function(e){if(e.key==='Enter')load();});
+gen('M',1+Math.floor(Math.random()*99999),false);
+})();
+</script>
+</body>
+</html>
