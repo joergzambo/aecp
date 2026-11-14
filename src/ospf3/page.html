@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OSPF 3: Multi-Area-OSPF</title>
+<style>
+/*BASECSS*/
+.rules{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+@media(max-width:760px){.rules{grid-template-columns:minmax(0,1fr)}}
+.cmp{width:100%;border-collapse:collapse;font-size:15px;margin-top:6px}
+.cmp th,.cmp td{border:1px solid #cfd8dc;padding:7px 10px;text-align:left;vertical-align:top}
+.cmp th{background:var(--soft);font:600 14px var(--ui)}
+.explore{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.panel .hefte{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px}
+.panel h3{font:400 21px var(--head);margin:0 0 6px}
+.heft{border:1.5px solid #b0bec5;border-radius:6px;padding:8px 10px;margin:8px 0;background:#fff}
+.heft h4{font:600 14px var(--ui);margin:0 0 6px}
+.pages{display:flex;flex-wrap:wrap;gap:5px}
+.pages span{font:600 12.5px var(--mono);padding:3px 7px;border-radius:3px;border:1px solid}
+.pg1{background:#e3f2fd;border-color:#1565c0;color:#0d47a1}
+.pg3{background:#fff3e0;border-color:#e65100;color:#bf360c}
+.lg{font-size:13px;color:var(--mute);margin-top:4px}
+.badge{display:inline-block;font:700 12px var(--ui);color:#fff;padding:2px 9px;border-radius:10px;vertical-align:2px}
+.b-ABR{background:#6a1b9a}.b-Backbone{background:#1565c0}.b-Intern{background:#455a64}
+.stepbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.stepno{font:600 15px var(--ui);margin-left:auto;color:var(--mute)}
+.tempo{display:inline-flex;gap:6px;align-items:center;font:600 14px var(--ui)}
+.tempo input{accent-color:#61a229}
+.explain{background:var(--soft);border-radius:4px;padding:12px 16px;margin-top:10px;font-size:16px;min-height:4.5em}
+.explain h3{font:400 21px var(--head);margin:0 0 4px}
+.explain p{margin:0}
+.cfgs{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:8px;margin-top:10px}
+.cfgs pre{margin:0;font-size:12px;overflow:auto}
+.cfgs .ph,.ph{font:600 13.5px var(--ui);margin:0 0 3px}
+.qh{font:600 16px var(--ui);margin:16px 0 4px}
+.at{border-collapse:collapse;margin-top:6px;font-size:15px}
+.at th,.at td{border:1px solid #cfd8dc;padding:5px 9px;text-align:left}
+.at th{background:var(--soft);font:600 14px var(--ui)}
+.at select{padding:5px 7px;border:1.5px solid #90a4ae;border-radius:4px;font:600 14px var(--mono)}
+.right{border-color:var(--ok)!important;background:#e3f4e6!important}.wrong{border-color:var(--bad)!important;background:#fde3e3!important}
+.slist{list-style:none;padding:0;margin:6px 0}
+.slist li{margin:5px 0;padding:6px 10px;background:var(--soft);border-radius:4px;font-size:15px}
+.quiz .q .ex{display:none;margin-top:6px;font-size:15px;background:var(--soft);border-left:4px solid var(--accent);padding:6px 10px}
+.quiz .q .ex.open{display:block}
+.opts.col{flex-direction:column;align-items:flex-start}
+</style>
+</head>
+<body>
+<main class="vmain">
+<h1>OSPF 3: Multi-Area-OSPF</h1>
+<p class="sub">In <a href="../ospf-2/">OSPF 2</a> waren alle Router in Area 0 und hatten dasselbe Heft (LSDB). In großen Netzen wird das Heft zu dick, und jede kleine Änderung lässt <b>alle</b> Router neu rechnen. Darum teilt man das Netz in mehrere <b>Areas</b>.</p>
+<nav class="jumps" aria-label="Abschnitte"><a href="#warum">Warum Areas?</a><a href="#erkunden">Wer sieht was?</a><a href="#ausfall">Ein Netz fällt aus</a><a href="#regeln">Regeln und Befehle</a><a href="#quiz">Teste dich</a><a href="#uebungen">Übungen</a><a href="#generator">🎲 Zufallsgenerator</a></nav>
+
+<h2 class="part" id="warum">Warum mehrere Areas?</h2>
+<div class="rules">
+ <div class="card"><h3>Ein Heft pro Area</h3><ul style="margin:0;padding-left:20px">
+  <li>Jede Area hat ihr <b>eigenes Heft</b>. Darin stehen alle Router der Area mit allen Details (Type-1-LSAs).</li>
+  <li>Von den <b>anderen Areas</b> gibt es nur eine <b>Kurzfassung</b> (Type-3-LSA): „Netz 10.5.1.0/24 gibt es dort, Kosten 3.“ Wie es dort genau aussieht, weiß man nicht.</li>
+  <li>Die Kurzfassungen schreibt der <b>ABR</b> (Area Border Router) – der Router an der Grenze zwischen zwei Areas.</li></ul></div>
+ <div class="card"><h3>Was bringt das?</h3><ul style="margin:0;padding-left:20px">
+  <li><b>Kleinere Hefte</b> – weniger Speicher und schneller gerechnet.</li>
+  <li><b>Ruhe in den anderen Areas</b>: Ändert sich etwas in Area 2, rechnet nur Area 2 Dijkstra neu. Die anderen tauschen nur eine Zeile ihrer Kurzfassung.</li>
+  <li>Der ABR kann viele Netze zu <b>einem</b> zusammenfassen (Summary) – noch weniger Einträge.</li></ul></div>
+</div>
+
+<h2 class="part" id="erkunden">Wer sieht was?</h2>
+<p class="sub">Klick auf einen Router: Welche Rolle hat er, was steht in seinem Heft, und was in seiner Routing-Tabelle?</p>
+<div class="card"><div class="explore"><div id="xsvg"></div><div class="panel" id="xpan"></div></div></div>
+
+<h2 class="part" id="ausfall">Ein Netz fällt aus</h2>
+<p class="sub">Was passiert, wenn in Area 2 ein LAN ausfällt? Achte darauf, wie weit die ausführlichen Seiten (Type 1) kommen – und wie weit nur die Kurzfassung (Type 3).</p>
+<div class="card">
+ <div id="asvg"></div>
+ <div class="stepbar"><button class="btn ghost" id="prev" type="button">‹ Zurück</button><button class="btn" id="next" type="button">Weiter ›</button><button class="btn ghost" id="play" type="button">▶ Abspielen</button>
+  <label class="tempo">🐢 <input type="range" id="spd" min="1" max="5" value="2" aria-label="Tempo"> 🐇</label><span class="stepno" id="no"></span></div>
+ <div class="explain" aria-live="polite"><h3 id="ttl"></h3><p id="txt"></p></div>
+</div>
+
+<h2 class="part" id="regeln">Regeln und Befehle</h2>
+<div class="rules">
+ <div class="card"><h3>Die Rollen</h3><table class="cmp" style="margin:0"><tbody>
+  <tr><td><span class="badge b-Intern">intern</span></td><td>Alle Interfaces in <b>einer</b> Area (nicht Area 0).</td></tr>
+  <tr><td><span class="badge b-Backbone">Backbone</span></td><td>Mindestens ein Interface in <b>Area 0</b>. Hier: nur in Area 0.</td></tr>
+  <tr><td><span class="badge b-ABR">ABR</span></td><td><b>Area Border Router</b>: Interfaces in Area 0 <b>und</b> in einer anderen Area. Hat ein Heft pro Area und schreibt die Kurzfassungen.</td></tr>
+  <tr><td><b>ASBR</b></td><td>Holt Routen von außerhalb von OSPF herein (z. B. Default-Route ins Internet).</td></tr></tbody></table></div>
+ <div class="card check"><h3>Die wichtigsten Regeln</h3><ol style="margin:0;padding-left:20px">
+  <li>Es gibt immer eine <b>Area 0</b> – das Rückgrat.</li>
+  <li><b>Jede andere Area muss an Area 0 hängen</b> (über einen ABR). Verkehr von Area 1 nach Area 2 geht immer über Area 0.</li>
+  <li>Ein Interface gehört zu <b>genau einer</b> Area – und beide Enden eines Links müssen in <b>derselben Area</b> sein, sonst werden die Router keine Nachbarn.</li>
+  <li>Ein Router ist ABR, sobald er Interfaces in Area 0 und einer anderen Area hat.</li></ol></div>
+ <div class="card"><h3>LSA-Typen in einfachen Worten</h3><table class="cmp" style="margin:0"><thead><tr><th>Typ</th><th>Wer schreibt</th><th>Was steht drin</th><th>Wie weit</th></tr></thead><tbody>
+  <tr><td><b>1</b> Router</td><td>jeder Router</td><td>„Meine Links und ihre Kosten“</td><td>nur eigene Area</td></tr>
+  <tr><td><b>2</b> Network</td><td>der DR</td><td>„Diese Router hängen an meinem Ethernet“</td><td>nur eigene Area</td></tr>
+  <tr><td><b>3</b> Summary</td><td>der ABR</td><td>Kurzfassung: „Dieses Netz gibt es in einer anderen Area“</td><td>in die anderen Areas</td></tr>
+  <tr><td><b>4</b> ASBR-Summary</td><td>der ABR</td><td>„So kommst du zum ASBR“</td><td>in die anderen Areas</td></tr>
+  <tr><td><b>5</b> External</td><td>der ASBR</td><td>„Dieses Netz kommt von außerhalb“</td><td>überall</td></tr></tbody></table></div>
+ <div class="card"><h3>In der Routing-Tabelle</h3><pre class="cli" style="margin-top:0">R1# show ip route ospf
+O     10.107.187.0/24 [110/2] via 10.107.0.9, Gi0/0
+O IA  10.52.121.0/24 [110/4] via 10.107.0.9, Gi0/0
+O E2  0.0.0.0/0 [110/1] via 10.107.0.9, Gi0/0</pre><ul style="margin:6px 0 0;padding-left:20px;font-size:15px">
+  <li><b>O</b>: Ziel liegt in einer Area, in der der Router selbst ist (intra-area).</li>
+  <li><b>O IA</b>: Ziel liegt in einer anderen Area – gelernt aus der Kurzfassung (inter-area).</li>
+  <li><b>O E2</b>: Ziel kommt von außerhalb (ASBR).</li></ul></div>
+ <div class="card"><h3>Konfiguration eines ABR</h3><pre class="cli" style="margin-top:0">R3(config)# router ospf 1
+R3(config-router)# router-id 3.3.3.3
+R3(config-router)# network 10.52.0.4 0.0.0.3 area 0
+R3(config-router)# network 10.107.0.0 0.0.255.255 area 1
+R3(config-router)# area 1 range 10.107.0.0 255.255.0.0</pre><p class="hint">Die Area hängt am <b>Interface</b>, nicht am Router. <code>area 1 range</code> fasst auf dem ABR alle Netze von Area 1 zu einer einzigen Kurzfassung zusammen.</p></div>
+ <div class="card"><h3>network-Befehl mit Wildcard lesen</h3><ul style="margin:0;padding-left:20px">
+  <li>Wildcard-Bit <b>0</b> = muss passen, <b>1</b> = egal.</li>
+  <li><code>0.0.0.0</code>: genau diese IP. <code>0.0.0.3</code>: ein /30-Netz. <code>0.0.255.255</code>: alles mit denselben ersten zwei Oktetten.</li>
+  <li><code>network 0.0.0.0 255.255.255.255 area 1</code>: <b>alle</b> Interfaces in Area 1.</li>
+  <li>Für jedes Interface gilt der <b>erste</b> passende network-Befehl.</li></ul></div>
+</div>
+
+<h2 class="part" id="quiz">Teste dich</h2>
+<div class="card quiz" id="qz"></div>
+
+<h2 class="part" id="uebungen">Übungen</h2>
+<p class="sub">Welche Areas die Links haben, steht nicht im Bild – nur in den <code>network</code>-Befehlen. Bestimme die Area jedes Links, die Rolle jedes Routers und wie die Netze in der Routing-Tabelle des markierten Routers erscheinen.</p>
+<div class="pager"><button class="btn ghost" id="pprev" type="button">‹ Zurück</button><div class="pinfo"><b id="pnum"></b><span id="ppart"></span></div><button class="btn" id="pnext" type="button">Weiter ›</button><div class="toc" id="ptoc"></div></div>
+<div id="tasks"></div>
+
+<h2 class="part" id="generator">🎲 Zufallsgenerator</h2>
+<p class="sub">Jede Aufgabe hat eine Nummer. Mit der Nummer bekommt jede Schülerin und jeder Schüler genau dieselbe Aufgabe.</p>
+<div class="genbar"><label for="glvl">Stufe</label><select id="glvl"><option value="L">Leicht (2 Areas, genaue network-Befehle)</option><option value="M" selected>Mittel (3 Areas, verschiedene Wildcards)</option><option value="S">Schwer (3 Areas, 9 Router, 0.0.0.0 255.255.255.255)</option></select>
+<button class="btn" id="gnew" type="button">Neue Aufgabe</button><label for="gcode">Nummer</label><input id="gcode" size="8" placeholder="M-123" autocomplete="off"><button class="btn ghost" id="gload" type="button">Laden</button><span id="gmsg" class="err"></span></div>
+<div id="gout"></div>
+</main>
+<script>
+/*O3JS*/
+</script>
+<script>
+(function(){
+'use strict';
+var $=function(i){return document.getElementById(i);},O=window.O3,reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+var EX=O.example(),ALL=O.nets(EX);
+function aname(a){return a===0?'Area 0':'Area '+a;}
+
+/* ================= Erkunder ================= */
+var xsel=0;
+function heftHTML(T,a){
+  var r1=T.rs.map(function(R,i){return i;}).filter(function(i){return O.areasOf(T,i).indexOf(a)>=0;}).map(function(i){return T.rs[i].name;});
+  var own=O.nets(T).filter(function(N){return N.area===a;}),sum=O.nets(T).filter(function(N){return N.area!==a;});
+  return'<div class="heft" style="border-color:'+O.acol(T,a)+'"><h4 style="color:'+O.acol(T,a)+'">Heft '+aname(a)+'</h4>'+
+   '<div class="pages">'+r1.map(function(n){return'<span class="pg1">Typ 1 · '+n+'</span>';}).join('')+'</div>'+
+   '<div class="lg">Ausführliche Seiten: alle Router der Area mit ihren Links – darin stecken '+own.length+' Netze.</div>'+
+   '<div class="pages" style="margin-top:6px">'+sum.map(function(N){return'<span class="pg3">Typ 3 · '+N.net+'/'+N.p+'</span>';}).join('')+'</div>'+
+   '<div class="lg">Kurzfassungen vom ABR: Netze aus den anderen Areas – nur Netz und Kosten, keine Details.</div></div>';
+}
+function xRender(){
+  $('xsvg').innerHTML=O.draw(EX,{roles:1,sel:xsel,click:1});
+  var i=xsel,R=EX.rs[i],ro=O.role(EX,i),as=O.areasOf(EX,i);
+  var why=ro==='ABR'?R.name+' hat Interfaces in '+as.map(aname).join(' und ')+' – er sitzt an der Grenze. Er hat <b>zwei Hefte</b> und schreibt für jede Area die Kurzfassungen der anderen.':ro==='Backbone'?R.name+' ist nur in Area 0, dem Backbone.':R.name+' ist nur in '+aname(as[0])+'. Vom Rest des Netzes kennt er nur die Kurzfassungen.';
+  var rt=ALL.slice().sort(function(a,b){var o={C:0,O:1,'O IA':2};var ta=O.route(EX,i,a).type,tb=O.route(EX,i,b).type;return o[ta]-o[tb]||(a.net<b.net?-1:1);}).map(function(N){return O.routeLine(EX,i,N);}).join('\n');
+  $('xpan').innerHTML='<h3>'+R.name+' <span class="badge b-'+ro+'">'+(ro==='Intern'?'intern':ro)+'</span></h3><p style="margin:0 0 6px">'+why+'</p><div class="hefte">'+as.map(function(a){return heftHTML(EX,a);}).join('')+'</div>'+
+   '<p class="ph" style="margin-top:10px">'+R.name+'# show ip route</p><pre class="cli" style="font-size:12px">'+esc(rt)+'</pre>';
+}
+$('xsvg').addEventListener('click',function(e){var g=e.target.closest('[data-r]');if(!g)return;xsel=+g.dataset.r;xRender();});
+xRender();
+
+/* ================= Animation: LAN fällt aus ================= */
+(function(){
+  var A2=EX.areas[2],A1=EX.areas[0];
+  var lanK=EX.lans.findIndex(function(n){return n.area===A2&&O.role(EX,n.r)==='Intern';});
+  if(lanK<0)lanK=EX.lans.findIndex(function(n){return n.area===A2;});
+  var L=EX.lans[lanK],src=L.r,abr2=EX.rs.map(function(_,i){return i;}).filter(function(i){var a=O.areasOf(EX,i);return a.indexOf(0)>=0&&a.indexOf(A2)>=0;})[0];
+  var abr1=EX.rs.map(function(_,i){return i;}).filter(function(i){var a=O.areasOf(EX,i);return a.indexOf(0)>=0&&a.indexOf(A1)>=0;})[0];
+  /* Nachrichten entlang aller Links einer Area, ausgehend von einem Router (Breitensuche) */
+  function flood(start,area){var seen={},q=[start],out=[],hot={};seen[start]=1;
+    while(q.length){var u=q.shift();EX.links.forEach(function(l,k){if(l.area!==area)return;var v=l.a===u?l.b:l.b===u?l.a:-1;if(v<0||seen[v])return;seen[v]=1;q.push(v);out.push([u,v]);hot[k]=1;});}
+    return{msgs:out,hot:hot};}
+  var f2=flood(src,A2),f0=flood(abr2,0),f1=flood(abr1,A1),N=function(i){return'<b>'+EX.rs[i].name+'</b>';},net=L.net+'/24';
+  var ar2=EX.rs.map(function(_,i){return i;}).filter(function(i){return O.areasOf(EX,i).indexOf(A2)>=0;}).map(function(i){return EX.rs[i].name;});
+  var ST=[
+   {t:'Alles läuft',x:'Alle Hefte sind aktuell. Area '+A2+' kennt ihre Router im Detail, Area 0 und Area '+A1+' kennen das Netz '+net+' nur als Kurzfassung (Typ 3).',o:{}},
+   {t:'Das LAN an '+EX.rs[src].name+' fällt aus',x:'Das Netz '+net+' an '+N(src)+' ist weg. '+N(src)+' schreibt seine <b>Typ-1-Seite</b> neu – ohne dieses Netz.',o:{lanDown:lanK}},
+   {t:'Typ 1 nur innerhalb von Area '+A2,x:'Die neue ausführliche Seite wird an alle Router in Area '+A2+' geflutet ('+ar2.join(', ')+'). Nur diese Router rechnen <b>Dijkstra neu</b>. Über '+N(abr2)+' hinaus kommt die Typ-1-Seite <b>nie</b>.',o:{lanDown:lanK,hot:f2.hot},msgs:f2.msgs,lbl:'Typ 1'},
+   {t:'Der ABR schreibt die Kurzfassung neu',x:N(abr2)+' ist ABR. Er streicht die Kurzfassung für '+net+' und schickt das als <b>Typ-3-Update</b> in Area 0.',o:{lanDown:lanK,hot:f0.hot,sel:abr2},msgs:f0.msgs,lbl:'Typ 3'},
+   {t:'Weiter in Area '+A1,x:N(abr1)+' ist ABR zu Area '+A1+'. Er gibt die geänderte Kurzfassung in seine Area weiter.',o:{lanDown:lanK,hot:f1.hot,sel:abr1},msgs:f1.msgs,lbl:'Typ 3'},
+   {t:'Ergebnis',x:'In Area 0 und Area '+A1+' wurde nur <b>eine Zeile der Kurzfassung</b> getauscht – dort muss niemand die ganze Area neu durchrechnen. Genau dafür gibt es Areas: Unruhe in einer Area bleibt in dieser Area.',o:{lanDown:lanK}}];
+  var si=0,playing=false,timer=0,busy=false;
+  function render(anim){var st=ST[si],o=JSON.parse(JSON.stringify(st.o));$('asvg').innerHTML=O.draw(EX,o);$('ttl').textContent=st.t;$('txt').innerHTML=st.x;$('no').textContent='Schritt '+(si+1)+' von '+ST.length;$('prev').disabled=si===0;$('next').disabled=si===ST.length-1;
+    if(anim&&st.msgs){busy=true;animate(st,function(){busy=false;if(playing)sched();});}else if(playing)sched();}
+  function animate(st,done){var g=$('asvg').querySelector('.pk'),dur=[0,2600,1800,1200,800,450][+$('spd').value],col=st.lbl==='Typ 1'?'#1565c0':'#e65100';
+    var items=st.msgs.map(function(m){var el=document.createElementNS('http://www.w3.org/2000/svg','g'),w=st.lbl.length*7+16;el.innerHTML='<rect x="'+(-w/2)+'" y="-28" width="'+w+'" height="18" rx="9" fill="'+col+'"/><text y="-15" text-anchor="middle" font-size="11" font-weight="700" fill="#fff" font-family="Open Sans,Arial,sans-serif">'+st.lbl+'</text><rect x="-11" y="-7" width="22" height="14" rx="2" fill="'+col+'"/><path d="M-11 -7l11 8 11 -8" fill="none" stroke="#fff" stroke-width="1.5"/>';g.appendChild(el);return{el:el,a:EX.rs[m[0]],b:EX.rs[m[1]]};});
+    if(reduce){items.forEach(function(it){it.el.setAttribute('transform','translate('+(it.a.x+it.b.x)/2+' '+(it.a.y+it.b.y)/2+')');});done();return;}
+    var t0=null;function f(ts){if(t0===null)t0=ts;var k=Math.min(1,(ts-t0)/dur);items.forEach(function(it){it.el.setAttribute('transform','translate('+(it.a.x+(it.b.x-it.a.x)*k)+' '+(it.a.y+(it.b.y-it.a.y)*k)+')');});if(k<1)requestAnimationFrame(f);else setTimeout(done,300);}
+    requestAnimationFrame(f);}
+  function sched(){clearTimeout(timer);timer=setTimeout(function(){if(!playing)return;if(si<ST.length-1){si++;render(true);}else stop();},[0,3400,2500,1700,1100,600][+$('spd').value]);}
+  function stop(){playing=false;clearTimeout(timer);$('play').textContent='▶ Abspielen';}
+  $('prev').onclick=function(){stop();if(si>0){si--;render(false);}};
+  $('next').onclick=function(){if(busy)return;stop();if(si<ST.length-1){si++;render(true);}};
+  $('play').onclick=function(){if(playing){stop();return;}playing=true;$('play').textContent='❚❚ Pause';if(si>=ST.length-1){si=0;render(false);}else{si++;render(true);}};
+  window.O3step=function(i){stop();si=i;render(false);};
+  render(false);
+})();
+
+/* ================= Quiz ================= */
+var Q=[
+ ['Warum teilt man ein großes OSPF-Netz in Areas?',['Damit mehr Router Platz haben','Damit die Hefte (LSDB) kleiner sind und Änderungen nur in einer Area Dijkstra auslösen','Weil OSPF nur 10 Router pro Area erlaubt','Damit man kein Area 0 braucht'],1,'Kleinere LSDB, weniger Rechnen, Unruhe bleibt in der Area.'],
+ ['Was ist ein ABR?',['Ein Router nur in Area 0','Ein Router mit Interfaces in Area 0 und einer anderen Area','Ein Router, der Routen von außen holt','Der DR einer Area'],1,'Area Border Router: sitzt an der Grenze, hat für jede seiner Areas ein Heft und schreibt die Kurzfassungen.'],
+ ['Wie weit kommt ein Typ-1-LSA (Router-LSA)?',['Durch das ganze OSPF-Netz','Nur innerhalb der eigenen Area','Nur bis zum direkten Nachbarn','Nur in Area 0'],1,'Die ausführlichen Seiten bleiben in der Area. Andere Areas bekommen nur die Kurzfassung (Typ 3).'],
+ ['Wer erzeugt Typ-3-LSAs?',['Jeder Router','Der DR','Der ABR','Der ASBR'],2,'Der ABR fasst die Netze einer Area für die anderen Areas zusammen.'],
+ ['Area 1 und Area 2 sind nur über einen Router verbunden, der in Area 1 und Area 2 ist – nicht in Area 0. Geht das?',['Ja, das ist egal','Nein – jede Area muss an Area 0 hängen, Verkehr zwischen Areas läuft über den Backbone','Ja, wenn die Prozess-ID gleich ist','Nur mit DR'],1,'Ohne Verbindung zu Area 0 tauscht OSPF keine Kurzfassungen zwischen den Areas aus.'],
+ ['Was bedeutet „O IA“ in der Routing-Tabelle?',['Das Netz ist direkt verbunden','Das Netz liegt in derselben Area','Das Netz liegt in einer anderen Area (inter-area)','Das Netz kommt von außerhalb von OSPF'],2,'O = intra-area, O IA = inter-area, O E2 = extern.'],
+ ['R1 hat „network 10.20.0.0 0.0.255.255 area 1“ und ein Interface mit 10.20.7.1. In welcher Area ist das Interface?',['Area 0','Area 1','Keiner','Area 20'],1,'Wildcard 0.0.255.255: nur die ersten zwei Oktette müssen passen (10.20). Das tun sie – Area 1.'],
+ ['Zwei Router sind direkt verbunden. R1 hat den Link in Area 0, R2 in Area 1. Was passiert?',['Sie werden trotzdem Nachbarn','Sie werden keine Nachbarn – die Area im Hello passt nicht','R2 wird automatisch ABR','Der Link wird zu Area 0'],1,'Die Area-ID steht im Hello. Unterschiedliche Areas → keine Nachbarschaft.']];
+$('qz').innerHTML=Q.map(function(q,n){return'<div class="q" data-n="'+n+'"><p>'+(n+1)+'. '+q[0]+'</p><div class="opts col">'+q[1].map(function(o,j){return'<label><input type="radio" name="q'+n+'" value="'+j+'"> '+o+'</label>';}).join('')+'</div><div class="ex">'+q[3]+'</div></div>';}).join('')+
+ '<div class="acts"><button class="btn" type="button" id="qcheck">Prüfen</button><span class="fb" id="qfb" aria-live="polite"></span></div>';
+$('qcheck').onclick=function(){var ok=0;Q.forEach(function(q,n){var box=document.querySelector('.q[data-n="'+n+'"]'),c=box.querySelector('input:checked');box.querySelectorAll('label').forEach(function(l){var v=+l.querySelector('input').value;l.classList.remove('right','wrong','missed');if(c&&+c.value===v)l.classList.add(v===q[2]?'right':'wrong');else if(v===q[2]&&c)l.classList.add('missed');});if(c){box.querySelector('.ex').classList.add('open');if(+c.value===q[2])ok++;}});
+ var fb=$('qfb');fb.className='fb '+(ok===Q.length?'good':'bad');fb.textContent=ok+' von '+Q.length+' richtig'+(ok===Q.length?' ✓':'.');};
+
+/* ================= Übungen ================= */
+var cache={},ROLES=[['Intern','intern'],['Backbone','Backbone'],['ABR','ABR']],TYPES=['C','O','O IA'];
+function mk(code){var m=code.split('-');return O.makeTask(+m[1],m[0]);}
+function taskOf(card){var c=card.dataset.code;if(!cache[c])cache[c]=mk(c);return cache[c];}
+function taskHTML(T,id,label){
+ var X=T.rs[T.x],ao='<option value="">–</option>'+T.areas.slice().sort(function(a,b){return a-b;}).map(function(a){return'<option value="'+a+'">Area '+a+'</option>';}).join('');
+ return'<div class="card task" id="'+id+'" data-code="'+T.code+'"><h3>'+label+' <span class="tag">'+O.LVNAME[T.level]+'</span><span class="tag">Nr. '+T.code+'</span></h3>'+O.draw(T,{hideAreas:1,x:T.x})+
+  '<div class="cfgs">'+T.rs.map(function(R,i){return'<div><p class="ph">'+R.name+'# show running-config</p><pre class="cli">'+esc(O.config(T,i))+'</pre></div>';}).join('')+'</div>'+
+  '<p class="qh">1. In welcher Area liegt jeder Link?</p><table class="at"><tbody>'+T.links.map(function(l,k){return'<tr data-k="'+k+'"><td><b>'+T.rs[l.a].name+' – '+T.rs[l.b].name+'</b> <span class="hint">'+l.net+'/30</span></td><td><select class="la" aria-label="Area Link '+k+'">'+ao+'</select></td></tr>';}).join('')+'</tbody></table>'+
+  '<p class="qh">2. Welche Rolle hat jeder Router?</p><table class="at"><tbody>'+T.rs.map(function(R,i){return'<tr data-i="'+i+'"><td><b>'+R.name+'</b></td><td><select class="ro" aria-label="Rolle '+R.name+'"><option value="">–</option>'+ROLES.map(function(x){return'<option value="'+x[0]+'">'+x[1]+'</option>';}).join('')+'</select></td></tr>';}).join('')+'</tbody></table>'+
+  '<p class="qh">3. Wie stehen diese Netze in der Routing-Tabelle von '+X.name+'?</p><table class="at"><tbody>'+T.ask.map(function(N,j){return'<tr data-j="'+j+'"><td><b style="font-family:var(--mono)">'+N.net+'/'+N.p+'</b></td><td><select class="ty" aria-label="Typ '+N.net+'"><option value="">–</option>'+TYPES.map(function(t){return'<option>'+t+'</option>';}).join('')+'</select></td></tr>';}).join('')+'</tbody></table>'+
+  '<div class="acts"><button class="btn" type="button" data-act="check">Prüfen</button><button class="btn ghost" type="button" data-act="sol">Lösung anzeigen</button><span class="fb" aria-live="polite"></span></div><div class="sol"></div></div>';
+}
+function mark(el,ok){el.classList.remove('right','wrong');if(ok!==null)el.classList.add(ok?'right':'wrong');}
+function check(card){
+ var T=taskOf(card),ok=0,tot=0;
+ card.querySelectorAll('select.la').forEach(function(s){var k=+s.closest('tr').dataset.k;tot++;if(!s.value){mark(s,null);return;}var g=+s.value===T.links[k].area;mark(s,g);if(g)ok++;});
+ card.querySelectorAll('select.ro').forEach(function(s){var i=+s.closest('tr').dataset.i;tot++;if(!s.value){mark(s,null);return;}var g=s.value===O.role(T,i);mark(s,g);if(g)ok++;});
+ card.querySelectorAll('select.ty').forEach(function(s){var j=+s.closest('tr').dataset.j;tot++;if(!s.value){mark(s,null);return;}var g=s.value===O.route(T,T.x,T.ask[j]).type;mark(s,g);if(g)ok++;});
+ var fb=card.querySelector('.fb'),all=ok===tot;fb.className='fb '+(all?'good':'bad');fb.textContent=all?'Alles richtig! ✓':ok+' von '+tot+' richtig.';if(all)card.dataset.solved='1';markToc();
+}
+function stmtFor(R,ip){for(var i=0;i<R.stmts.length;i++)if(O.hit(ip,R.stmts[i].net,R.stmts[i].wc))return R.stmts[i];return null;}
+function solHTML(T){
+ var X=T.rs[T.x],xa=O.areasOf(T,T.x);
+ var h='<h3 style="font:400 20px var(--head);margin:0">Lösung</h3>'+O.draw(T,{roles:1,x:T.x});
+ h+='<p class="qh">1. Areas der Links</p><ul class="slist">'+T.links.map(function(l){var A=T.rs[l.a],B=T.rs[l.b],fa=A.ifs.filter(function(f){return f.net===l.net;})[0],sa=stmtFor(A,fa.ip);
+   return'<li><b>'+A.name+' – '+B.name+': Area '+l.area+'</b> – '+A.name+' '+fa.n+' ('+fa.ip+') passt zu <code>network '+sa.net+' '+sa.wc+' area '+sa.area+'</code>.</li>';}).join('')+'</ul>';
+ h+='<p class="qh">2. Rollen</p><ul class="slist">'+T.rs.map(function(R,i){var as=O.areasOf(T,i),ro=O.role(T,i);return'<li><b>'+R.name+': '+(ro==='Intern'?'intern':ro)+'</b> – Interfaces in '+as.map(aname).join(' und ')+'.</li>';}).join('')+'</ul>';
+ h+='<p class="qh">3. Routing-Tabelle von '+X.name+' ('+xa.map(aname).join(' und ')+')</p><pre class="cli">'+esc(T.ask.map(function(N){return O.routeLine(T,T.x,N);}).join('\n'))+'</pre>'+
+  '<p class="hint">C = direkt angeschlossen. O = Netz liegt in '+(xa.length>1?'einer Area':'der Area')+', in der '+X.name+' selbst ist. O IA = Netz liegt in einer anderen Area – '+X.name+' kennt es nur aus der Kurzfassung (Typ 3).</p>';
+ return h;
+}
+document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('[data-act]');if(!t)return;var card=t.closest('.task');if(!card)return;
+ if(t.dataset.act==='check')check(card);
+ if(t.dataset.act==='sol'){var so=card.querySelector('.sol');if(!so.innerHTML)so.innerHTML=solHTML(taskOf(card));var o=so.classList.toggle('open');t.textContent=o?'Lösung ausblenden':'Lösung anzeigen';}});
+var list=/*LIST*/;
+var host=$('tasks'),cp=0;
+list.forEach(function(code,k){var T=mk(code);cache[code]=T;var d=document.createElement('div');d.className='page';d.hidden=k!==0;
+ d.innerHTML=taskHTML(T,'t'+(k+1),'Aufgabe '+(k+1))+'<div class="navrow">'+(k>0?'<button class="btn ghost" type="button" data-go="'+(k-1)+'">‹ Aufgabe '+k+'</button>':'<span></span>')+(k<list.length-1?'<button class="btn" type="button" data-go="'+(k+1)+'">Aufgabe '+(k+2)+' ›</button>':'<a class="btn" href="#generator" style="text-decoration:none">🎲 Weiter mit dem Zufallsgenerator</a>')+'</div>';host.appendChild(d);});
+var pages=[].slice.call(host.children);
+list.forEach(function(c,k){var b=document.createElement('button');b.type='button';b.textContent=k+1;b.dataset.go=k;$('ptoc').appendChild(b);});
+function markToc(){[].forEach.call($('ptoc').children,function(b,k){b.classList.toggle('on',k===cp);b.classList.toggle('ok',pages[k].querySelector('.task').dataset.solved==='1');});}
+function show(k,scroll){k=Math.max(0,Math.min(pages.length-1,k));cp=k;pages.forEach(function(p,j){p.hidden=j!==k;});$('pnum').textContent='Aufgabe '+(k+1)+' von '+pages.length;$('ppart').textContent=O.LVNAME[list[k][0]];$('pprev').disabled=k===0;$('pnext').disabled=k===pages.length-1;markToc();if(scroll){var top=$('uebungen').getBoundingClientRect().top+window.pageYOffset;if(window.pageYOffset>top)window.scrollTo({top:top,behavior:reduce?'auto':'smooth'});}}
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-go]');if(b)show(+b.dataset.go,true);});
+$('pprev').onclick=function(){show(cp-1,true);};$('pnext').onclick=function(){show(cp+1,true);};show(0,false);
+function gen(lvl,seed){var T=O.makeTask(seed,lvl);if(!T){$('gmsg').textContent='Zu dieser Nummer gibt es keine Aufgabe.';return;}$('gmsg').textContent='';cache[T.code]=T;$('gout').innerHTML=taskHTML(T,'g'+T.code.replace('-','_'),'Aufgabe '+T.code);$('gcode').value=T.code;$('glvl').value=lvl;}
+$('gnew').onclick=function(){gen($('glvl').value,1+Math.floor(Math.random()*99999));};
+function load(){var m=/^\s*([LMS])\s*-?\s*(\d{1,6})\s*$/i.exec($('gcode').value);if(!m){$('gmsg').textContent='Bitte eine Nummer wie L-12, M-305 oder S-4711 eingeben.';return;}gen(m[1].toUpperCase(),+m[2]);}
+$('gload').onclick=load;$('gcode').addEventListener('keydown',function(e){if(e.key==='Enter')load();});
+gen('M',1+Math.floor(Math.random()*99999));
+})();
+</script>
+</body>
+</html>
