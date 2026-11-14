@@ -11,7 +11,8 @@ SITE = {
     'description': 'NWT – Netzwerktechnik lernen mit Animationen, Erklärungen und Übungen: Switching, Routing, IP-Services und Netzwerksicherheit.',
     'intro': 'Topologien durchschauen, verstehen, warum das Netz so entscheidet, selbst konfigurieren – und üben, bis es sitzt. '
              'Vom OSI-Modell bis zu Angriffen im LAN, mit Animationen, Lösungen zum Aufklappen und Zufallsgenerator.',
-    'news': ['<strong>Neu:</strong> <a href="routing/ospf-1/">OSPF 1: Dijkstra-Algorithmus</a> – eigener Dijkstra-Solver Schritt für Schritt, Kosten als Zahlen oder aus Bandbreiten, mit Übungen. '
+    'news': ['<strong>Neu:</strong> <a href="routing/ospf-2/">OSPF 2: Backbone Area, DR/BDR und LSDB</a> – wie Router den Netzplan austauschen, DR/BDR-Wahl zum Ausprobieren, Referenzbandbreite. '
+             'Außerdem <a href="routing/ospf-1/">OSPF 1: Dijkstra-Algorithmus</a> – eigener Dijkstra-Solver Schritt für Schritt, Kosten als Zahlen oder aus Bandbreiten, mit Übungen. '
              'Außerdem <a href="switching/cdp/">CDP – Nachbarn erkennen</a> – aus CDP-Ausgaben Modelle und IPs ablesen und den Netzplan verkabeln. '
              'Außerdem <a href="switching/layer-3-switching/">Layer-3-Switching</a> – SVIs, Routed Port und Trunk zum Router, mit Konfiguration zum Ausprobieren und Fehlersuche-Übungen. '
              'Außerdem <a href="routing/routing-schleifen/">Routing-Schleifen</a> – Count to Infinity, Split Horizon und Route Poisoning als Animation, mit Übungen. '
@@ -64,8 +65,10 @@ AREAS = [
           'text': 'Animation von Count to Infinity, Split Horizon, Route Poisoning und Poison Reverse – mit Quiz, Übungen und Zufallsgenerator.'},
          {'slug': 'ospf-1', 'title': 'OSPF 1: Dijkstra-Algorithmus', 'tool': 'ospf-1',
           'text': 'Kürzeste Wege mit Dijkstra – Solver zum Selberbauen, Schritt für Schritt mit Tabelle, Kosten als Zahlen oder aus Bandbreiten, mit Zufallsgenerator.'},
-         {'slug': 'ospf-2', 'title': 'OSPF 2',
-          'text': 'OSPF im Netz: Konfiguration und mehr.'},
+         {'slug': 'ospf-2', 'title': 'OSPF 2: Backbone Area, DR/BDR und LSDB', 'tool': 'ospf-2',
+          'text': 'Wie Router mit Hello, DBD, LSR, LSU und LSAck ihren Netzplan austauschen – als Animation. DR/BDR-Wahl, Router-ID, Referenzbandbreite, Area 0 – mit Übungen und Zufallsgenerator.'},
+         {'slug': 'ospf-3', 'title': 'OSPF 3: Multi-Area-OSPF',
+          'text': 'Mehrere Areas, ABR und Backbone.'},
      ]},
     {'slug': 'ip-services', 'title': 'IP-Services', 'text': 'Dienste, die ein Netz erst benutzbar machen.',
      'topics': [

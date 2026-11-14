@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OSPF 2: Backbone Area, DR/BDR und LSDB</title>
+<style>
+
+:root{
+  /* AECP-Stil: weiß, schwarz, Belgrano/Bitter/Open Sans; VLAN-Farben tragen Bedeutung */
+  --ink:#1c2b33; --mute:#546e7a; --line:#e3e1e8; --soft:#f3f5f7; --ok:#2e7d32; --bad:#c62828; --warn:#e65100; --accent:#61a229;
+  --head:"Belgrano",Georgia,serif; --ui:"Bitter",Georgia,serif; --body:"Open Sans","Helvetica Neue",Arial,sans-serif; --mono:ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#fff;color:var(--ink);font:16px/1.65 var(--body)}
+.vmain{max-width:980px;margin:0 auto;padding:24px 20px 60px}
+.vmain h1{font:400 clamp(30px,4.5vw,42px)/1.15 var(--head);letter-spacing:.5px;margin:.3em 0 .2em;text-wrap:balance}
+.vmain h2{font:400 26px/1.2 var(--head);letter-spacing:.5px;margin:0 0 .4em;text-wrap:balance}
+.sub{color:var(--mute);max-width:72ch;margin:0 0 14px}
+.jumps{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 6px}
+.jumps a{font:600 15px var(--ui);letter-spacing:.4px;color:#fff;background:var(--ink);padding:8px 14px;border-radius:4px;text-decoration:none}
+.jumps a:hover{background:#000}
+.part{border-top:3px solid var(--ink);margin-top:40px;padding-top:12px}
+.card{border:1px solid var(--line);border-radius:4px;background:#fff;padding:18px 20px;margin:14px 0}
+svg{width:100%;height:auto;display:block;background:#fbfcfd;border:1px solid var(--line);border-radius:4px}
+button,select,input{font:600 15px var(--ui);letter-spacing:.3px}
+.btn{padding:9px 16px;border-radius:4px;border:1.5px solid var(--ink);background:var(--ink);color:#fff;cursor:pointer}
+.btn:hover{background:#000}
+.btn.ghost{background:#fff;color:var(--ink)}
+.btn.ghost:hover{background:var(--soft)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Schritt-Animation */
+.sbgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+@media(max-width:760px){.sbgrid{grid-template-columns:1fr}}
+.cfg{background:var(--soft);border-radius:4px;padding:10px 14px;font-size:14px}
+.cfg h3{font:600 15px var(--ui);margin:0 0 6px}
+.cfg label{margin-right:12px;white-space:nowrap}
+.cfg select{font:500 14px var(--body);padding:2px 4px}
+.hint{font-size:14px;color:var(--mute);margin:8px 0 0}
+.result{margin-top:10px;font-size:15px;min-height:1.6em}
+.frames{margin-top:12px;font:13px var(--mono)}
+.frame{display:flex;flex-wrap:wrap;margin:6px 0;align-items:stretch}
+.frame span{border:1.5px solid var(--ink);border-right:0;padding:5px 8px;background:#fff;white-space:nowrap}
+.frame span:last-child{border-right:1.5px solid var(--ink)}
+.frame .ftag{background:#fff8e1;font-weight:700}
+.frame .ftag.none{background:var(--soft);color:var(--mute);border-style:dashed;font-weight:400}
+.frame b{font-family:var(--body)}
+.flab{font:600 14px var(--ui);margin-top:8px}
+
+/* Regelwerk */
+.rules{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:760px){.rules{grid-template-columns:1fr}}
+.rules .card{margin:0}
+.rules h3{font:400 19px var(--head);margin:0 0 6px}
+.rules ul{margin:0;padding-left:20px}
+.rules li{margin:3px 0}
+code,pre{font-family:var(--mono);font-size:13.5px}
+pre.cli{background:#1c2b33;color:#e6edf2;border-radius:4px;padding:10px 12px;margin:8px 0 0;overflow-x:auto;line-height:1.5}
+.check{background:#fff8e1;border:1px solid #ffe082}
+
+/* Übungen */
+.pager{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:4px;padding:12px 14px;margin:14px 0}
+.pinfo{text-align:center;line-height:1.3}
+.pinfo span{display:block;font-size:13px;color:var(--mute)}
+.toc{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:5px}
+.toc button{min-width:36px;padding:4px 0;border:1px solid #cfd8dc;background:#fff;color:var(--ink);border-radius:4px;cursor:pointer;font-size:13px}
+.toc button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.toc button.ok{background:#e3f4e6;border-color:#a5d6a7}
+.toc button.on.ok{background:var(--ok);border-color:var(--ok)}
+.task h3{font:400 22px var(--head);margin:0 0 4px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.tag{font:400 12px var(--head);text-transform:uppercase;letter-spacing:1.5px;color:#3d6e14;background:#eef6e6;padding:2px 8px;border-radius:2px}
+.trunks{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px;margin-top:10px}
+.trunks pre{margin:0}
+.q{margin-top:16px;padding-top:12px;border-top:1px dashed #cfd8dc}
+.q p{margin:0 0 6px;font-weight:600}
+.opts{display:flex;flex-wrap:wrap;gap:6px 10px}
+.opts label{display:inline-flex;align-items:center;gap:6px;border:1.5px solid #cfd8dc;border-radius:4px;padding:5px 10px;cursor:pointer;font-size:15px;background:#fff}
+.opts label.right{border-color:var(--ok);background:#e3f4e6}
+.opts label.wrong{border-color:var(--bad);background:#fde3e3}
+.opts label.missed{border-color:var(--ok);border-style:dashed}
+.dot{width:11px;height:11px;border-radius:50%;display:inline-block}
+.acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;align-items:center}
+.fb{font-weight:600}
+.fb.good{color:var(--ok)} .fb.bad{color:var(--bad)}
+.sol{display:none;margin-top:14px;border-top:2px solid var(--ink);padding-top:12px}
+.sol.open{display:block}
+.sol ul{list-style:none;padding:0;margin:10px 0}
+.sol li{margin:4px 0;padding-left:4px}
+.ans{background:var(--soft);border-left:4px solid var(--accent);padding:8px 12px;margin:8px 0}
+.navrow{display:flex;justify-content:space-between;margin-top:14px;gap:8px}
+.genbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
+.genbar select,.genbar input{padding:8px;border:1.5px solid #90a4ae;border-radius:4px;font-family:var(--body);font-weight:500}
+.err{color:var(--bad)}
+@media print{.jumps,.pager,.acts,.navrow,.genbar,#sandbox,#generator{display:none!important}.task{display:block!important;break-inside:avoid}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+
+.rules{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+@media(max-width:760px){.rules{grid-template-columns:minmax(0,1fr)}}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 12px}
+.tabs button{padding:9px 14px;border-radius:4px;border:1.5px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer;text-align:left;line-height:1.25}
+.tabs button small{display:block;font:400 12px var(--body);opacity:.8}
+.tabs button[aria-selected="true"]{background:var(--ink);color:#fff}
+.stepbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.stepno{font:600 15px var(--ui);margin-left:auto;color:var(--mute)}
+.tempo{display:inline-flex;gap:6px;align-items:center;font:600 14px var(--ui)}
+.tempo input{accent-color:#61a229}
+.explain{background:var(--soft);border-radius:4px;padding:12px 16px;margin-top:10px;font-size:16px;min-height:5em}
+.explain h3{font:400 21px var(--head);margin:0 0 4px}
+.explain p{margin:0 0 6px}
+.pk{display:inline-block;font:700 12px var(--ui);color:#fff;padding:2px 8px;border-radius:3px;letter-spacing:.3px;vertical-align:1px}
+.p-hello{background:#546e7a}.p-dbd{background:#1565c0}.p-lsr{background:#6a1b9a}.p-lsu{background:#e65100}.p-ack{background:#2e7d32}
+.cmp{width:100%;border-collapse:collapse;font-size:15px;margin-top:6px}
+.cmp th,.cmp td{border:1px solid #cfd8dc;padding:7px 10px;text-align:left;vertical-align:top}
+.cmp th{background:var(--soft);font:600 14px var(--ui)}
+.states{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:8px 0;font-size:14px}
+.states span{padding:4px 9px;border-radius:12px;background:#eceff1;font:600 13px var(--mono)}
+.states b{color:var(--mute)}
+.sim{border-collapse:collapse;font-size:14.5px;width:100%;margin-top:8px}
+.sim th,.sim td{border:1px solid #cfd8dc;padding:5px 7px;text-align:left}
+.sim th{background:var(--soft);font:600 13.5px var(--ui)}
+.sim input[type=text],.sim input[type=number]{width:100%;max-width:150px;padding:4px 6px;border:1.5px solid #90a4ae;border-radius:4px;font:500 14px var(--mono)}
+.sim input.bad{border-color:var(--bad);background:#fde3e3}
+.sim .why{font-size:13px;color:var(--mute)}
+.role{display:inline-block;font:700 12px var(--ui);color:#fff;padding:2px 9px;border-radius:10px}
+.r-DR{background:#2e7d32}.r-BDR{background:#1565c0}.r-DROTHER{background:#78909c}
+.calc{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:4px 0 8px}
+.calc select{padding:7px;border:1.5px solid #90a4ae;border-radius:4px;font:600 14px var(--ui)}
+td.same{background:#fde3e3}
+.cfgs{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:8px;margin-top:10px}
+.cfgs pre{margin:0;font-size:12px;overflow:auto}
+.cfgs .ph{font:600 13.5px var(--ui);margin:0 0 3px}
+.qh{font:600 16px var(--ui);margin:16px 0 4px}
+.at{border-collapse:collapse;margin-top:6px;font-size:15px}
+.at th,.at td{border:1px solid #cfd8dc;padding:5px 9px;text-align:left}
+.at th{background:var(--soft);font:600 14px var(--ui)}
+.at input,.at select,.one{padding:5px 7px;border:1.5px solid #90a4ae;border-radius:4px;font:600 14.5px var(--mono)}
+.at input{width:10em}
+.right{border-color:var(--ok)!important;background:#e3f4e6!important}.wrong{border-color:var(--bad)!important;background:#fde3e3!important}
+.slist{list-style:none;padding:0;margin:6px 0}
+.slist li{margin:5px 0;padding:6px 10px;background:var(--soft);border-radius:4px;font-size:15px}
+.late{background:#fff8e1;border:1px solid #ffe082;border-radius:4px;padding:6px 10px;margin:8px 0;font-size:15px}
+.quiz .q .ex{display:none;margin-top:6px;font-size:15px;background:var(--soft);border-left:4px solid var(--accent);padding:6px 10px}
+.quiz .q .ex.open{display:block}
+.opts.col{flex-direction:column;align-items:flex-start}
+</style>
+</head>
+<body>
+<main class="vmain">
+<h1>OSPF 2: Backbone Area, DR/BDR und wie Router den Netzplan austauschen</h1>
+<p class="sub">In <a href="../ospf-1/">OSPF 1</a> hatte jeder Router schon den ganzen Netzplan und hat mit Dijkstra gerechnet. Hier geht es darum, <b>wie</b> der Netzplan zu jedem Router kommt, wer auf einem Ethernet das Sagen hat (<b>DR und BDR</b>), wie die <b>Kosten</b> entstehen – und was die <b>Backbone Area 0</b> ist.</p>
+<nav class="jumps" aria-label="Abschnitte"><a href="#austausch">Netzplan austauschen</a><a href="#dr">DR und BDR</a><a href="#ref">Referenzbandbreite</a><a href="#area">Backbone Area 0</a><a href="#quiz">Teste dich</a><a href="#uebungen">Übungen</a><a href="#generator">🎲 Zufallsgenerator</a></nav>
+
+<h2 class="part" id="austausch">Wie Router den Netzplan austauschen</h2>
+<div class="rules">
+ <div class="card"><h3>Das Heft: LSA und LSDB</h3>
+  <p style="margin:0 0 6px">Stell dir vor, jeder Router hat ein <b>Heft</b> mit dem Netzplan.</p>
+  <ul style="margin:0;padding-left:20px"><li>Jede <b>Seite</b> im Heft ist ein <b>LSA</b> (Link-State Advertisement): „Ich bin R2, ich habe diese Links mit diesen Kosten.“ Jeder Router schreibt nur seine eigene Seite.</li>
+  <li>Das ganze Heft ist die <b>LSDB</b> (Link-State-Datenbank).</li>
+  <li>Ziel: <b>Alle Router einer Area haben das gleiche Heft.</b> Dann rechnet jeder mit Dijkstra seine Routing-Tabelle.</li>
+  <li>Ändert sich etwas, schreibt der Router eine <b>neue Version</b> seiner Seite und schickt nur diese herum.</li></ul></div>
+ <div class="card"><h3>Die fünf OSPF-Pakete</h3>
+  <table class="cmp" style="margin:0"><tbody>
+  <tr><td><span class="pk p-hello">Hello</span></td><td>„Hallo, bist du da? Ich bin R1.“ – Nachbarn finden und alle 10 s zeigen, dass man noch lebt.</td></tr>
+  <tr><td><span class="pk p-dbd">DBD</span></td><td>„Das ist mein Inhaltsverzeichnis.“ – nur die Liste der Seiten, nicht die Seiten selbst.</td></tr>
+  <tr><td><span class="pk p-lsr">LSR</span></td><td>„Diese Seiten fehlen mir – bitte schicken.“</td></tr>
+  <tr><td><span class="pk p-lsu">LSU</span></td><td>„Hier sind die Seiten.“ – enthält die LSAs.</td></tr>
+  <tr><td><span class="pk p-ack">LSAck</span></td><td>„Danke, angekommen.“</td></tr></tbody></table></div>
+</div>
+<div class="tabs" role="tablist" id="tabs"></div>
+<div class="card">
+ <div id="asvg"></div>
+ <div class="stepbar"><button class="btn ghost" id="prev" type="button">‹ Zurück</button><button class="btn" id="next" type="button">Weiter ›</button><button class="btn ghost" id="play" type="button">▶ Abspielen</button>
+  <label class="tempo">🐢 <input type="range" id="spd" min="1" max="5" value="2" aria-label="Tempo"> 🐇</label><span class="stepno" id="no"></span></div>
+ <div class="explain" aria-live="polite"><h3 id="ttl"></h3><div id="txt"></div></div>
+</div>
+<div class="card"><h3 style="font:400 19px var(--head);margin:0 0 4px">Die Zustände einer Nachbarschaft</h3>
+ <div class="states"><span>Down</span><b>→</b><span>Init</span><b>→</b><span>2-Way</span><b>→</b><span>ExStart</span><b>→</b><span>Exchange</span><b>→</b><span>Loading</span><b>→</b><span>Full</span></div>
+ <ul style="margin:0;padding-left:20px;font-size:15px"><li><b>Init</b>: Ich habe ein Hello bekommen. <b>2-Way</b>: Der andere hat mich auch gesehen – wir kennen uns.</li>
+ <li><b>ExStart/Exchange</b>: Inhaltsverzeichnisse (DBD) austauschen. <b>Loading</b>: fehlende Seiten anfordern (LSR) und bekommen (LSU).</li>
+ <li><b>Full</b>: Beide Hefte sind gleich. Damit Router überhaupt Nachbarn werden, müssen <b>Area, Hello-/Dead-Timer, Subnetz und Authentifizierung</b> zusammenpassen.</li></ul></div>
+
+<h2 class="part" id="dr">Designated Router (DR) und Backup (BDR)</h2>
+<div class="rules">
+ <div class="card"><h3>Warum ein DR?</h3><p style="margin:0 0 6px">Hängen viele Router an einem Switch (Ethernet), müsste jeder mit jedem sein Heft abgleichen: bei 10 Routern 45 Nachbarschaften. Darum wird ein <b>Chef</b> gewählt.</p>
+  <ul style="margin:0;padding-left:20px"><li>Alle schicken Neuigkeiten nur an <b>DR und BDR</b> (224.0.0.6). Der DR verteilt sie an alle (224.0.0.5).</li>
+  <li><b>Full</b> wird man nur mit DR und BDR. Zwei „normale“ Router (DROTHER) bleiben untereinander bei <b>2-Way</b>.</li>
+  <li>Fällt der DR aus, übernimmt der BDR sofort.</li>
+  <li>Auf Punkt-zu-Punkt-Links (z. B. seriell) gibt es keinen DR.</li></ul></div>
+ <div class="card check"><h3>Wer wird DR?</h3><ol style="margin:0;padding-left:20px">
+  <li>Höchste <b>Priorität</b> (<code>ip ospf priority</code>, Standard 1). <b>Priorität 0</b> = darf nie DR/BDR werden.</li>
+  <li>Bei Gleichstand: höchste <b>Router-ID</b>.</li>
+  <li>Zweitbester wird <b>BDR</b>.</li></ol>
+  <p style="margin:8px 0 0"><b>Keine Übernahme:</b> Kommt später ein „besserer“ Router dazu, bleibt der alte DR trotzdem DR – bis er ausfällt oder OSPF neu gestartet wird.</p></div>
+ <div class="card"><h3>Die Router-ID</h3><p style="margin:0 0 6px">Jeder OSPF-Router braucht eine eindeutige Router-ID – sie sieht aus wie eine IP-Adresse. Reihenfolge:</p><ol style="margin:0;padding-left:20px">
+  <li><code>router-id 1.1.1.1</code> im OSPF-Prozess</li><li>sonst: höchste IP einer <b>Loopback</b></li><li>sonst: höchste IP eines <b>aktiven Interfaces</b></li></ol>
+  <p class="hint">Eine neue Router-ID gilt erst nach <code>clear ip ospf process</code> oder Neustart.</p></div>
+ <div class="card"><h3>Nachschauen</h3><pre class="cli" style="margin-top:0">R1# show ip ospf neighbor
+Neighbor ID   Pri  State          Dead Time  Address       Interface
+4.4.4.4       100  FULL/DR        00:00:36   10.0.0.4      Gi0/0
+3.3.3.3        50  FULL/BDR       00:00:33   10.0.0.3      Gi0/0
+2.2.2.2         1  2WAY/DROTHER   00:00:38   10.0.0.2      Gi0/0</pre>
+  <p class="hint">State zeigt die Nachbarschaft und die Rolle des <b>Nachbarn</b>. R1 ist hier selbst DROTHER – darum mit R2 nur 2-Way.</p></div>
+</div>
+<p class="qh">Wahl-Simulator</p>
+<div class="card">
+ <p style="margin:0 0 4px;font-size:15px">Ändere Prioritäten, Router-IDs und Loopbacks – die Wahl wird sofort neu gerechnet. „Startet später“ heißt: Der Router kommt erst nach der Wahl dazu.</p>
+ <div id="esvg"></div>
+ <div style="overflow-x:auto"><table class="sim" id="etab"></table></div>
+ <div class="acts"><button class="btn ghost" type="button" id="ereset">Zurücksetzen</button></div>
+</div>
+
+<h2 class="part" id="ref">Kosten und Referenzbandbreite</h2>
+<div class="rules">
+ <div class="card"><h3>So rechnet OSPF die Kosten</h3><p style="margin:0 0 6px"><b>Kosten = Referenzbandbreite ÷ Bandbreite des Interfaces</b> (abgerundet, mindestens 1). Die Kosten eines Wegs sind die Summe der Kosten aller ausgehenden Interfaces.</p>
+  <p style="margin:0">Standard-Referenz bei Cisco: <b>100 Mbit/s</b>. Problem: FastEthernet (100 Mbit/s), GigabitEthernet und 10-Gigabit haben dann <b>alle die Kosten 1</b> – OSPF sieht keinen Unterschied.</p></div>
+ <div class="card"><h3>Die Lösung</h3><pre class="cli" style="margin-top:0">R1(config)# router ospf 1
+R1(config-router)# auto-cost reference-bandwidth 10000
+! in Mbit/s – auf ALLEN Routern gleich einstellen!
+
+R1(config)# interface g0/1
+R1(config-if)# ip ospf cost 25
+! Kosten direkt festlegen – überschreibt die Rechnung</pre></div>
+</div>
+<div class="card">
+ <div class="calc"><label for="refsel" style="font:600 14px var(--ui)">Referenzbandbreite</label><select id="refsel"><option value="100">100 Mbit/s (Standard)</option><option value="1000">1000 Mbit/s</option><option value="10000">10 000 Mbit/s</option><option value="100000">100 000 Mbit/s</option></select></div>
+ <table class="cmp" id="reft"></table>
+ <p class="hint" id="refh"></p>
+</div>
+
+<h2 class="part" id="area">Backbone Area 0</h2>
+<div class="rules">
+ <div class="card"><h3>Was ist eine Area?</h3><ul style="margin:0;padding-left:20px">
+  <li>Eine <b>Area</b> ist eine Gruppe von Routern, die <b>dasselbe Heft</b> (LSDB) haben.</li>
+  <li><b>Area 0</b> heißt <b>Backbone</b> – das Rückgrat. In kleinen Netzen sind alle Router in Area 0: <b>Single-Area-OSPF</b>.</li>
+  <li>Große Netze teilt man in mehrere Areas, damit die Hefte klein bleiben und nicht jede Änderung überall Dijkstra auslöst. Alle Areas müssen dann an Area 0 hängen (Multi-Area – kommt in OSPF 3).</li></ul></div>
+ <div class="card"><h3>Konfiguration</h3><pre class="cli" style="margin-top:0">R1(config)# router ospf 1
+R1(config-router)# router-id 1.1.1.1
+R1(config-router)# network 192.168.1.0 0.0.0.255 area 0
+R1(config-router)# network 10.0.0.0 0.0.0.3 area 0
+R1(config-router)# passive-interface g0/1</pre>
+  <ul style="margin:6px 0 0;padding-left:20px;font-size:15px"><li><code>network</code> mit <b>Wildcard-Maske</b>: Auf welchen Interfaces läuft OSPF, und in welcher Area?</li>
+  <li><code>passive-interface</code>: Netz wird angekündigt, aber keine Hellos zu den PCs.</li>
+  <li>Die Prozess-ID (hier 1) ist nur lokal – sie muss bei Nachbarn nicht gleich sein. Die <b>Area</b> schon!</li></ul></div>
+</div>
+<div class="card"><table class="cmp"><thead><tr><th>Befehl</th><th>Zeigt</th></tr></thead><tbody>
+<tr><td><code>show ip ospf neighbor</code></td><td>Nachbarn, Zustand (FULL/2WAY) und Rolle (DR/BDR/DROTHER)</td></tr>
+<tr><td><code>show ip ospf interface g0/0</code></td><td>Area, Kosten, Priorität, wer DR/BDR ist, Hello-/Dead-Timer</td></tr>
+<tr><td><code>show ip protocols</code></td><td>Router-ID, Networks, passive Interfaces</td></tr>
+<tr><td><code>show ip ospf database</code></td><td>Das Heft: alle LSAs der Area</td></tr>
+<tr><td><code>show ip route ospf</code></td><td>Von OSPF gelernte Routen – Kennbuchstabe <b>O</b></td></tr></tbody></table></div>
+
+<h2 class="part" id="quiz">Teste dich</h2>
+<div class="card quiz" id="qz"></div>
+
+<h2 class="part" id="uebungen">Übungen</h2>
+<p class="sub">Alle Router hängen am selben Switch in Area 0. Lies die Konfigurationen: Welche Router-ID hat jeder Router? Wer wird DR und BDR? Was zeigt <code>show ip ospf neighbor</code> auf dem markierten Router, und welche Kosten hat sein Interface zum Switch?</p>
+<div class="pager"><button class="btn ghost" id="pprev" type="button">‹ Zurück</button><div class="pinfo"><b id="pnum"></b><span id="ppart"></span></div><button class="btn" id="pnext" type="button">Weiter ›</button><div class="toc" id="ptoc"></div></div>
+<div id="tasks"></div>
+
+<h2 class="part" id="generator">🎲 Zufallsgenerator</h2>
+<p class="sub">Jede Aufgabe hat eine Nummer. Mit der Nummer bekommt jede Schülerin und jeder Schüler genau dieselbe Aufgabe.</p>
+<div class="genbar"><label for="glvl">Stufe</label><select id="glvl"><option value="L">Leicht (3 Router)</option><option value="M" selected>Mittel (4 Router, Priorität 0, Interface-Typen)</option><option value="S">Schwer (5–6 Router, später Start, ip ospf cost)</option></select>
+<button class="btn" id="gnew" type="button">Neue Aufgabe</button><label for="gcode">Nummer</label><input id="gcode" size="8" placeholder="M-123" autocomplete="off"><button class="btn ghost" id="gload" type="button">Laden</button><span id="gmsg" class="err"></span></div>
+<div id="gout"></div>
+</main>
+<script>
+/* NWT · OSPF 2: Router-ID, DR/BDR-Wahl, Nachbarzustände, Kosten mit Referenzbandbreite. Aufgaben-Generator, Zeichnen.
+   Browser: window.O2 · Node: globalThis.O2 */
+(function (G) {
+'use strict';
+var LVNAME = {L: 'Leicht', M: 'Mittel', S: 'Schwer'};
+var LVCODE = {L: 3, M: 4, S: 5};
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function ri(r, a, b) { return a + Math.floor(r() * (b - a + 1)); }
+function pick(r, a) { return a[Math.floor(r() * a.length)]; }
+function shuffle(r, a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(r() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+function ipn(ip) { return ip.split('.').reduce(function (a, b) { return a * 256 + (+b); }, 0); }
+function maxIp(list) { return list.reduce(function (m, x) { return m === null || ipn(x) > ipn(m) ? x : m; }, null); }
+
+/* Interface-Typen und Bandbreite in Mbit/s */
+var IFT = {Fa: {full: 'FastEthernet', bw: 100}, Gi: {full: 'GigabitEthernet', bw: 1000}, Te: {full: 'TenGigabitEthernet', bw: 10000}};
+function cost(ref, bw) { return Math.max(1, Math.floor(ref / bw)); }
+
+/* Router-ID: 1. router-id-Befehl, 2. höchste Loopback-IP, 3. höchste IP eines aktiven Interfaces */
+function rid(R) {
+  if (R.cmd) return {id: R.cmd, how: 'cmd'};
+  if (R.loops.length) return {id: maxIp(R.loops), how: 'loop'};
+  return {id: maxIp([R.segIp].concat(R.other ? [R.other] : [])), how: 'if'};
+}
+/* Wahl auf dem Segment. Router mit late=true kommen erst nach der Wahl dazu (keine Übernahme). */
+function better(a, b) { return a.prio !== b.prio ? a.prio > b.prio : ipn(a.rid) > ipn(b.rid); }
+function elect(rs) {
+  var list = rs.map(function (R, i) { return {i: i, prio: R.prio, rid: rid(R).id, late: !!R.late}; });
+  var el = list.filter(function (x) { return !x.late && x.prio > 0; }).sort(function (a, b) { return better(a, b) ? -1 : 1; });
+  var dr = el.length ? el[0].i : -1, bdr = el.length > 1 ? el[1].i : -1;
+  /* Kommt ein später Router dazu und es fehlt noch ein BDR, wird er BDR (falls wählbar) */
+  if (bdr < 0) { var lt = list.filter(function (x) { return x.late && x.prio > 0; }).sort(function (a, b) { return better(a, b) ? -1 : 1; }); if (lt.length) { if (dr < 0) { dr = lt[0].i; bdr = lt.length > 1 ? lt[1].i : -1; } else bdr = lt[0].i; } }
+  return {dr: dr, bdr: bdr, role: rs.map(function (_, i) { return i === dr ? 'DR' : i === bdr ? 'BDR' : 'DROTHER'; })};
+}
+/* Zustand in "show ip ospf neighbor" von Router x für Nachbar y */
+function nbState(E, x, y) {
+  var full = E.role[x] !== 'DROTHER' || E.role[y] !== 'DROTHER';
+  return (full ? 'FULL/' : '2WAY/') + E.role[y];
+}
+
+/* ---------- Generator ---------- */
+function build(r, lvl) {
+  var n = lvl === 'L' ? 3 : lvl === 'M' ? 4 : ri(r, 5, 6);
+  var segPfx = pick(r, ['192.168.' + ri(r, 1, 250) + '.', '10.' + ri(r, 1, 200) + '.' + ri(r, 0, 255) + '.', '172.16.' + ri(r, 0, 31) + '.']);
+  var hosts = shuffle(r, Array.from({length: 250}, function (_, i) { return i + 1; })).slice(0, n);
+  var ref = lvl === 'L' ? pick(r, [100, 100, 1000]) : pick(r, [100, 1000, 10000, 10000]);
+  var used = {};
+  function uniq(gen) { for (var k = 0; k < 50; k++) { var v = gen(); if (!used[v]) { used[v] = 1; return v; } } return null; }
+  var rs = [];
+  for (var i = 0; i < n; i++) {
+    var R = {name: 'R' + (i + 1), segIp: segPfx + hosts[i], prio: 1, loops: [], cmd: null, late: false, ospfCost: null};
+    used[R.segIp] = 1;
+    R.type = lvl === 'L' ? 'Gi' : pick(r, ['Fa', 'Gi', 'Gi', 'Te']);
+    R.other = uniq(function () { return '10.' + ri(r, 1, 250) + '.' + ri(r, 0, 255) + '.1'; });
+    var mode = lvl === 'L' ? pick(r, ['cmd', 'loop']) : pick(r, ['cmd', 'loop', 'loop', 'if']);
+    if (mode === 'cmd') { R.cmd = uniq(function () { var k = ri(r, 1, 9); return k + '.' + k + '.' + k + '.' + k; }); if (r() < 0.4) R.loops.push(uniq(function () { return '172.31.' + ri(r, 0, 255) + '.' + ri(r, 1, 254); })); }
+    if (mode === 'loop') { var nl = lvl === 'S' ? ri(r, 1, 2) : 1; for (var k = 0; k < nl; k++) R.loops.push(uniq(function () { return pick(r, [ri(r, 1, 9) + '.' + ri(r, 1, 9) + '.' + ri(r, 1, 9) + '.' + ri(r, 1, 9), '172.31.' + ri(r, 0, 255) + '.' + ri(r, 1, 254)]); })); }
+    if (R.loops.indexOf(null) >= 0 || !R.other || (mode === 'cmd' && !R.cmd)) return null;
+    if (lvl !== 'L' || r() < 0.5) R.prio = pick(r, lvl === 'L' ? [1, 1, 10, 100] : [0, 1, 1, 1, 5, 10, 50, 100, 255]);
+    if (lvl === 'S' && r() < 0.25) R.ospfCost = ri(r, 2, 50);
+    rs.push(R);
+  }
+  /* Router-IDs müssen eindeutig sein */
+  var ids = rs.map(function (R) { return rid(R).id; });
+  if (ids.some(function (x, k) { return ids.indexOf(x) !== k; })) return null;
+  /* Schwer: oft startet ein Router später – und wäre eigentlich der beste */
+  if (lvl === 'S' && r() < 0.6) {
+    var best = rs.slice().filter(function (R) { return R.prio > 0; }).sort(function (a, b) { return better({prio: a.prio, rid: rid(a).id}, {prio: b.prio, rid: rid(b).id}) ? -1 : 1; })[0];
+    if (best) best.late = true;
+  }
+  return {rs: rs, ref: ref, seg: segPfx + '0'};
+}
+function makeTask(seed, lvl) {
+  if (!LVCODE[lvl] || !(seed >= 1)) return null;
+  for (var att = 0; att < 300; att++) {
+    var r = mulberry32((seed * 7919 + att * 104729 + LVCODE[lvl] * 1000003 + 2207) >>> 0);
+    var T = build(r, lvl); if (!T) continue;
+    var E = elect(T.rs);
+    if (E.dr < 0 || E.bdr < 0) continue;
+    if (T.rs.filter(function (R) { return R.prio > 0; }).length < 2) continue;
+    /* Router, für den "show ip ospf neighbor" gefragt wird: ab Mittel bevorzugt ein DROTHER */
+    var others = T.rs.map(function (_, i) { return i; }).filter(function (i) { return E.role[i] === 'DROTHER'; });
+    T.x = lvl !== 'L' && others.length && r() < 0.75 ? pick(r, others) : ri(r, 0, T.rs.length - 1);
+    T.E = E;
+    T.ans = {rid: T.rs.map(function (R) { return rid(R).id; }), dr: E.dr, bdr: E.bdr,
+      nb: T.rs.map(function (_, y) { return y === T.x ? null : nbState(E, T.x, y); }),
+      cost: T.rs[T.x].ospfCost || cost(T.ref, IFT[T.rs[T.x].type].bw)};
+    T.level = lvl; T.code = lvl + '-' + seed;
+    return T;
+  }
+  return null;
+}
+
+/* ---------- Texte ---------- */
+function ifName(R) { return IFT[R.type].full + (R.type === 'Te' ? '0/0/0' : '0/0'); }
+function shortIf(R) { return R.type + (R.type === 'Te' ? '0/0/0' : '0/0'); }
+function config(T, R) {
+  var o = 'hostname ' + R.name + '\n!\n';
+  R.loops.forEach(function (ip, k) { o += 'interface Loopback' + k + '\n ip address ' + ip + ' 255.255.255.255\n!\n'; });
+  o += 'interface ' + ifName(R) + '\n description zum Switch\n ip address ' + R.segIp + ' 255.255.255.0\n' + (R.prio !== 1 ? ' ip ospf priority ' + R.prio + '\n' : '') + (R.ospfCost ? ' ip ospf cost ' + R.ospfCost + '\n' : '') + '!\n';
+  o += 'interface GigabitEthernet0/1\n ip address ' + R.other + ' 255.255.255.0\n!\n';
+  o += 'router ospf 1\n' + (R.cmd ? ' router-id ' + R.cmd + '\n' : '') + (T.ref !== 100 ? ' auto-cost reference-bandwidth ' + T.ref + '\n' : '') +
+    ' network ' + T.seg + ' 0.0.0.255 area 0\n network ' + R.other.replace(/\.1$/, '.0') + ' 0.0.0.255 area 0\n' + (R.loops.length ? R.loops.map(function (ip) { return ' network ' + ip + ' 0.0.0.0 area 0\n'; }).join('') : '');
+  return o.replace(/\n$/, '');
+}
+function ridWhy(R) {
+  var x = rid(R);
+  if (x.how === 'cmd') return 'router-id ' + x.id + ' ist konfiguriert – das hat Vorrang vor allem anderen' + (R.loops.length ? ' (auch vor der Loopback)' : '') + '.';
+  if (x.how === 'loop') return 'kein router-id-Befehl → höchste Loopback-IP' + (R.loops.length > 1 ? ' (' + R.loops.join(' / ') + ')' : '') + ': ' + x.id + '.';
+  return 'kein router-id-Befehl, keine Loopback → höchste IP eines aktiven Interfaces (' + R.segIp + ' / ' + R.other + '): ' + x.id + '.';
+}
+
+/* ---------- Zeichnen: Router um einen Switch ---------- */
+function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]; }); }
+function tx(x, y, t, o) { o = o || {}; return '<text x="' + x + '" y="' + y + '" text-anchor="' + (o.a || 'middle') + '" font-size="' + (o.fs || 13) + '" font-weight="' + (o.fw || 400) + '" fill="' + (o.c || '#1c2b33') + '" font-family="' + (o.mono ? 'ui-monospace,Menlo,Consolas,monospace' : 'Open Sans,Arial,sans-serif') + '">' + esc(t) + '</text>'; }
+var ICON_R = '<ellipse cx="0" cy="8" rx="26" ry="9" fill="#1f5872"/><rect x="-26" y="-8" width="52" height="16" fill="#2f7392"/><ellipse cx="0" cy="-8" rx="26" ry="9" fill="#5a9dbb" stroke="#1f5872"/><path d="M-13 -8h8M5 -8h8M-1 -14v5M-1 -6v5" stroke="#fff" stroke-width="2" stroke-linecap="round"/>';
+var ICON_S = '<path d="M-30 -5l10 -10h48l-10 10z" fill="#6aaecb" stroke="#1f5872"/><path d="M-30 -5h48v16h-48z" fill="#2f7392"/><path d="M18 -5l10 -10v16l-10 10z" fill="#1f5872"/><path d="M-22 1h10M-6 1h10M-18 6h10M-2 6h10" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>';
+/* opt: {roles: E (zeigt DR/BDR), rids:true, x: hervorgehobener Router} */
+function draw(T, opt) {
+  opt = opt || {};
+  var n = T.rs.length, W = Math.max(760, n * 150 + 40), y0 = opt.rids ? 146 : opt.roles || opt.prio ? 128 : 104, sy = y0 + 110, H = sy + 52, sx = W / 2, o = ['<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Router an einem gemeinsamen Switch">'];
+  var xs = T.rs.map(function (_, i) { return W / 2 + (i - (n - 1) / 2) * Math.min(150, (W - 120) / Math.max(1, n - 1)); });
+  T.rs.forEach(function (R, i) { o.push('<line x1="' + xs[i] + '" y1="' + y0 + '" x2="' + sx + '" y2="' + (sy - 12) + '" stroke="#1c2b33" stroke-width="2.5"' + (R.late && opt.showLate ? ' stroke-dasharray="7 5"' : '') + '/>'); });
+  o.push('<g transform="translate(' + sx + ' ' + sy + ')">' + ICON_S + '</g>' + tx(sx, sy + 34, T.seg + '/24 · Area 0', {fs: 13, fw: 700}));
+  T.rs.forEach(function (R, i) {
+    var x = xs[i], hl = opt.x === i;
+    if (hl) o.push('<rect x="' + (x - 72) + '" y="4" width="144" height="' + (y0 - 8) + '" rx="8" fill="#fff8e1" stroke="#f9a825" stroke-width="2"/>');
+    o.push('<g transform="translate(' + x + ' 52)">' + ICON_R + '</g>' + tx(x, 28, R.name, {fs: 16, fw: 700}));
+    o.push(tx(x, 92, shortIf(R) + ' .' + R.segIp.split('.')[3], {fs: 12, mono: 1, c: '#455a64'}));
+    if (opt.roles) { var role = opt.roles.role[i], col = role === 'DR' ? '#2e7d32' : role === 'BDR' ? '#1565c0' : '#78909c'; o.push('<rect x="' + (x - 34) + '" y="100" width="68" height="20" rx="10" fill="' + col + '"/>' + tx(x, 114.5, role, {fs: 12, fw: 700, c: '#fff'})); }
+    else if (opt.prio) o.push(tx(x, 116, 'Priorität ' + R.prio, {fs: 12, c: '#546e7a'}));
+    if (opt.rids) o.push(tx(x, opt.roles ? 132 : 132, 'RID ' + rid(R).id, {fs: 11.5, mono: 1, c: '#1c2b33'}));
+  });
+  o.push('</svg>');
+  return o.join('');
+}
+
+G.O2 = {LVNAME: LVNAME, IFT: IFT, cost: cost, rid: rid, elect: elect, nbState: nbState, makeTask: makeTask, config: config, ridWhy: ridWhy, draw: draw, ifName: ifName, shortIf: shortIf, ipn: ipn, ICON_R: ICON_R, ICON_S: ICON_S};
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+(function(){
+'use strict';
+var $=function(i){return document.getElementById(i);},O=window.O2,reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function tx(x,y,t,o){o=o||{};return'<text x="'+x+'" y="'+y+'" text-anchor="'+(o.a||'middle')+'" font-size="'+(o.fs||13)+'" font-weight="'+(o.fw||400)+'" fill="'+(o.c||'#1c2b33')+'" font-family="'+(o.mono?'ui-monospace,Menlo,Consolas,monospace':'Open Sans,Arial,sans-serif')+'">'+esc(t)+'</text>';}
+
+/* ================= Animation: Netzplan austauschen ================= */
+var PC={Hello:'#546e7a',DBD:'#1565c0',LSR:'#6a1b9a',LSU:'#e65100',LSAck:'#2e7d32'},PCL={Hello:'p-hello',DBD:'p-dbd',LSR:'p-lsr',LSU:'p-lsu',LSAck:'p-ack'};
+function P(t){return'<span class="pk '+PCL[t]+'">'+t+'</span>';}
+function H(o){return o;}/* Heft: {R1:['R1:1','R2:1'],...} */
+var SC={};
+/* Szenario 1: Zwei Router werden Nachbarn */
+(function(){
+ var N={R1:[140,100],R2:[450,100],R3:[760,100]};
+ var h0={R1:['R1:1'],R2:['R2:1','R3:1'],R3:['R2:1','R3:1']};
+ SC.p2p={name:'Zwei Router werden Nachbarn',sub:'Hello, DBD, LSR, LSU, LSAck',N:N,H:200,lblTop:1,heftAt:function(x,y){return[x,y+34];},links:[['R1','R2'],['R2','R3']],steps:[
+  {t:'Ausgangslage',x:'<p>R2 und R3 kennen sich schon – ihre Hefte sind gleich: Seiten von R2 und R3. R1 ist neu und kennt nur seine eigene Seite. Jetzt wird das Kabel R1–R2 eingesteckt.</p>',heft:h0,st:{'R1-R2':'Down','R2-R3':'Full'}},
+  {t:'R1 sagt Hallo',x:'<p>'+P('Hello')+' R1 schickt ein Hello an die Multicast-Adresse 224.0.0.5: „Hallo, ich bin R1, Area 0, Hello alle 10 Sekunden.“ R2 sieht: Da ist jemand – Zustand <b>Init</b>.</p>',msgs:[['R1','R2','Hello']],heft:h0,st:{'R1-R2':'Init','R2-R3':'Full'}},
+  {t:'R2 antwortet',x:'<p>'+P('Hello')+' R2 antwortet: „Hallo R1, ich sehe dich!“ Beide sehen sich gegenseitig im Hello – Zustand <b>2-Way</b>. Die Werte passen (gleiche Area, gleiche Timer, gleiches Subnetz) – sonst würden sie hier nicht weiterkommen.</p>',msgs:[['R2','R1','Hello']],heft:h0,st:{'R1-R2':'2-Way','R2-R3':'Full'}},
+  {t:'Inhaltsverzeichnisse tauschen',x:'<p>'+P('DBD')+' Jetzt zeigen sich beide ihr <b>Inhaltsverzeichnis</b>: R1 „Ich habe: Seite R1“, R2 „Ich habe: Seite R2, Seite R3“. Noch keine Inhalte, nur die Liste. Zustand <b>Exchange</b>.</p>',msgs:[['R1','R2','DBD','R1'],['R2','R1','DBD','R2 R3']],heft:h0,st:{'R1-R2':'Exchange','R2-R3':'Full'}},
+  {t:'Fehlende Seiten anfordern',x:'<p>'+P('LSR')+' Jeder vergleicht mit seinem Heft und fragt nach, was fehlt: R1 „Schick mir bitte R2 und R3“, R2 „Schick mir bitte R1“. Zustand <b>Loading</b>.</p>',msgs:[['R1','R2','LSR','R2 R3'],['R2','R1','LSR','R1']],heft:h0,st:{'R1-R2':'Loading','R2-R3':'Full'}},
+  {t:'Seiten schicken',x:'<p>'+P('LSU')+' Jetzt kommen die echten Seiten (LSAs). Weil es einen neuen Link gibt, schreiben R1 und R2 ihre eigene Seite auch gleich neu: <b>Version 2</b>.</p>',msgs:[['R2','R1','LSU','R2 R3'],['R1','R2','LSU','R1']],heft:{R1:['R1:2','R2:2','R3:1'],R2:['R1:2','R2:2','R3:1'],R3:['R2:1','R3:1']},chg:{R1:1,R2:1},st:{'R1-R2':'Loading','R2-R3':'Full'}},
+  {t:'Danke, angekommen',x:'<p>'+P('LSAck')+' Beide bestätigen den Empfang. Ihre Hefte sind gleich – Zustand <b>Full</b>. R1 und R2 sind jetzt vollwertige Nachbarn.</p>',msgs:[['R1','R2','LSAck'],['R2','R1','LSAck']],heft:{R1:['R1:2','R2:2','R3:1'],R2:['R1:2','R2:2','R3:1'],R3:['R2:1','R3:1']},st:{'R1-R2':'Full','R2-R3':'Full'}},
+  {t:'R2 gibt weiter (Flooding)',x:'<p>'+P('LSU')+' R3 hat die Neuigkeiten noch nicht. R2 schickt ihm die neuen Seiten weiter: R1 und R2 (Version 2). So wandert jede Neuigkeit von Nachbar zu Nachbar durch die ganze Area – das heißt <b>Flooding</b>.</p>',msgs:[['R2','R3','LSU','R1 R2']],heft:{R1:['R1:2','R2:2','R3:1'],R2:['R1:2','R2:2','R3:1'],R3:['R1:2','R2:2','R3:1']},chg:{R3:1},st:{'R1-R2':'Full','R2-R3':'Full'}},
+  {t:'Alle Hefte gleich',x:'<p>'+P('LSAck')+' R3 bestätigt. Jetzt haben <b>alle drei das gleiche Heft</b>. Jeder rechnet damit Dijkstra (siehe <a href="../ospf-1/">OSPF 1</a>) – mit sich selbst als Start – und bekommt seine Routing-Tabelle. Ab jetzt gehen nur noch Hellos hin und her, solange sich nichts ändert.</p>',msgs:[['R3','R2','LSAck']],heft:{R1:['R1:2','R2:2','R3:1'],R2:['R1:2','R2:2','R3:1'],R3:['R1:2','R2:2','R3:1']},st:{'R1-R2':'Full','R2-R3':'Full'},done:1}]};
+})();
+/* Szenario 2: Ethernet mit DR und BDR */
+(function(){
+ var N={R1:[140,300],R2:[353,300],R3:[567,300],R4:[780,300],SW:[460,470]};
+ var all=['R1:1','R2:1','R3:1','R4:1'],h={R1:all,R2:all,R3:all,R4:all},nw=['R1:2','R2:1','R3:1','R4:1'];
+ var adj0=[],adjF=[['R1','R3','full'],['R1','R4','full'],['R2','R3','full'],['R2','R4','full'],['R3','R4','full'],['R1','R2','2way']];
+ SC.dr={name:'Ethernet mit DR und BDR',sub:'4 Router an einem Switch',N:N,sw:1,H:520,heftAt:function(x,y){return[x,8];},prio:{R1:1,R2:1,R3:50,R4:100},links:[],steps:[
+  {t:'Ausgangslage',x:'<p>Vier Router hängen am selben Switch, alle in Area 0. Ohne Chef müsste jeder mit jedem sein Heft abgleichen: 4 Router → <b>6 Nachbarschaften</b>, bei 10 Routern schon 45.</p>',heft:h,adj:adj0},
+  {t:'Alle sagen Hallo',x:'<p>'+P('Hello')+' Jeder schickt Hellos an 224.0.0.5 – die hören alle OSPF-Router. Im Hello steht auch die <b>Priorität</b> und die <b>Router-ID</b>.</p>',msgs:[['R1','*','Hello'],['R2','*','Hello'],['R3','*','Hello'],['R4','*','Hello']],heft:h,adj:adj0},
+  {t:'Wahl: DR und BDR',x:'<p>Höchste Priorität gewinnt: <b>R4 (100) wird DR</b>, R3 (50) wird <b>BDR</b>. Bei gleicher Priorität hätte die höhere Router-ID entschieden. R1 und R2 sind <b>DROTHER</b>.</p>',heft:h,adj:adj0,roles:1},
+  {t:'Nachbarschaften',x:'<p>Jeder wird nur mit <b>DR und BDR Full</b> (grün). R1 und R2 bleiben untereinander bei <b>2-Way</b> (grau) – sie tauschen ihre Hefte nicht direkt. Statt 6 gibt es nur 5 volle Nachbarschaften – bei 10 Routern 17 statt 45.</p>',heft:h,adj:adjF,roles:1},
+  {t:'R1 hat eine Neuigkeit',x:'<p>'+P('LSU')+' An R1 kommt ein neues Netz dazu. R1 schreibt seine Seite neu (Version 2) und schickt sie an <b>224.0.0.6</b> – die Adresse, auf die nur <b>DR und BDR</b> hören.</p>',msgs:[['R1','R4','LSU','R1'],['R1','R3','LSU','R1']],heft:{R1:nw,R2:all,R3:nw,R4:nw},chg:{R1:1,R3:1,R4:1},adj:adjF,roles:1},
+  {t:'Der DR verteilt',x:'<p>'+P('LSU')+' Der <b>DR R4</b> schickt die neue Seite an <b>224.0.0.5</b> – an alle. Der BDR hört nur mit und springt ein, falls der DR ausfällt.</p>',msgs:[['R4','R2','LSU','R1'],['R4','R1','LSU','R1'],['R4','R3','LSU','R1']],heft:{R1:nw,R2:nw,R3:nw,R4:nw},chg:{R2:1},adj:adjF,roles:1},
+  {t:'Bestätigen',x:'<p>'+P('LSAck')+' Alle bestätigen den Empfang. Alle vier Hefte sind wieder gleich – und jeder rechnet neu mit Dijkstra.</p>',msgs:[['R2','R4','LSAck'],['R1','R4','LSAck'],['R3','R4','LSAck']],heft:{R1:nw,R2:nw,R3:nw,R4:nw},adj:adjF,roles:1,done:1}]};
+})();
+/* Szenario 3: Ein Link fällt aus */
+(function(){
+ var N={R1:[260,95],R2:[640,95],R3:[640,320],R4:[260,320]};
+ var v1=['R1:1','R2:1','R3:1','R4:1'],h1={R1:v1,R2:v1,R3:v1,R4:v1};
+ var a={R1:['R1:1','R2:2','R3:1','R4:1'],R2:['R1:1','R2:2','R3:1','R4:1'],R3:['R1:1','R2:1','R3:2','R4:1'],R4:['R1:1','R2:1','R3:2','R4:1']};
+ var all2=['R1:1','R2:2','R3:2','R4:1'],h2={R1:all2,R2:all2,R3:all2,R4:all2};
+ SC.fail={name:'Ein Link fällt aus',sub:'nur die Änderung wird verschickt',N:N,H:410,heftAt:function(x,y){return[x<450?x-150:x+150,y-23];},lblVert:1,links:[['R1','R2'],['R2','R3'],['R3','R4'],['R4','R1']],steps:[
+  {t:'Alles läuft',x:'<p>Vier Router im Ring, alle Nachbarschaften <b>Full</b>, alle Hefte gleich. R1 erreicht R3 über R2. Solange nichts passiert, gehen nur Hellos (alle 10 s) hin und her.</p>',heft:h1,st:{'R1-R2':'Full','R2-R3':'Full','R3-R4':'Full','R1-R4':'Full'}},
+  {t:'Das Kabel R2–R3 fällt aus',x:'<p>R2 und R3 merken es sofort am Interface. (Wäre nur der Nachbar abgestürzt, würden sie es nach dem <b>Dead-Timer</b> merken: 40 s ohne Hello.)</p>',heft:h1,down:{'R2-R3':1},st:{'R1-R2':'Full','R3-R4':'Full','R1-R4':'Full'}},
+  {t:'Neue Seiten schreiben und schicken',x:'<p>'+P('LSU')+' R2 schreibt seine Seite neu (<b>Version 2</b>, ohne den Link zu R3) und schickt sie an R1. R3 macht dasselbe und schickt an R4. Verschickt wird <b>nur die geänderte Seite</b>, nicht das ganze Heft.</p>',msgs:[['R2','R1','LSU','R2'],['R3','R4','LSU','R3']],heft:a,chg:{R1:1,R2:1,R3:1,R4:1},down:{'R2-R3':1},st:{'R1-R2':'Full','R3-R4':'Full','R1-R4':'Full'}},
+  {t:'Bestätigen und weitergeben',x:'<p>'+P('LSAck')+' R1 und R4 bestätigen. '+P('LSU')+' Und sie geben die Neuigkeit an ihre anderen Nachbarn weiter: R1 schickt „R2 Version 2“ an R4, R4 schickt „R3 Version 2“ an R1.</p>',msgs:[['R1','R2','LSAck'],['R4','R3','LSAck'],['R1','R4','LSU','R2'],['R4','R1','LSU','R3']],heft:{R1:all2,R4:all2,R2:a.R2,R3:a.R3},chg:{R1:1,R4:1},down:{'R2-R3':1},st:{'R1-R2':'Full','R3-R4':'Full','R1-R4':'Full'}},
+  {t:'Weiter bis zum Ende',x:'<p>'+P('LSAck')+' R1 und R4 bestätigen sich gegenseitig. '+P('LSU')+' Dann geben sie weiter: R1 schickt „R3 Version 2“ an R2, R4 schickt „R2 Version 2“ an R3.</p>',msgs:[['R1','R4','LSAck'],['R4','R1','LSAck'],['R1','R2','LSU','R3'],['R4','R3','LSU','R2']],heft:h2,chg:{R2:1,R3:1},down:{'R2-R3':1},st:{'R1-R2':'Full','R3-R4':'Full','R1-R4':'Full'}},
+  {t:'Neu rechnen',x:'<p>'+P('LSAck')+' Alle Hefte sind wieder gleich (Version 2 von R2 und R3). Jeder rechnet <b>Dijkstra neu</b>: R1 erreicht R3 jetzt über R4. Das ging in Sekunden – viel schneller als bei RIP. Zusätzlich frischt jeder Router seine Seite alle 30 Minuten auf, auch ohne Änderung.</p>',msgs:[['R2','R1','LSAck'],['R3','R4','LSAck']],heft:h2,down:{'R2-R3':1},st:{'R1-R2':'Full','R3-R4':'Full','R1-R4':'Full'},done:1}]};
+})();
+var ORDER=['p2p','dr','fail'],cur='p2p',si=0,playing=false,timer=0,busy=false;
+function key(a,b){return a<b?a+'-'+b:b+'-'+a;}
+function heftBox(name,x,y,cards,chg){
+  var w=Math.max(130,cards.length*44+16),h='<g transform="translate('+(x-w/2)+' '+y+')"><rect width="'+w+'" height="46" rx="5" fill="'+(chg?'#fff8e1':'#fff')+'" stroke="'+(chg?'#ffa000':'#b0bec5')+'" stroke-width="'+(chg?2:1.3)+'"/>'+tx(8,13,'Heft von '+name+' (LSDB)',{a:'start',fs:10,c:'#546e7a',fw:600});
+  cards.forEach(function(c,i){var p=c.split(':'),v2=+p[1]>1;h+='<g transform="translate('+(8+i*44)+' 18)"><rect width="40" height="22" rx="3" fill="'+(v2?'#ffe0b2':'#e3f2fd')+'" stroke="'+(v2?'#e65100':'#1565c0')+'"/>'+tx(20,11,p[0],{fs:11,fw:700})+tx(20,20,'v'+p[1],{fs:8.5,c:'#546e7a'})+'</g>';});
+  return h+'</g>';
+}
+function scene(s,i){
+  var S=SC[s],st=S.steps[i],N=S.N,W=900,Hh=S.H,h='<svg viewBox="0 0 '+W+' '+Hh+'" role="img" aria-label="'+esc(S.name)+'">';
+  if(S.sw){Object.keys(N).forEach(function(r){if(r==='SW')return;h+='<line x1="'+N[r][0]+'" y1="'+(N[r][1]+12)+'" x2="'+N.SW[0]+'" y2="'+(N.SW[1]-10)+'" stroke="#1c2b33" stroke-width="2.5"/>';});
+    (st.adj||[]).forEach(function(a){var A=N[a[0]],B=N[a[1]],mx=(A[0]+B[0])/2,my=A[1]-100-Math.abs(B[0]-A[0])*0.36;h+='<path d="M'+A[0]+' '+(A[1]-58)+' Q'+mx+' '+my+' '+B[0]+' '+(B[1]-58)+'" fill="none" stroke="'+(a[2]==='full'?'#2e7d32':'#90a4ae')+'" stroke-width="'+(a[2]==='full'?2.5:2)+'"'+(a[2]==='full'?'':' stroke-dasharray="5 4"')+'/>';});
+    h+='<g transform="translate('+N.SW[0]+' '+N.SW[1]+')">'+O.ICON_S+'</g>';}
+  (S.links||[]).forEach(function(l){var A=N[l[0]],B=N[l[1]],k=key(l[0],l[1]),dn=st.down&&st.down[k],state=st.st&&st.st[k];
+    h+='<line x1="'+A[0]+'" y1="'+A[1]+'" x2="'+B[0]+'" y2="'+B[1]+'" stroke="'+(dn?'#c62828':state==='Down'?'#b0bec5':'#1c2b33')+'" stroke-width="3"'+(dn||state==='Down'?' stroke-dasharray="8 6"':'')+'/>';
+    var mx=(A[0]+B[0])/2,my=(A[1]+B[1])/2;
+    if(dn)h+='<g transform="translate('+mx+' '+my+')"><circle r="14" fill="#c62828"/><path d="M-5 -5l10 10M5 -5l-10 10" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></g>';
+    else if(state){var w=state.length*8+18,vert=A[0]===B[0];var lx=vert?(mx<450?mx+14+w/2:mx-14-w/2):mx,ly=vert?my:my-18;h+='<rect x="'+(lx-w/2)+'" y="'+(ly-11)+'" width="'+w+'" height="20" rx="10" fill="'+(state==='Full'?'#2e7d32':state==='Down'?'#90a4ae':'#f9a825')+'"/>'+tx(lx,ly+3.5,state,{fs:11.5,fw:700,c:'#fff'});}});
+  Object.keys(N).forEach(function(r){if(r==='SW')return;var x=N[r][0],y=N[r][1];h+='<g transform="translate('+x+' '+y+')">'+O.ICON_R+'</g>'+(S.lblVert?tx(x,y<200?y-24:y+40,r,{fs:16,fw:700}):S.lblLeft&&S.lblLeft[r]?tx(x-36,y+5,r,{a:'end',fs:16,fw:700}):S.lblTop?tx(x,y-24,r,{fs:16,fw:700}):tx(x+36,y+5,r,{a:'start',fs:16,fw:700}));
+    if(S.prio)h+=tx(x-34,y+5,'Prio '+S.prio[r],{a:'end',fs:12,c:'#546e7a'});
+    if(st.roles){var role=r==='R4'?'DR':r==='R3'?'BDR':'DROTHER',col=role==='DR'?'#2e7d32':role==='BDR'?'#1565c0':'#78909c';h+='<rect x="'+(x-36)+'" y="'+(y-52)+'" width="72" height="20" rx="10" fill="'+col+'"/>'+tx(x,y-37.5,role,{fs:12,fw:700,c:'#fff'});}
+    var hp=S.heftAt(x,y);
+    h+=heftBox(r,hp[0],hp[1],st.heft[r],st.chg&&st.chg[r]);});
+  return h+'<g class="pk"></g></svg>';
+}
+function pathOf(S,m){var N=S.N;if(m[1]==='*')return[N[m[0]],N.SW];if(S.sw)return[N[m[0]],N.SW,N[m[1]]];return[N[m[0]],N[m[1]]];}
+function animMsgs(s,st,done){
+  var S=SC[s],svg=$('asvg').querySelector('svg'),g=svg.querySelector('.pk');if(!st.msgs){if(done)done();return;}
+  var dur=[0,3000,2100,1400,900,520][+$('spd').value];
+  var items=st.msgs.map(function(m){var el=document.createElementNS('http://www.w3.org/2000/svg','g'),lbl=m[2]+(m[3]?' '+m[3]:''),w=lbl.length*7+18;
+    el.innerHTML='<rect x="'+(-w/2)+'" y="-30" width="'+w+'" height="20" rx="10" fill="'+PC[m[2]]+'"/>'+tx(0,-16,lbl,{fs:11.5,fw:700,c:'#fff'})+'<rect x="-12" y="-8" width="24" height="16" rx="2" fill="'+PC[m[2]]+'"/><path d="M-12 -8l12 9 12 -9" fill="none" stroke="#fff" stroke-width="1.6"/>';
+    g.appendChild(el);return{el:el,pts:pathOf(S,m)};});
+  function at(pts,k){var segs=pts.length-1,f=Math.min(segs-1e-9,k*segs),i=Math.floor(f),t=f-i;return[pts[i][0]+(pts[i+1][0]-pts[i][0])*t,pts[i][1]+(pts[i+1][1]-pts[i][1])*t];}
+  if(reduce){items.forEach(function(it){var p=at(it.pts,0.5);it.el.setAttribute('transform','translate('+p[0]+' '+p[1]+')');});if(done)done();return;}
+  var t0=null;function f(ts){if(t0===null)t0=ts;var k=Math.min(1,(ts-t0)/dur);items.forEach(function(it){var p=at(it.pts,k);it.el.setAttribute('transform','translate('+p[0]+' '+p[1]+')');});
+    if(k<1)requestAnimationFrame(f);else setTimeout(function(){if(done)done();},Math.min(450,dur/3));}
+  requestAnimationFrame(f);
+}
+function render(animate){
+  var S=SC[cur],st=S.steps[i_()],show=animate&&st.msgs&&si>0;
+  $('asvg').innerHTML=scene(cur,show?si-1:si);
+  $('ttl').textContent=st.t;$('txt').innerHTML=st.x;$('no').textContent='Schritt '+(si+1)+' von '+S.steps.length;$('prev').disabled=si===0;$('next').disabled=si===S.steps.length-1;
+  if(show){busy=true;var keepDown=st.down;$('asvg').innerHTML=scene(cur,si-1);animMsgs(cur,st,function(){busy=false;$('asvg').innerHTML=scene(cur,si);if(playing)schedule();});}
+  else if(playing)schedule();
+}
+function i_(){return si;}
+function schedule(){clearTimeout(timer);timer=setTimeout(function(){if(!playing)return;if(si<SC[cur].steps.length-1){si++;render(true);}else stop();},[0,3600,2600,1700,1100,600][+$('spd').value]);}
+function stop(){playing=false;clearTimeout(timer);$('play').textContent='▶ Abspielen';}
+$('prev').onclick=function(){stop();if(si>0){si--;render(false);}};
+$('next').onclick=function(){if(busy)return;stop();if(si<SC[cur].steps.length-1){si++;render(true);}};
+$('play').onclick=function(){if(playing){stop();return;}playing=true;$('play').textContent='❚❚ Pause';if(si>=SC[cur].steps.length-1){si=0;render(false);}else{si++;render(true);}};
+$('tabs').innerHTML=ORDER.map(function(k){return'<button type="button" role="tab" data-s="'+k+'" aria-selected="'+(k===cur)+'">'+SC[k].name+'<small>'+SC[k].sub+'</small></button>';}).join('');
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-s]');if(!b)return;stop();cur=b.dataset.s;si=0;document.querySelectorAll('[data-s]').forEach(function(x){x.setAttribute('aria-selected',x===b);});render(false);});
+render(false);
+window.O2step=function(s,i){stop();cur=s;si=i;render(false);};
+
+/* ================= Wahl-Simulator ================= */
+var E0=[{name:'R1',prio:1,cmd:'',loop:'',seg:'10.0.0.1',late:false},{name:'R2',prio:1,cmd:'',loop:'2.2.2.2',seg:'10.0.0.2',late:false},{name:'R3',prio:50,cmd:'',loop:'',seg:'10.0.0.3',late:false},{name:'R4',prio:1,cmd:'4.4.4.4',loop:'',seg:'10.0.0.4',late:false}];
+var ES=JSON.parse(JSON.stringify(E0));
+function okIp(v){return/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.test(v)&&v.split('.').every(function(x){return+x<=255;});}
+function esRouters(){return ES.map(function(e){return{name:e.name,prio:Math.max(0,Math.min(255,Math.round(+e.prio)||0)),cmd:okIp(e.cmd)?e.cmd:null,loops:okIp(e.loop)?[e.loop]:[],segIp:okIp(e.seg)?e.seg:'10.0.0.9',other:null,late:e.late,type:'Gi'};});}
+function eRender(full){
+  var rs=esRouters(),E=O.elect(rs),T={rs:rs,seg:'10.0.0.0'};
+  $('esvg').innerHTML=O.draw(T,{roles:E,rids:1,showLate:1});
+  if(full){$('etab').innerHTML='<thead><tr><th>Router</th><th>Priorität</th><th>router-id</th><th>Loopback-IP</th><th>Interface-IP</th><th>startet später</th><th>Router-ID</th><th>Rolle</th></tr></thead><tbody>'+ES.map(function(e,i){
+    return'<tr data-i="'+i+'"><td><b>'+e.name+'</b></td><td><input type="number" min="0" max="255" data-f="prio" value="'+e.prio+'"></td><td><input type="text" data-f="cmd" value="'+esc(e.cmd)+'" placeholder="–"></td><td><input type="text" data-f="loop" value="'+esc(e.loop)+'" placeholder="–"></td><td><input type="text" data-f="seg" value="'+esc(e.seg)+'"></td><td><input type="checkbox" data-f="late"'+(e.late?' checked':'')+'></td><td class="rid"></td><td class="rl"></td></tr>';}).join('')+'</tbody>';}
+  rs.forEach(function(R,i){var tr=$('etab').querySelector('tr[data-i="'+i+'"]'),x=O.rid(R);tr.querySelector('.rid').innerHTML='<b style="font-family:var(--mono)">'+x.id+'</b><div class="why">'+(x.how==='cmd'?'router-id-Befehl':x.how==='loop'?'höchste Loopback':'höchste Interface-IP')+'</div>';
+    tr.querySelector('.rl').innerHTML='<span class="role r-'+E.role[i]+'">'+E.role[i]+'</span>'+(R.prio===0?'<div class="why">Priorität 0 – nie DR</div>':R.late&&E.role[i]==='DROTHER'?'<div class="why">kam zu spät</div>':'');
+    ['cmd','loop','seg'].forEach(function(f){var inp=tr.querySelector('[data-f="'+f+'"]'),v=inp.value.trim();inp.classList.toggle('bad',!!v&&!okIp(v));});});
+}
+$('etab').addEventListener('input',function(e){var f=e.target.dataset.f;if(!f)return;var i=+e.target.closest('tr').dataset.i;ES[i][f]=f==='late'?e.target.checked:e.target.value.trim();eRender(false);});
+$('etab').addEventListener('change',function(e){if(e.target.dataset.f==='late'){var i=+e.target.closest('tr').dataset.i;ES[i].late=e.target.checked;eRender(false);}});
+$('ereset').onclick=function(){ES=JSON.parse(JSON.stringify(E0));eRender(true);};
+eRender(true);
+
+/* ================= Referenzbandbreite ================= */
+var IFS=[['Serial (T1)',1.544],['Ethernet',10],['FastEthernet',100],['GigabitEthernet',1000],['10-Gigabit-Ethernet',10000],['40-Gigabit-Ethernet',40000],['100-Gigabit-Ethernet',100000]];
+function fmt(bw){return bw>=1000?(bw/1000).toLocaleString('de-AT')+' Gbit/s':bw.toLocaleString('de-AT')+' Mbit/s';}
+function refRender(){var ref=+$('refsel').value,cs=IFS.map(function(x){return O.cost(ref,x[1]);});
+  $('reft').innerHTML='<thead><tr><th>Interface</th><th>Bandbreite</th><th>Rechnung</th><th>Kosten</th></tr></thead><tbody>'+IFS.map(function(x,i){var same=cs.filter(function(c){return c===cs[i];}).length>1;
+    return'<tr><td>'+x[0]+'</td><td>'+fmt(x[1])+'</td><td>'+ref.toLocaleString('de-AT')+' ÷ '+x[1].toLocaleString('de-AT')+' = '+(ref/x[1]).toLocaleString('de-AT',{maximumFractionDigits:4})+'</td><td class="'+(same?'same':'')+'"><b>'+cs[i]+'</b></td></tr>';}).join('')+'</tbody>';
+  var dup=IFS.filter(function(x,i){return cs.filter(function(c){return c===cs[i];}).length>1;}).map(function(x){return x[0];});
+  $('refh').textContent=dup.length?'Rot: Diese Interfaces haben die gleichen Kosten, obwohl sie unterschiedlich schnell sind – OSPF kann sie nicht unterscheiden. ('+dup.join(', ')+')':'Alle Interfaces haben unterschiedliche Kosten – so soll es sein.';}
+$('refsel').onchange=refRender;refRender();
+
+/* ================= Quiz ================= */
+var Q=[
+ ['Was ist ein LSA?',['Ein Kabel zwischen zwei Routern','Eine „Seite“ im Netzplan: Router X hat diese Links mit diesen Kosten','Die Routing-Tabelle','Ein Hello-Paket'],1,'Jeder Router beschreibt in seinem LSA seine eigenen Links. Alle LSAs zusammen sind die LSDB – das Heft.'],
+ ['Welches Paket enthält die echten LSAs?',['Hello','DBD','LSR','LSU'],3,'DBD ist nur das Inhaltsverzeichnis, LSR die Bitte um fehlende Seiten. Die Seiten selbst stecken im LSU (Link-State Update).'],
+ ['Was muss bei zwei Routern gleich sein, damit sie Nachbarn werden?',['Die Prozess-ID','Die Router-ID','Area, Hello-/Dead-Timer und Subnetz','Die Priorität'],2,'Die Prozess-ID ist nur lokal. Router-IDs müssen sogar verschieden sein.'],
+ ['Was passiert, wenn ein Link ausfällt?',['Alle Router schicken ihr ganzes Heft neu','Die betroffenen Router schicken eine neue Version ihres LSAs, das durch die Area geflutet wird','Nichts – bis zum nächsten 30-Sekunden-Update','Der DR wird neu gewählt'],1,'Nur die Änderung wird verschickt (LSU), von Nachbar zu Nachbar bestätigt (LSAck). Danach rechnet jeder Dijkstra neu.'],
+ ['R1 hat Priorität 1 und Router-ID 9.9.9.9, R2 Priorität 10 und Router-ID 1.1.1.1. Wer wird DR?',['R1 – höhere Router-ID','R2 – höhere Priorität','Beide','Keiner'],1,'Zuerst zählt die Priorität. Die Router-ID entscheidet nur bei Gleichstand.'],
+ ['Ein Router hat Priorität 0. Was heißt das?',['Er wird immer DR','Er darf nie DR oder BDR werden','Er macht kein OSPF','Er wird BDR'],1,'Priorität 0 schließt ihn von der Wahl aus. Er ist DROTHER, macht aber ganz normal OSPF.'],
+ ['Kein router-id-Befehl, Loopback 2.2.2.2, Interface 192.168.1.1. Welche Router-ID?',['192.168.1.1','2.2.2.2','0.0.0.0','1.1.1.1'],1,'Loopback hat Vorrang vor physischen Interfaces – auch wenn deren IP höher ist.'],
+ ['Zwei DROTHER-Router am selben Switch – welcher Zustand steht zwischen ihnen?',['FULL','2WAY','DOWN','EXSTART'],1,'Volle Nachbarschaft nur mit DR und BDR. Zwischen DROTHERs bleibt es bei 2WAY – das ist normal, kein Fehler.'],
+ ['Standard-Referenzbandbreite 100 Mbit/s: Welche Kosten hat ein GigabitEthernet-Interface?',['10','1','0,1','100'],1,'100 ÷ 1000 = 0,1 → mindestens 1. Darum stellt man die Referenz höher, z. B. auto-cost reference-bandwidth 10000.'],
+ ['Was ist Area 0?',['Eine Area ohne Router','Die Backbone-Area – das Rückgrat, an das alle anderen Areas angeschlossen werden','Die Area für Gäste','Eine Area nur für Loopbacks'],1,'In Single-Area-OSPF sind alle Router in Area 0. Bei mehreren Areas hängen alle an Area 0.']];
+$('qz').innerHTML=Q.map(function(q,n){return'<div class="q" data-n="'+n+'"><p>'+(n+1)+'. '+q[0]+'</p><div class="opts col">'+q[1].map(function(o,j){return'<label><input type="radio" name="q'+n+'" value="'+j+'"> '+o+'</label>';}).join('')+'</div><div class="ex">'+q[3]+'</div></div>';}).join('')+
+ '<div class="acts"><button class="btn" type="button" id="qcheck">Prüfen</button><span class="fb" id="qfb" aria-live="polite"></span></div>';
+$('qcheck').onclick=function(){var ok=0;Q.forEach(function(q,n){var box=document.querySelector('.q[data-n="'+n+'"]'),c=box.querySelector('input:checked');box.querySelectorAll('label').forEach(function(l){var v=+l.querySelector('input').value;l.classList.remove('right','wrong','missed');if(c&&+c.value===v)l.classList.add(v===q[2]?'right':'wrong');else if(v===q[2]&&c)l.classList.add('missed');});if(c){box.querySelector('.ex').classList.add('open');if(+c.value===q[2])ok++;}});
+ var fb=$('qfb');fb.className='fb '+(ok===Q.length?'good':'bad');fb.textContent=ok+' von '+Q.length+' richtig'+(ok===Q.length?' ✓':'.');};
+
+/* ================= Übungen ================= */
+var cache={},STATES=['FULL/DR','FULL/BDR','FULL/DROTHER','2WAY/DROTHER'];
+function mk(code){var m=code.split('-');return O.makeTask(+m[1],m[0]);}
+function taskOf(card){var c=card.dataset.code;if(!cache[c])cache[c]=mk(c);return cache[c];}
+function taskHTML(T,id,label){
+ var X=T.rs[T.x],names=T.rs.map(function(R){return R.name;}),late=T.rs.filter(function(R){return R.late;});
+ var ro='<option value="">–</option>'+names.map(function(n,i){return'<option value="'+i+'">'+n+'</option>';}).join('');
+ return'<div class="card task" id="'+id+'" data-code="'+T.code+'"><h3>'+label+' <span class="tag">'+O.LVNAME[T.level]+'</span><span class="tag">Nr. '+T.code+'</span></h3>'+O.draw(T,{x:T.x})+
+  (late.length?'<div class="late">⏱ '+late.map(function(R){return'<b>'+R.name+'</b>';}).join(', ')+' wurde erst eingeschaltet, als die anderen schon fertig gewählt hatten.</div>':'')+
+  '<div class="cfgs">'+T.rs.map(function(R){return'<div><p class="ph">'+R.name+'# show running-config</p><pre class="cli">'+esc(O.config(T,R))+'</pre></div>';}).join('')+'</div>'+
+  '<p class="qh">1. Router-ID jedes Routers</p><table class="at"><tbody>'+T.rs.map(function(R,i){return'<tr data-i="'+i+'"><td><b>'+R.name+'</b></td><td><input class="rid" autocomplete="off" spellcheck="false" placeholder="z. B. 1.1.1.1" aria-label="Router-ID '+R.name+'"></td></tr>';}).join('')+'</tbody></table>'+
+  '<p class="qh">2. Wer wird DR, wer BDR?</p><p style="margin:0">DR <select class="one dr">'+ro+'</select> &nbsp; BDR <select class="one bdr">'+ro+'</select></p>'+
+  '<p class="qh">3. '+X.name+'# show ip ospf neighbor – welcher State steht bei jedem Nachbarn?</p><table class="at"><thead><tr><th>Nachbar</th><th>State</th></tr></thead><tbody>'+T.rs.map(function(R,y){if(y===T.x)return'';return'<tr data-y="'+y+'"><td><b>'+R.name+'</b></td><td><select class="nb" aria-label="State '+R.name+'"><option value="">–</option>'+STATES.map(function(s){return'<option>'+s+'</option>';}).join('')+'</select></td></tr>';}).join('')+'</tbody></table>'+
+  '<p class="qh">4. Welche OSPF-Kosten hat '+X.name+' auf seinem Interface zum Switch ('+O.shortIf(X)+')?</p><input class="one cost" inputmode="numeric" autocomplete="off" style="width:7em" aria-label="Kosten">'+
+  '<div class="acts"><button class="btn" type="button" data-act="check">Prüfen</button><button class="btn ghost" type="button" data-act="sol">Lösung anzeigen</button><span class="fb" aria-live="polite"></span></div><div class="sol"></div></div>';
+}
+function mark(el,ok){el.classList.remove('right','wrong');if(ok!==null)el.classList.add(ok?'right':'wrong');}
+function check(card){
+ var T=taskOf(card),A=T.ans,ok=0,tot=0;
+ card.querySelectorAll('input.rid').forEach(function(inp){var i=+inp.closest('tr').dataset.i,v=inp.value.trim();tot++;if(!v){mark(inp,null);return;}var g=v===A.rid[i];mark(inp,g);if(g)ok++;});
+ [['dr',A.dr],['bdr',A.bdr]].forEach(function(x){var s=card.querySelector('.'+x[0]);tot++;if(!s.value){mark(s,null);return;}var g=+s.value===x[1];mark(s,g);if(g)ok++;});
+ card.querySelectorAll('select.nb').forEach(function(s){var y=+s.closest('tr').dataset.y;tot++;if(!s.value){mark(s,null);return;}var g=s.value===A.nb[y];mark(s,g);if(g)ok++;});
+ var c=card.querySelector('.cost');tot++;if(c.value.trim()){var g=+c.value.trim()===A.cost;mark(c,g);if(g)ok++;}else mark(c,null);
+ var fb=card.querySelector('.fb'),all=ok===tot;fb.className='fb '+(all?'good':'bad');fb.textContent=all?'Alles richtig! ✓':ok+' von '+tot+' richtig.';if(all)card.dataset.solved='1';markToc();
+}
+function pad(t,w){t=String(t);while(t.length<w)t+=' ';return t;}
+function solHTML(T){
+ var A=T.ans,E=T.E,X=T.rs[T.x],rids=A.rid;
+ var cand=T.rs.map(function(R,i){return{i:i,R:R};}).filter(function(c){return c.R.prio>0;}).sort(function(a,b){return a.R.prio!==b.R.prio?b.R.prio-a.R.prio:O.ipn(rids[b.i])-O.ipn(rids[a.i]);});
+ var h='<h3 style="font:400 20px var(--head);margin:0">Lösung</h3>'+O.draw(T,{roles:E,rids:1,x:T.x,showLate:1});
+ h+='<p class="qh">1. Router-IDs</p><ul class="slist">'+T.rs.map(function(R,i){return'<li><b>'+R.name+': '+rids[i]+'</b> – '+esc(O.ridWhy(R))+'</li>';}).join('')+'</ul>';
+ h+='<p class="qh">2. Wahl</p><ul class="slist"><li>Reihenfolge nach Priorität, bei Gleichstand nach Router-ID: '+cand.map(function(c){return c.R.name+' ('+c.R.prio+' / '+rids[c.i]+')'+(c.R.late?' ⏱':'');}).join(' › ')+'</li>'+
+  (T.rs.some(function(R){return R.prio===0;})?'<li>Priorität 0 – nimmt nicht teil: '+T.rs.filter(function(R){return R.prio===0;}).map(function(R){return R.name;}).join(', ')+'.</li>':'')+
+  (T.rs.some(function(R){return R.late;})?'<li>⏱ '+T.rs.filter(function(R){return R.late;}).map(function(R){return R.name;}).join(', ')+' kam zu spät: Die Wahl war schon vorbei, und OSPF übernimmt nicht nachträglich – auch wenn der Router eigentlich gewinnen würde.</li>':'')+
+  '<li><b>DR: '+T.rs[A.dr].name+'</b>, <b>BDR: '+T.rs[A.bdr].name+'</b>, alle anderen DROTHER.</li></ul>';
+ var out=X.name+'# show ip ospf neighbor\n'+pad('Neighbor ID',16)+pad('Pri',6)+pad('State',17)+pad('Dead Time',12)+pad('Address',17)+'Interface\n';
+ T.rs.forEach(function(R,y){if(y===T.x)return;out+=pad(rids[y],16)+pad(R.prio,6)+pad(A.nb[y]+'  ',17)+pad('00:00:3'+(y%10),12)+pad(R.segIp,17)+O.shortIf(X)+'\n';});
+ h+='<p class="qh">3. Nachbarn von '+X.name+' ('+E.role[T.x]+')</p><pre class="cli">'+esc(out.replace(/\n$/,''))+'</pre><p class="hint">'+(E.role[T.x]==='DROTHER'?X.name+' ist DROTHER: FULL nur mit DR und BDR, mit den anderen DROTHERs 2WAY.':X.name+' ist '+E.role[T.x]+': mit allen Nachbarn FULL.')+'</p>';
+ var bw=O.IFT[X.type].bw;
+ h+='<p class="qh">4. Kosten</p><div class="ans">'+(X.ospfCost?X.name+' hat <code>ip ospf cost '+X.ospfCost+'</code> am Interface – das überschreibt die Rechnung: <b>'+X.ospfCost+'</b>.':O.ifName(X)+' hat '+(bw>=1000?bw/1000+' Gbit/s':bw+' Mbit/s')+'. Referenz '+T.ref+' Mbit/s'+(T.ref===100?' (Standard, kein auto-cost-Befehl)':'')+': '+T.ref+' ÷ '+bw+' = '+(T.ref/bw).toLocaleString('de-AT')+(T.ref<bw?' → mindestens 1':'')+' → <b>'+A.cost+'</b>.')+'</div>';
+ return h;
+}
+document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('[data-act]');if(!t)return;var card=t.closest('.task');if(!card)return;
+ if(t.dataset.act==='check')check(card);
+ if(t.dataset.act==='sol'){var so=card.querySelector('.sol');if(!so.innerHTML)so.innerHTML=solHTML(taskOf(card));var o=so.classList.toggle('open');t.textContent=o?'Lösung ausblenden':'Lösung anzeigen';}});
+var list=["L-1", "L-2", "L-3", "M-1", "M-2", "M-3", "M-4", "S-1", "S-2", "S-3"];
+var host=$('tasks'),cp=0;
+list.forEach(function(code,k){var T=mk(code);cache[code]=T;var d=document.createElement('div');d.className='page';d.hidden=k!==0;
+ d.innerHTML=taskHTML(T,'t'+(k+1),'Aufgabe '+(k+1))+'<div class="navrow">'+(k>0?'<button class="btn ghost" type="button" data-go="'+(k-1)+'">‹ Aufgabe '+k+'</button>':'<span></span>')+(k<list.length-1?'<button class="btn" type="button" data-go="'+(k+1)+'">Aufgabe '+(k+2)+' ›</button>':'<a class="btn" href="#generator" style="text-decoration:none">🎲 Weiter mit dem Zufallsgenerator</a>')+'</div>';host.appendChild(d);});
+var pages=[].slice.call(host.children);
+list.forEach(function(c,k){var b=document.createElement('button');b.type='button';b.textContent=k+1;b.dataset.go=k;$('ptoc').appendChild(b);});
+function markToc(){[].forEach.call($('ptoc').children,function(b,k){b.classList.toggle('on',k===cp);b.classList.toggle('ok',pages[k].querySelector('.task').dataset.solved==='1');});}
+function show(k,scroll){k=Math.max(0,Math.min(pages.length-1,k));cp=k;pages.forEach(function(p,j){p.hidden=j!==k;});$('pnum').textContent='Aufgabe '+(k+1)+' von '+pages.length;$('ppart').textContent=O.LVNAME[list[k][0]];$('pprev').disabled=k===0;$('pnext').disabled=k===pages.length-1;markToc();if(scroll){var top=$('uebungen').getBoundingClientRect().top+window.pageYOffset;if(window.pageYOffset>top)window.scrollTo({top:top,behavior:reduce?'auto':'smooth'});}}
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-go]');if(b)show(+b.dataset.go,true);});
+$('pprev').onclick=function(){show(cp-1,true);};$('pnext').onclick=function(){show(cp+1,true);};show(0,false);
+function gen(lvl,seed){var T=O.makeTask(seed,lvl);if(!T){$('gmsg').textContent='Zu dieser Nummer gibt es keine Aufgabe.';return;}$('gmsg').textContent='';cache[T.code]=T;$('gout').innerHTML=taskHTML(T,'g'+T.code.replace('-','_'),'Aufgabe '+T.code);$('gcode').value=T.code;$('glvl').value=lvl;}
+$('gnew').onclick=function(){gen($('glvl').value,1+Math.floor(Math.random()*99999));};
+function load(){var m=/^\s*([LMS])\s*-?\s*(\d{1,6})\s*$/i.exec($('gcode').value);if(!m){$('gmsg').textContent='Bitte eine Nummer wie L-12, M-305 oder S-4711 eingeben.';return;}gen(m[1].toUpperCase(),+m[2]);}
+$('gload').onclick=load;$('gcode').addEventListener('keydown',function(e){if(e.key==='Enter')load();});
+gen('M',1+Math.floor(Math.random()*99999));
+})();
+</script>
+</body>
+</html>
